@@ -1,0 +1,18 @@
+:root {
+  --ink: #2b2340;
+  --paper: #f4efe2;
+  color-scheme: dark;
+}
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #17131f;
+  color: var(--paper);
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#app { position: fixed; inset: 0; }
