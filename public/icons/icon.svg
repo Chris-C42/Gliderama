@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!--
+    PLACEHOLDER ART (the design lead will replace this).
+    Conventions scripts/gen-icons.mjs relies on:
+      - #bg    the tile background. It is hidden for the maskable icon (which is re-filled edge to edge
+               with the same colour) and its fill colour is used to fill the apple-touch-icon.
+      - the rest of the file is the glyph; for the maskable icon it is scaled into the safe zone.
+    Keep the important artwork inside the circle inscribed in the 512x512 box.
+  -->
+  <rect id="bg" width="512" height="512" rx="112" fill="#2b2340"/>
+  <g id="glyph" stroke="#2b2340" stroke-width="8" stroke-linejoin="round" stroke-linecap="round">
+    <!-- wing -->
+    <path d="M406 106 L106 211 L241 271 Z" fill="#ffffff"/>
+    <!-- keel -->
+    <path d="M406 106 L241 271 L301 406 Z" fill="#dcd5ef"/>
+  </g>
+</svg>

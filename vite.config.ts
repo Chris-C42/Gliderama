@@ -12,10 +12,17 @@ export default defineConfig({
     preact(),
     VitePWA({
       registerType: 'prompt',
+      // No auto-injected register script: src/app/pwa.ts registers the service worker via virtual:pwa-register.
+      injectRegister: null,
       includeAssets: ['icons/*.png', 'icons/*.svg'],
-      manifest: false, // provided by public/manifest.webmanifest (see infra task)
+      manifest: false, // provided by public/manifest.webmanifest (linked from index.html)
       workbox: {
-        globPatterns: ['**/*.{js,css,html,png,svg,woff,woff2,webmanifest}'],
+        // Precache every build asset (code, styles, images, fonts, the static manifest) so the game runs offline.
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,avif,jpg,jpeg,gif,woff,woff2,ttf,otf,json,webmanifest,wasm,ogg,mp3,wav,m4a}'],
+        // three.js and the game code are big single chunks; never silently drop one from the precache.
+        maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
+        // Resolved against the service worker's own URL (<base>/sw.js), so this is <base>/index.html under any
+        // BASE_PATH (e.g. /Gliderama/): every navigation inside the scope falls back to the cached app shell.
         navigateFallback: 'index.html',
       },
     }),

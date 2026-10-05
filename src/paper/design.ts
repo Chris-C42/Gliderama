@@ -39,6 +39,11 @@ export interface FoldOp {
   side: 1 | -1;
   /** Mountain folds tuck the flap underneath instead of on top. */
   mountain: boolean;
+  /**
+   * Flap fold: if set, only the flap under this table point (and any layers stacked on it) folds;
+   * the layers beneath stay put (e.g. the lock fold of a Nakamura). null = fold through all layers.
+   */
+  flap: Vec2Like | null;
 }
 
 export interface WingFold {
