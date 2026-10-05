@@ -22,6 +22,7 @@ export const KINDS: Record<string, KindDef> = {
   pencils: home.pencilCupKind,
   switchPlate: home.switchKind,
   floorVent: home.floorVentKind,
+  drip: home.dripKind,
   sideTable: home.sideTableKind,
   candle: home.candleStickKind,
   fan: home.fanStandKind,

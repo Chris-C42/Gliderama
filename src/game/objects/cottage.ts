@@ -320,8 +320,8 @@ export const cat: ObjFactory = (def, id, gfx) => {
 export const kettle: ObjFactory = (def, id) => {
   const sx = def.x + 28;
   const sy = def.y + 6;
-  const power = num(def.power, 3);
-  const reach = num(def.reach, 170);
+  const power = num(def.power, 4.5);
+  const reach = num(def.reach, 200);
   let acc = 0;
   return {
     id,
@@ -330,7 +330,7 @@ export const kettle: ObjFactory = (def, id) => {
       const dy = sy - y;
       if (dy < 0 || dy > reach) return;
       const cx = sx + dy * 0.12;
-      const half = 6 + dy * 0.22;
+      const half = 9 + dy * 0.3;
       const dx = x - cx;
       if (Math.abs(dx) > half) return;
       out.y += power * (1 - dy / reach) * (1 - (dx / half) ** 2);
@@ -414,5 +414,27 @@ export const cuckooClock: ObjFactory = (def, id, gfx) => {
     dispose() {
       sprite?.dispose();
     },
+  };
+};
+
+/** The kitchen range: warm air rises off the whole hob, and its kettle steams (unless `kettle: false`). */
+export const stove: ObjFactory = (def, id, gfx, room) => {
+  const w = def.w ?? 124;
+  const power = num(def.power, 2.6);
+  const steam = def.kettle === false ? null : kettle({ ...def, t: 'kettle', x: def.x + 8, y: def.y - 22 }, id, gfx, room);
+  return {
+    id,
+    def,
+    wind(x, y, out) {
+      if (y < def.y - 2 && y > LAYOUT.ceiling) {
+        const k = bump(x, def.x - 12, def.x + w + 12);
+        if (k > 0) out.y += power * k * Math.max(0.5, 1 - (def.y - y) / 300);
+      }
+      steam?.wind?.(x, y, out);
+    },
+    update: steam?.update,
+    trigger: steam?.trigger,
+    onTouch: steam?.onTouch,
+    sound: () => ({ loop: 'vent', x: def.x + w / 2, y: def.y - 20, vol: 0.4 }),
   };
 };

@@ -31,7 +31,7 @@ export function buildSimRoom(def: RoomDef): SimRoom {
     if (f) objects.push(f(it, `${def.id}:${it.t}:${i++}`, null, { dark: !!def.dark, night: !!def.night }));
   }
   const hazards: Rect[] = [];
-  for (const o of objects) if (o.def.t === 'candle' && o.trigger) {
+  for (const o of objects) if ((o.def.t === 'candle' || o.def.t === 'fireplace') && o.trigger) {
     const r = o.trigger();
     if (r) hazards.push(r);
   }
@@ -63,14 +63,14 @@ export interface SimStart {
   facing?: 1 | -1;
 }
 
-const noopApi = (plane: () => Plane): SessionApi => ({
+const noopApi = (plane: () => Plane, switches = new Map<string, boolean>()): SessionApi => ({
   collectStar() {},
   addSheet() {},
   repair() {},
   addCharge() {},
   toggleLights() {},
-  setSwitch() {},
-  switchOn: () => true,
+  setSwitch: (g, on) => void switches.set(g, on),
+  switchOn: (g) => switches.get(g) ?? true,
   soak() {},
   ignite() {},
   burnDamage() {},
@@ -146,6 +146,14 @@ export function simulateRoom(
     const done = (outcome: SimOutcome): SimResult => ({ outcome, t, path, damage: damagePct(plane.damage), plane });
     if (r === 'crashed') return done('crashed');
     if (r === 'grounded') return done('grounded');
+    // switches are mechanisms the flight can use (a fan switched off), so they work headless too
+    for (const o of room.objects) {
+      if (o.def.t !== 'switch' || !o.trigger) continue;
+      const tr = o.trigger();
+      if (!tr) continue;
+      const hw = planeHull(st);
+      if (polyVsBox(hw, { ...tr })) o.onTouch?.(ctx);
+    }
     if (room.hazards.length) {
       const hw = planeHull(st);
       const bb = bounds(hw);

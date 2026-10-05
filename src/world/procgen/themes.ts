@@ -389,15 +389,102 @@ const HOME: ThemeDef = {
   templates: [homeBedroom, homeHall, homeStudy, homeKids, homeLanding],
 };
 
+const cottageGuest: RoomTemplate = {
+  id: 'bedroom',
+  names: ['Guest Room', 'Attic Bedroom', 'Little Bedroom'],
+  looks: [cottagePosies, cottageBlue, cottagePlaid],
+  floorPlan: [
+    { id: 'bed', kind: 'bed', chance: 1, w: [196, 224], where: 'any', againstWall: true },
+    { id: 'night', kind: 'nightstand', chance: 0.85, near: 'bed', on: [{ kind: 'oilLamp', chance: 0.7 }, { kind: 'books', chance: 0.25, n: [2, 3] }] },
+    { id: 'dresser', kind: 'dresser', chance: 0.6, where: 'any', on: [{ kind: 'oilLamp', chance: 0.3 }] },
+    { id: 'rocker', kind: 'rockingChair', chance: 0.45, where: 'any' },
+    { id: 'basket', kind: 'knittingBasket', chance: 0.4, where: 'any' },
+  ],
+  wallPlan: [
+    { kind: 'cottageWindow', chance: 0.8, n: [1, 1] },
+    { kind: 'frame', chance: 0.9, n: [1, 2], v: [0, 1, 2] },
+    { kind: 'wallClock', chance: 0.25, n: [1, 1] },
+  ],
+  pendant: 0.35,
+  rug: 0.8,
+  perches: ['bed', 'desk', 'wall'],
+  weight: 1.1,
+};
+
+const cottageHall: RoomTemplate = {
+  id: 'hall',
+  names: ['Cottage Hall', 'Narrow Hall', 'Passage'],
+  looks: [cottagePlaid, cottagePosies, cottageBoards],
+  floorPlan: [
+    { id: 'clock', kind: 'grandfatherClock', chance: 0.6, where: 'any' },
+    { id: 'tableA', kind: 'sideTable', chance: 0.8, w: [78, 96], where: 'any', on: [{ kind: 'oilLamp', chance: 0.5 }, { kind: 'books', chance: 0.2, n: [2, 3] }] },
+    { id: 'chair', kind: 'armchair', chance: 0.3, where: 'any' },
+    { id: 'shelf', kind: 'bookshelf', chance: 0.25, w: [84, 100], where: 'exit' },
+  ],
+  wallPlan: [
+    { kind: 'frame', chance: 1, n: [2, 3], v: [0, 1, 2] },
+    { kind: 'wallClock', chance: 0.3, n: [1, 1] },
+    { kind: 'cottageWindow', chance: 0.35, n: [1, 1] },
+  ],
+  pendant: 0.5,
+  rug: 0.6,
+  perches: ['wall'],
+  weight: 1,
+};
+
+const cottageParlour: RoomTemplate = {
+  id: 'study',
+  names: ['Parlour', 'Sitting Room', 'Front Room'],
+  looks: [cottagePosies, cottagePlaid, cottageBlue],
+  floorPlan: [
+    { id: 'fire', kind: 'fireplace', chance: 0.85, where: 'any', on: [{ kind: 'oilLamp', chance: 0.6 }] },
+    { id: 'chair', kind: 'armchair', chance: 0.85, where: 'any' },
+    { id: 'rocker', kind: 'rockingChair', chance: 0.4, where: 'any' },
+    { id: 'tea', kind: 'teaTable', chance: 0.5, where: 'any' },
+    { id: 'basket', kind: 'knittingBasket', chance: 0.45, where: 'any' },
+    { id: 'shelf', kind: 'bookshelf', chance: 0.3, w: [84, 104], h: [150, 190], where: 'any' },
+  ],
+  wallPlan: [
+    { kind: 'cottageWindow', chance: 0.7, n: [1, 1] },
+    { kind: 'frame', chance: 0.9, n: [1, 2], v: [0, 1, 2] },
+    { kind: 'wallClock', chance: 0.2, n: [1, 1] },
+  ],
+  pendant: 0.3,
+  rug: 0.8,
+  perches: ['shelf', 'wall'],
+  weight: 1.2,
+};
+
+const cottageKitchen: RoomTemplate = {
+  id: 'kids',
+  names: ['Kitchen', 'Scullery', 'Back Kitchen'],
+  looks: [cottageTiles, cottageBoards, cottageBlue],
+  floorPlan: [
+    { id: 'stove', kind: 'stove', chance: 0.9, where: 'any' },
+    { id: 'hutch', kind: 'dresserHutch', chance: 0.65, where: 'any' },
+    { id: 'tea', kind: 'teaTable', chance: 0.4, where: 'any' },
+    { id: 'table', kind: 'sideTable', chance: 0.35, w: [72, 90], where: 'any', on: [{ kind: 'oilLamp', chance: 0.4 }] },
+  ],
+  wallPlan: [
+    { kind: 'cottageWindow', chance: 0.7, n: [1, 1] },
+    { kind: 'wallClock', chance: 0.45, n: [1, 1] },
+    { kind: 'frame', chance: 0.3, n: [1, 1], v: [2] },
+  ],
+  pendant: 0.4,
+  rug: 0.3,
+  perches: ['shelf', 'wall'],
+  weight: 1,
+};
+
 const COTTAGE: ThemeDef = {
   id: 'cottage',
   name: "Grandma's Cottage",
   place: 'cottage',
   templates: [
-    cottage(homeBedroom, ['Guest Room', 'Attic Bedroom', 'Little Bedroom'], [cottagePosies, cottageBlue, cottagePlaid]),
-    cottage(homeHall, ['Cottage Hall', 'Narrow Hall', 'Passage'], [cottagePlaid, cottagePosies, cottageBoards]),
-    cottage(homeStudy, ['Sewing Room', 'Reading Nook', 'Parlour'], [cottagePlaid, cottageBlue, cottagePosies]),
-    cottage(homeKids, ['Nursery', 'Toy Room', 'Playroom'], [cottagePosies, cottageBlue, cottageTiles]),
+    cottageGuest,
+    cottageHall,
+    cottageParlour,
+    cottageKitchen,
     cottage(homeLanding, ['Stairs', 'Landing', 'Staircase'], [cottagePosies, cottageBoards, cottageBlue]),
   ],
 };

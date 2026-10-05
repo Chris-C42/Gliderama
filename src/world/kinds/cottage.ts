@@ -236,7 +236,7 @@ export const armchairKind: KindDef = {
 
 export const stoveKind: KindDef = {
   z: 1,
-  paint(px, it) {
+  paint(px, it, room) {
     const w = W(it, 124);
     const h = H(it, 96);
     const { x, y } = it;
@@ -271,6 +271,8 @@ export const stoveKind: KindDef = {
     // feet
     px.rect(x + 2, y + h - 4, 10, 4, iron[0]);
     px.rect(x + w - 12, y + h - 4, 10, 4, iron[0]);
+    // its kettle (the steam is the runtime `stove` object); `kettle: false` for an empty hob
+    if (it.kettle !== false) kettleKind.paint!(px, { t: 'kettle', x: x + 8, y: y - 22, v: it.v }, room);
   },
   glow(px, it) {
     const w = W(it, 124);
@@ -283,6 +285,7 @@ export const stoveKind: KindDef = {
     return [
       { x: it.x - 4, y: it.y, w: w + 8, h },
       { x: it.x + w - 31, y: it.y - 52, w: 16, h: 52 },
+      ...(it.kettle !== false ? [{ x: it.x + 9, y: it.y - 17, w: 22, h: 17 }] : []),
     ];
   },
   lights(it) {
@@ -585,9 +588,13 @@ export const cottageWindowKind: KindDef = {
     }
     px.dither(x, y, w, 10, '#ffffff', 0.6);
     for (let i = 0; i < w; i += 6) px.ellipse(x + i + 3, y + 10, 3, 2, '#f8f6f0');
-    // sill + window box with geraniums
+    // sill + window box with geraniums (`box: false` for a plain sill)
     px.rect(x - 8, y + h, w + 16, 5, frame[4]);
     px.hline(x - 8, y + h, w + 16, frame[5]);
+    if (it.box === false) {
+      px.dither(x - 6, y + h + 5, w + 12, 3, R.ink[1], 0.4);
+      return;
+    }
     px.rect(x - 4, y + h + 5, w + 8, 12, R.leaf[2]);
     px.frame(x - 4, y + h + 5, w + 8, 12, R.leaf[0]);
     for (let i = 0; i < w + 4; i += 7) {
@@ -605,7 +612,7 @@ export const cottageWindowKind: KindDef = {
   colliders(it) {
     const w = W(it, 96);
     const h = H(it, 104);
-    return [{ x: it.x - 8, y: it.y + h, w: w + 16, h: 17 }];
+    return [{ x: it.x - 8, y: it.y + h, w: w + 16, h: it.box === false ? 5 : 17 }];
   },
   lights(it, room) {
     const cx = it.x + W(it, 96) / 2;

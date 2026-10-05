@@ -2,6 +2,7 @@ import { GameRenderer } from '../render/GameRenderer';
 import { Session } from '../game/session';
 import { RECIPES } from '../paper/recipes';
 import { SAMPLE_LEVEL } from '../world/levels/sample';
+import { allLevels } from '../world/campaign';
 import type { ControlState, ThrowState } from '../core/types';
 
 const q = new URLSearchParams(location.search);
@@ -10,7 +11,9 @@ const hudEl = document.getElementById('hud')!;
 const recipe = RECIPES.find((r) => r.id === (q.get('plane') ?? 'dart'))!;
 const design = recipe.make();
 const renderer = new GameRenderer(canvas, design.look);
-const session = new Session(renderer, SAMPLE_LEVEL, design, { autoTrim: q.has('autotrim'), slowMo: false }, {
+// ?level=cottage-1 plays a campaign level
+const level = (q.get('level') && allLevels().find((l) => l.id === q.get('level'))?.build()) || SAMPLE_LEVEL;
+const session = new Session(renderer, level, design, { autoTrim: q.has('autotrim'), slowMo: false }, {
   hud(h) {
     hudEl.textContent = `${h.roomName}  phase:${h.phase}  sheets:${h.sheets}  stars:${h.stars}/${h.starsTotal}  dmg:${h.damage}%  t:${h.time.toFixed(1)}\nV ${h.speed.toFixed(2)} m/s  α ${h.alpha.toFixed(1)}°  L/D ${h.ld.toFixed(1)} ${h.stall > 0.5 ? 'STALL' : ''}  ${h.message ?? ''}`;
   },

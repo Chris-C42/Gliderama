@@ -125,6 +125,32 @@ export const CATALOG: Record<string, CatalogEntry> = {
   },
 
   // ---- air movers
+  // ---- cottage furniture
+  fireplace: {
+    kind: 'fireplace',
+    placement: 'floor',
+    w: 170,
+    h: 150,
+    surface: { dx: -10, extra: 20, top: 0 },
+    tags: ['furniture', 'table', 'fire', 'lift', 'cottage'],
+  },
+  armchair: { kind: 'armchair', placement: 'floor', w: 96, h: 110, variants: ['rose', 'moss', 'plum', 'mustard'], tags: ['seat', 'furniture', 'cottage'] },
+  grandfatherClock: { kind: 'grandfatherClock', placement: 'floor', w: 46, h: 214, variants: ['walnut', 'oak'], tags: ['tall', 'furniture', 'clock', 'cottage'] },
+  dresserHutch: { kind: 'dresserHutch', placement: 'floor', w: 150, h: 204, variants: ['pine', 'oak'], tags: ['storage', 'tall', 'furniture', 'cottage'] },
+  rockingChair: { kind: 'rockingChair', placement: 'floor', w: 70, h: 104, variants: WOOD3, tags: ['seat', 'furniture', 'cottage'] },
+  teaTable: { kind: 'teaTable', placement: 'floor', w: 84, h: 62, wRange: [70, 90], variants: ['walnut', 'oak'], tags: ['low', 'furniture', 'cottage'] },
+  knittingBasket: { kind: 'knittingBasket', placement: 'floor', w: 44, h: 28, tags: ['low', 'furniture', 'small', 'cottage'] },
+  stove: { kind: 'stove', placement: 'floor', w: 124, h: 96, tags: ['furniture', 'air', 'cottage'] },
+  cottageWindow: {
+    kind: 'cottageWindow',
+    placement: 'wall',
+    w: 96,
+    h: 104,
+    pad: { l: 8, r: 8, t: 3, b: 17 },
+    tags: ['wall', 'window', 'light', 'cottage'],
+  },
+  oilLamp: { kind: 'oilLamp', placement: 'surface', w: 18, h: 34, rest: 34, tags: ['light', 'small', 'cottage'] },
+
   floorVent: { kind: 'floorVent', placement: 'vent', w: 56, h: 9, wRange: [48, 64], tags: ['air', 'lift'] },
 
   // ---- decor on the floor

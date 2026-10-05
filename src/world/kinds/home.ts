@@ -681,6 +681,26 @@ export const switchKind: KindDef = {
     px.frame(x, y, 10, 16, R.cream[2]);
     px.rect(x + 3, y + 4, 4, 8, R.cream[3]);
   },
+  // a glow-in-the-dark rocker, so a dark room's switch can be found
+  glow(px, it) {
+    px.rect(it.x + 3, it.y + 4, 4, 8, '#8fd8a0');
+    px.frame(it.x, it.y, 10, 16, '#3c6a4c');
+  },
+};
+
+/** Where a `drip` object leaks from: a pipe joint and a damp stain on the ceiling (x = the drip's x). */
+export const dripKind: KindDef = {
+  z: 0,
+  paint(px, it) {
+    const { x } = it;
+    const y = LAYOUT.ceiling;
+    px.dither(x - 14, y + 1, 28, 8, R.ink[1], 0.25);
+    px.ellipse(x, y + 4, 10, 3, 'rgba(60,90,120,0.25)');
+    px.rect(x - 16, y, 32, 4, R.steel[2]);
+    px.hline(x - 16, y, 32, R.steel[4]);
+    px.rect(x - 3, y + 2, 6, 5, R.steel[3]);
+    px.px(x, y + 7, R.sky[4]);
+  },
 };
 
 export const floorVentKind: KindDef = {
@@ -808,10 +828,17 @@ export const frontDoorKind: KindDef = {
     px.rect(x, y + h - 40, w, 40, R.moss[4]);
     px.poly([[x + w * 0.35, y + h - 40], [x + w * 0.65, y + h - 40], [x + w, y + h], [x, y + h]], R.cream[3]);
     px.ellipse(x + 20, y + h - 46, 14, 10, R.leaf[3]);
-    // open door leaf
-    px.poly([[x + w - 4, y], [x + w + 10, y + 10], [x + w + 10, y + h - 4], [x + w - 4, y + h]], R.red[3]);
-    px.line(x + w - 4, y, x + w + 10, y + 10, R.red[5]);
-    px.rect(x + w + 4, y + h / 2, 3, 6, R.brass[4]);
+    // open door leaf, hinged on the side away from the room (`flip` for doors on the left wall)
+    const door = pickRamp(it, [R.red, R.teal, R.navy]);
+    if (it.flip) {
+      px.poly([[x + 4, y], [x - 10, y + 10], [x - 10, y + h - 4], [x + 4, y + h]], door[3]);
+      px.line(x + 4, y, x - 10, y + 10, door[5]);
+      px.rect(x - 7, y + h / 2, 3, 6, R.brass[4]);
+    } else {
+      px.poly([[x + w - 4, y], [x + w + 10, y + 10], [x + w + 10, y + h - 4], [x + w - 4, y + h]], door[3]);
+      px.line(x + w - 4, y, x + w + 10, y + 10, door[5]);
+      px.rect(x + w + 4, y + h / 2, 3, 6, R.brass[4]);
+    }
   },
   glow(px, it) {
     px.rect(it.x, it.y, W(it, 96), H(it, 226), '#e8f2ff');
