@@ -11,3 +11,6 @@ dev-dist
 # local tuning harnesses
 *.scratch.test.ts
 lab2.html
+
+# agent worktrees
+.claude/worktrees/
