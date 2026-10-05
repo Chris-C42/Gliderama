@@ -790,3 +790,47 @@ export const guitar = ringer('strum', (def) => {
 });
 
 export const chimes = ringer('chime', (def) => ({ x: def.x, y: def.y + 12, w: num(def.w, 35), h: num(def.h, 79) - 12 }));
+
+// ---------------------------------------------------------------------------------------------
+// A sparkle (Glider PRO's decoration): a glint that twinkles now and then at x, y.
+
+export const sparkle: ObjFactory = (def, id, gfx) => {
+  const sp = spriteOf(gfx, 11, 11, 1, 9);
+  let timer = 0.5 + Math.random() * 2;
+  let t = -1;
+  const paint = (px: Px, f: number) => {
+    const r = [1, 3, 5, 3, 1][f];
+    px.hline(5 - r, 5, r * 2 + 1, '#fff4b8');
+    px.vline(5, 5 - r, r * 2 + 1, '#fff4b8');
+    if (r > 2) {
+      px.px(4, 4, '#ffffff');
+      px.px(6, 6, '#ffffff');
+      px.px(4, 6, '#ffffff');
+      px.px(6, 4, '#ffffff');
+    }
+    px.px(5, 5, '#ffffff');
+  };
+  return {
+    id,
+    def,
+    update(ctx) {
+      if (t < 0) {
+        timer -= ctx.dt;
+        if (timer > 0) return;
+        t = 0;
+      }
+      t += ctx.dt;
+      const f = Math.floor(t * 14);
+      if (f > 4) {
+        t = -1;
+        timer = 0.5 + Math.random() * 2;
+        sp.hide();
+        return;
+      }
+      sp.show(`f${f}`, (px) => paint(px, f), def.x - 5, def.y - 5);
+    },
+    dispose() {
+      sp.dispose();
+    },
+  };
+};

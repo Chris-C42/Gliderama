@@ -93,6 +93,8 @@ const GARDEN: RoomDef = {
     { t: 'star', x: 340, y: 100, look: 'clock', v: 1 },
     { t: 'star', x: 380, y: 100, look: 'clock', v: 2 },
     { t: 'star', x: 430, y: 90, look: 'cuckoo' },
+    { t: 'sparkle', x: 520, y: 120 },
+    { t: 'sparkle', x: 140, y: 60 },
   ],
 };
 
