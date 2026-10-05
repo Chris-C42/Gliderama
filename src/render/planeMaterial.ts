@@ -208,8 +208,9 @@ void main() {
 }
 `;
 
+/** Colours are kept in display space (ColorManagement is disabled by the game renderer). */
 function hex(c: string): THREE.Color {
-  return new THREE.Color(c).convertSRGBToLinear();
+  return new THREE.Color(c);
 }
 
 export interface PlaneMaterialOptions {

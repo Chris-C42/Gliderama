@@ -1,0 +1,392 @@
+/** Candles, switches, collectibles, drips, workbenches, exits. */
+
+import * as THREE from 'three';
+import { R } from '../../render/palette';
+import { Px } from '../../render/pixel';
+import { rgb } from '../../render/particles';
+import type { ObjFactory } from './types';
+
+const num = (v: unknown, d: number) => (typeof v === 'number' ? v : d);
+const str = (v: unknown, d: string) => (typeof v === 'string' ? v : d);
+
+// ---------------------------------------------------------------------------------------------
+// Candle: flickering flame (emissive sprite + light), thermal updraft, fire hazard.
+
+export const candle: ObjFactory = (def, id, renderer) => {
+  // def.x, def.y = top-left of the wick area; flame sits above (x+2, y)
+  const fx = def.x + 3;
+  const fy = def.y;
+  const sprite = renderer.createSprite(8, 14, 1, 9);
+  const px = new Px(sprite.canvas, 5);
+  let t = Math.random() * 10;
+  let frame = -1;
+  const col = new THREE.Color('#ffb860');
+  const light = { x: fx, y: fy - 4, r: 70, color: col, intensity: 0.85 };
+  const draw = (f: number) => {
+    px.ctx.clearRect(0, 0, 8, 14);
+    const lean = [0, 1, 0, -1][f % 4];
+    px.ellipse(4 + lean * 0.5, 9, 2.5, 4, R.flame[3]);
+    px.ellipse(4 + lean, 7, 1.5, 3, R.flame[4]);
+    px.px(4 + lean, 3 + (f % 2), R.flame[4]);
+    px.ellipse(4, 10, 1, 1.5, R.flame[5]);
+    px.px(4, 12, R.navy[4]);
+    sprite.refresh();
+  };
+  sprite.set(fx - 4, fy - 13);
+  let embers = 0;
+  return {
+    id,
+    def,
+    wind(x, y, out) {
+      const dy = fy - y;
+      if (dy < 0 || dy > 140) return;
+      const half = 5 + dy * 0.1;
+      const dx = Math.abs(x - fx);
+      if (dx > half) return;
+      out.y += 1.0 * (1 - dx / half) * (1 - dy / 160);
+    },
+    update(ctx) {
+      t += ctx.dt;
+      const f = Math.floor(t * 10) % 4;
+      if (f !== frame) {
+        frame = f;
+        draw(f);
+      }
+      light.intensity = 0.75 + 0.15 * Math.sin(t * 13) + 0.08 * Math.sin(t * 31);
+      embers += ctx.dt * 2;
+      while (embers > 1) {
+        embers -= 1;
+        ctx.particles.spawn({ x: fx, y: fy - 12, vx: (Math.random() - 0.5) * 10, vy: -30 - Math.random() * 20, life: 0.6, max: 0.6, ...rgb('#ffcc66'), a: 0.8 });
+      }
+    },
+    trigger() {
+      return { x: fx - 3, y: fy - 13, w: 6, h: 12 };
+    },
+    onTouch(ctx) {
+      ctx.api.ignite();
+    },
+    lights() {
+      return [light];
+    },
+    dispose() {
+      sprite.dispose();
+    },
+  };
+};
+
+// ---------------------------------------------------------------------------------------------
+// Light switch: fly into it to flip the room lights (or a named group, e.g. a fan).
+
+export const lightSwitch: ObjFactory = (def, id, renderer) => {
+  const group = str(def.group, 'lights');
+  const sprite = renderer.createSprite(10, 16, 0, 6);
+  const px = new Px(sprite.canvas, 2);
+  let state: boolean | null = null;
+  let cooldown = 0;
+  const draw = (on: boolean) => {
+    px.ctx.clearRect(0, 0, 10, 16);
+    px.rect(0, 0, 10, 16, R.cream[5]);
+    px.frame(0, 0, 10, 16, R.cream[2]);
+    px.rect(3, 3, 4, 10, R.cream[2]);
+    if (on) {
+      px.rect(3, 3, 4, 5, '#ffffff');
+      px.hline(3, 8, 4, R.cream[1]);
+    } else {
+      px.rect(3, 8, 4, 5, '#ffffff');
+      px.hline(3, 7, 4, R.cream[1]);
+    }
+    sprite.refresh();
+  };
+  sprite.set(def.x, def.y);
+  return {
+    id,
+    def,
+    update(ctx) {
+      cooldown = Math.max(0, cooldown - ctx.dt);
+      const on = group === 'lights' ? ctx.api.lightsOn() : ctx.api.switchOn(group);
+      if (on !== state) {
+        state = on;
+        draw(on);
+      }
+    },
+    trigger() {
+      return { x: def.x - 4, y: def.y - 4, w: 18, h: 24 };
+    },
+    onTouch(ctx) {
+      if (cooldown > 0) return;
+      cooldown = 0.8;
+      if (group === 'lights') ctx.api.toggleLights();
+      else ctx.api.setSwitch(group, !ctx.api.switchOn(group));
+      ctx.api.sfx('switch');
+    },
+    dispose() {
+      sprite.dispose();
+    },
+  };
+};
+
+// ---------------------------------------------------------------------------------------------
+// Collectibles
+
+function starPixels(px: Px, cx: number, cy: number, sx: number, col: string, edge: string) {
+  // 5-point star scaled horizontally by sx (spin)
+  const pts: [number, number][] = [];
+  for (let k = 0; k < 10; k++) {
+    const a = -Math.PI / 2 + (k * Math.PI) / 5;
+    const r = k % 2 === 0 ? 6.5 : 2.8;
+    pts.push([cx + Math.cos(a) * r * sx, cy + Math.sin(a) * r]);
+  }
+  px.poly(pts, edge);
+  const inner = pts.map(([x, y]) => [cx + (x - cx) * 0.7, cy + (y - cy) * 0.7] as [number, number]);
+  px.poly(inner, col);
+}
+
+export const star: ObjFactory = (def, id, renderer) => {
+  const sprite = renderer.createSprite(16, 16, 1, 7);
+  const px = new Px(sprite.canvas, 4);
+  let t = Math.random() * 6;
+  let frame = -1;
+  let gone = false;
+  const draw = (f: number) => {
+    px.ctx.clearRect(0, 0, 16, 16);
+    const sx = [1, 0.8, 0.45, 0.8][f];
+    starPixels(px, 8, 8.5, sx, R.mustard[5], R.brass[2]);
+    if (f === 0) px.px(6, 6, '#ffffff');
+    sprite.refresh();
+  };
+  return {
+    id,
+    def,
+    update(ctx) {
+      if (gone) return;
+      if (ctx.api.isCollected(id)) {
+        gone = true;
+        sprite.set(0, 0, false);
+        return;
+      }
+      t += ctx.dt;
+      const f = Math.floor(t * 6) % 4;
+      if (f !== frame) {
+        frame = f;
+        draw(f);
+      }
+      sprite.set(def.x - 8, def.y - 8 + Math.round(Math.sin(t * 2.5) * 2));
+      if (Math.random() < ctx.dt * 2) {
+        ctx.particles.spawn({ x: def.x + (Math.random() - 0.5) * 14, y: def.y + (Math.random() - 0.5) * 14, vy: -6, life: 0.5, max: 0.5, ...rgb('#fff6c0'), a: 1 });
+      }
+    },
+    trigger() {
+      return gone ? null : { x: def.x - 9, y: def.y - 9, w: 18, h: 18 };
+    },
+    onTouch(ctx) {
+      if (gone) return;
+      gone = true;
+      sprite.set(0, 0, false);
+      ctx.api.collectStar(id);
+      ctx.api.sfx('star');
+      for (let k = 0; k < 14; k++) {
+        const a = (k / 14) * Math.PI * 2;
+        ctx.particles.spawn({ x: def.x, y: def.y, vx: Math.cos(a) * 70, vy: Math.sin(a) * 70, life: 0.5, max: 0.5, ...rgb(k % 2 ? '#ffe070' : '#ffffff'), a: 1, drag: 3 });
+      }
+    },
+    dispose() {
+      sprite.dispose();
+    },
+  };
+};
+
+type PickupKind = 'sheet' | 'tape' | 'battery' | 'bands';
+
+function pickup(kind: PickupKind): ObjFactory {
+  return (def, id, renderer) => {
+    const sprite = renderer.createSprite(18, 16, 0.4, 7);
+    const px = new Px(sprite.canvas, 6);
+    let t = Math.random() * 6;
+    let gone = false;
+    px.ctx.clearRect(0, 0, 18, 16);
+    if (kind === 'sheet') {
+      px.poly([[2, 4], [14, 2], [16, 12], [4, 14]], '#f8f4ea');
+      px.line(2, 4, 14, 2, '#ffffff');
+      px.line(4, 14, 16, 12, R.cream[2]);
+      px.line(14, 2, 16, 12, R.cream[2]);
+      px.line(5, 7, 13, 6, R.navy[4]);
+      px.line(5, 10, 12, 9, R.navy[4]);
+      px.rect(12, 9, 5, 5, R.moss[4]);
+      px.hline(13, 11, 3, '#ffffff');
+      px.vline(14, 10, 3, '#ffffff');
+    } else if (kind === 'tape') {
+      px.ellipse(9, 8, 7, 7, R.cream[3]);
+      px.ellipse(9, 8, 6, 6, R.cream[4]);
+      px.ellipse(9, 8, 3, 3, R.ink[2]);
+      px.ellipse(9, 8, 2, 2, R.cream[2]);
+      px.rect(11, 13, 6, 2, R.cream[4]);
+    } else if (kind === 'battery') {
+      px.rect(3, 4, 12, 8, R.ink[2]);
+      px.rect(4, 5, 10, 6, R.moss[4]);
+      px.rect(4, 5, 4, 6, R.brass[4]);
+      px.rect(15, 6, 2, 4, R.steel[4]);
+      px.px(10, 7, '#fff');
+    } else {
+      px.ellipse(9, 8, 6, 4, R.rose[3]);
+      px.ellipse(9, 8, 4, 2, 'rgba(0,0,0,0)');
+      px.ctx.clearRect(6, 7, 6, 2);
+    }
+    sprite.refresh();
+    return {
+      id,
+      def,
+      update(ctx) {
+        if (gone) return;
+        if (ctx.api.isCollected(id)) {
+          gone = true;
+          sprite.set(0, 0, false);
+          return;
+        }
+        t += ctx.dt;
+        sprite.set(def.x - 9, def.y - 8 + Math.round(Math.sin(t * 2) * 2));
+      },
+      trigger() {
+        return gone ? null : { x: def.x - 9, y: def.y - 9, w: 18, h: 18 };
+      },
+      onTouch(ctx) {
+        if (gone) return;
+        gone = true;
+        sprite.set(0, 0, false);
+        ctx.api.collectStar(id); // marks as collected for this run
+        if (kind === 'sheet') ctx.api.addSheet();
+        if (kind === 'tape') ctx.api.repair(0.35);
+        if (kind === 'battery') ctx.api.addCharge('boost', 1);
+        if (kind === 'bands') ctx.api.addCharge('bands', 3);
+        ctx.api.sfx(kind === 'sheet' ? 'sheet' : kind === 'tape' ? 'tape' : 'select');
+      },
+      dispose() {
+        sprite.dispose();
+      },
+    };
+  };
+}
+
+export const sheetPickup = pickup('sheet');
+export const tapePickup = pickup('tape');
+export const batteryPickup = pickup('battery');
+export const bandsPickup = pickup('bands');
+
+// ---------------------------------------------------------------------------------------------
+// Drip: water drops fall from (x, y) every `every` seconds.
+
+export const drip: ObjFactory = (def, id, renderer) => {
+  const every = num(def.every, 1.4);
+  const floorY = num(def.floorY, 338);
+  interface Drop {
+    y: number;
+    vy: number;
+    s: ReturnType<typeof renderer.createSprite>;
+    live: boolean;
+  }
+  const drops: Drop[] = [];
+  for (let k = 0; k < 3; k++) {
+    const s = renderer.createSprite(3, 5, 0.5, 8);
+    const px = new Px(s.canvas, 1);
+    px.rect(1, 0, 1, 1, R.sky[4]);
+    px.rect(0, 1, 3, 3, R.sky[3]);
+    px.px(0, 1, R.sky[5]);
+    px.rect(1, 4, 1, 1, R.navy[4]);
+    s.refresh();
+    s.set(0, 0, false);
+    drops.push({ y: 0, vy: 0, s, live: false });
+  }
+  let timer = Math.random() * every;
+  return {
+    id,
+    def,
+    update(ctx) {
+      timer -= ctx.dt;
+      if (timer <= 0) {
+        timer = every;
+        const d = drops.find((q) => !q.live);
+        if (d) {
+          d.live = true;
+          d.y = def.y;
+          d.vy = 0;
+        }
+      }
+      for (const d of drops) {
+        if (!d.live) continue;
+        d.vy += 420 * ctx.dt;
+        d.y += d.vy * ctx.dt;
+        if (d.y > floorY) {
+          d.live = false;
+          d.s.set(0, 0, false);
+          for (let k = 0; k < 5; k++)
+            ctx.particles.spawn({ x: def.x, y: floorY, vx: (Math.random() - 0.5) * 60, vy: -40 - Math.random() * 40, grav: 300, life: 0.4, max: 0.4, ...rgb('#a9d4f0'), a: 0.9 });
+          continue;
+        }
+        d.s.set(def.x - 1, d.y - 2, true);
+        const p = ctx.api.plane();
+        if (p.alive && Math.abs(p.x - def.x) < 16 && Math.abs(p.y - d.y) < 10) {
+          d.live = false;
+          d.s.set(0, 0, false);
+          ctx.api.soak(0.18);
+          ctx.api.sfx('splash');
+          for (let k = 0; k < 6; k++)
+            ctx.particles.spawn({ x: def.x, y: d.y, vx: (Math.random() - 0.5) * 80, vy: -30 - Math.random() * 40, grav: 300, life: 0.4, max: 0.4, ...rgb('#a9d4f0'), a: 0.9 });
+        }
+      }
+    },
+    dispose() {
+      for (const d of drops) d.s.dispose();
+    },
+  };
+};
+
+// ---------------------------------------------------------------------------------------------
+// Workbench: land on it to refold / repair. Marked with a gentle sparkle.
+
+export const workbench: ObjFactory = (def, id) => {
+  const w = def.w ?? 120;
+  let t = 0;
+  return {
+    id,
+    def,
+    update(ctx) {
+      t += ctx.dt;
+      if (Math.random() < ctx.dt * 3) {
+        ctx.particles.spawn({ x: def.x + Math.random() * w, y: def.y - 4 - Math.random() * 10, vy: -12, life: 0.8, max: 0.8, ...rgb('#bfe8ff'), a: 0.9 });
+      }
+    },
+    trigger() {
+      return { x: def.x + 6, y: def.y - 10, w: w - 12, h: 12 };
+    },
+    onTouch(ctx) {
+      const p = ctx.api.plane();
+      // only when settling gently onto the bench
+      if (Math.hypot(p.vx, p.vy) < 1.2) ctx.api.openWorkbench(id);
+    },
+  };
+};
+
+// ---------------------------------------------------------------------------------------------
+// Exit: fly through to finish the level.
+
+export const exitPortal: ObjFactory = (def, id) => {
+  const w = def.w ?? 40;
+  const h = def.h ?? 60;
+  let fired = false;
+  return {
+    id,
+    def,
+    update(ctx) {
+      if (Math.random() < ctx.dt * 6) {
+        ctx.particles.spawn({ x: def.x + Math.random() * w, y: def.y + Math.random() * h, vy: -10, life: 0.7, max: 0.7, ...rgb('#fff2b0'), a: 0.8 });
+      }
+    },
+    trigger() {
+      return { x: def.x, y: def.y, w, h };
+    },
+    onTouch(ctx) {
+      if (fired) return;
+      fired = true;
+      ctx.api.completeLevel();
+    },
+  };
+};

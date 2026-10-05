@@ -1,0 +1,25 @@
+import type { ObjFactory } from './types';
+import { ceilingVent, deskFan, floorVent, radiator } from './air';
+import { batteryPickup, bandsPickup, candle, drip, exitPortal, lightSwitch, sheetPickup, star, tapePickup, workbench } from './things';
+
+/** Item kinds that have runtime behaviour (art may come from world/kinds as well). */
+export const OBJECTS: Record<string, ObjFactory> = {
+  floorVent,
+  ceilingVent,
+  fan: deskFan,
+  radiator,
+  candle,
+  switch: lightSwitch,
+  star,
+  sheet: sheetPickup,
+  tape: tapePickup,
+  battery: batteryPickup,
+  bands: bandsPickup,
+  drip,
+  workbench,
+  exit: exitPortal,
+};
+
+export function registerObjects(extra: Record<string, ObjFactory>): void {
+  Object.assign(OBJECTS, extra);
+}

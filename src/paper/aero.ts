@@ -179,7 +179,9 @@ export function coeffs(m: AeroModel, alpha: number, ctrl: number, qhat: number, 
 
   // Moment: normal force at the centre of pressure. CP moves aft when stalled.
   const CN = clAtt * ca * (1 - stall) + cn * stall + cdAtt * sa * (1 - stall) * 0.0;
-  const smEff = m.SM + stall * 0.22 + (backwards ? -0.6 : 0);
+  // Reversed flow: the centre of pressure sits near the (now leading) tail → unstable, so the
+  // plane flips back around nose-first instead of tail-sliding forever.
+  const smEff = m.SM + stall * 0.22 + (backwards ? 0.5 : 0);
   let Cm = -CN * smEff;
   Cm += -(m.flapCmd * m.trimDelta + m.ctrlCmd * ctrl) * flapEff;
   Cm += m.Cmq * qhat;
