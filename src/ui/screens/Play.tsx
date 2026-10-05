@@ -48,6 +48,7 @@ export function Play(props: { spec: PlaySpec }) {
     inputRef.current = input;
     input.attach(window);
     const s = settings.peek();
+    renderer.air.setVisible(s.airCurrents);
     const goal = spec.goal ?? { kind: 'exit' };
     let hoops = 0;
     let session!: Session;

@@ -38,8 +38,8 @@ Pages. Landscape for flying; menus/workshop adapt to portrait.
   direction performs a **turnaround** (a 3D wingover/stall-turn; duration and height loss depend on
   the design's agility, speed and damage).
 - **One-thumb touch layout** (Settings → Touch controls): instead of two direction buttons, a floating
-  joystick. The thumb can land anywhere in the dominant-hand 55 % of the screen (left, or right when
-  left-handed) and that point becomes the stick's centre. Sideways turns (engages past 35 % of the reach,
+  joystick. The thumb can land anywhere in the left 55 % of the screen (the right 55 % in the
+  left-handed layout) and that point becomes the stick's centre. Sideways turns (engages past 35 % of the reach,
   lets go under 22 %, so it doesn't flicker), up / down pitches (small dead zone, rescaled to full range)
   independently of the direction. One gadget button sits in the opposite bottom corner. The zone steps
   aside while the plane waits to be thrown, so the slingshot drag still works anywhere.
@@ -183,8 +183,11 @@ flights / a second design side by side).
 - **The plane** is a real 3D mesh from the fold engine, flat-shaded, printed paper texture via UVs,
   two-sided paper, 1-px outline, rendered at pixel scale in a 3/4 view so wings are visible;
   banking and turnarounds show its true shape. Classic Glider **shadow** on the surface below.
-- **Airflow is readable**: subtle animated wisps in vent columns, streaks from fans, heat shimmer
-  above flames.
+- **Airflow is readable**: Glider-style squiggly blue lines run from every air source to exactly
+  where its air stops (each object describes its own current, and a test holds the lines to the
+  wind field). Dashes drift along the flow with a bright head, warm air shimmers, lines grow out of
+  a fan when it is switched on and dim in dark rooms. Wisps, streaks and embers add life on top.
+  A setting hides the lines.
 - **UI**: craft-desk aesthetic — index cards, masking-tape labels, graph paper, pixel fonts
   (Pixelify Sans / Silkscreen).
 

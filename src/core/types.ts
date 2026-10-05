@@ -26,6 +26,8 @@ export interface Settings {
   slowMo: boolean;
   /** Show live flight data (speed / AoA / L:D) during normal play. */
   flightData: boolean;
+  /** Draw the air currents (squiggly lines from vents, fans, candles and fires to where their air stops). */
+  airCurrents: boolean;
   /** Reduce screen shake / flashing. */
   reducedMotion: boolean;
   /** Haptic feedback on touch devices where supported. */
@@ -44,6 +46,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autoTrim: false,
   slowMo: false,
   flightData: false,
+  airCurrents: true,
   reducedMotion: false,
   haptics: true,
   engineerView: false,

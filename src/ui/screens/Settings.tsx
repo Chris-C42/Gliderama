@@ -93,6 +93,7 @@ export function SettingsScreen() {
             <Toggle k="autoTrim" label="Auto-trim" hint="every design glides at its best hands-off" />
             <Toggle k="slowMo" label="Slow motion" hint="extra time to react" />
             <Toggle k="flightData" label="Flight data" hint="speed, angle of attack, glide ratio" />
+            <Toggle k="airCurrents" label="Air currents" hint="lines showing where vents, fans and fires blow" />
             <Toggle k="reducedMotion" label="Reduced motion" hint="less screen shake" />
           </div>
         </section>

@@ -3,6 +3,7 @@ import { go } from '../../app/nav';
 import { Icon, type IconName } from '../icons';
 import { GameRenderer } from '../../render/GameRenderer';
 import { Session } from '../../game/session';
+import { settings } from '../../core/settings';
 import { RECIPES } from '../../paper/recipes';
 import { BEDROOM } from '../../world/levels/sample';
 import type { LevelDef } from '../../game/level';
@@ -35,6 +36,7 @@ function useAttract(canvas: { current: HTMLCanvasElement | null }) {
     } catch {
       return; // no WebGL: the menu still works over the desk background
     }
+    renderer.air.setVisible(settings.peek().airCurrents);
     const session = new Session(renderer, ATTRACT, design, { autoTrim: true, slowMo: false });
     session.message = null;
     const ctl: ControlState = { dir: 0, pitch: 0, gadget: false, gadgetPressed: false, pausePressed: false };

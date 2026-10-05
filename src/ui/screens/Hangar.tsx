@@ -121,6 +121,7 @@ export function Hangar(props: { design?: Design }) {
     inputRef.current = input;
     input.attach(window);
     const s = settings.peek();
+    renderer.air.setVisible(s.airCurrents);
     const session = new Session(
       renderer,
       hangarLevel(extras.current),
