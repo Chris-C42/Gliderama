@@ -4,6 +4,7 @@ import { RECIPES } from '../paper/recipes';
 import { SAMPLE_LEVEL } from '../world/levels/sample';
 import { allLevels } from '../world/campaign';
 import { CHALLENGES } from '../modes/challenges';
+import { generateFloor, themeForFloor } from '../world/procgen';
 import type { ControlState, ThrowState } from '../core/types';
 
 const q = new URLSearchParams(location.search);
@@ -14,10 +15,20 @@ const design = recipe.make();
 const renderer = new GameRenderer(canvas, design.look);
 // &noair hides the air-current lines (for checking the art underneath)
 if (q.has('noair')) renderer.air.setVisible(false);
-// ?level=cottage-1 plays a campaign level, ?challenge=gale a Paper Lab challenge
+// ?level=cottage-1 plays a campaign level, ?challenge=gale a Paper Lab challenge, ?seed=7&floor=2 a generated floor
+// (&theme=cottage, &stairs=1: every change of storey a flight of stairs)
+const floor = Number(q.get('floor') ?? 0);
+const theme = q.get('theme');
 const level =
   (q.get('level') && allLevels().find((l) => l.id === q.get('level'))?.build()) ||
   (q.get('challenge') && CHALLENGES.find((c) => c.id === q.get('challenge'))?.level()) ||
+  (q.get('seed') &&
+    generateFloor({
+      seed: Number(q.get('seed')),
+      floor,
+      theme: theme === 'home' || theme === 'cottage' ? theme : themeForFloor(floor),
+      stairsChance: q.has('stairs') ? 1 : undefined,
+    })) ||
   SAMPLE_LEVEL;
 // &room=1,0 starts in another room of the level (for looking at its art and air)
 if (q.get('room') && level.rooms[q.get('room')!]) level.start = { ...level.start, room: q.get('room')! };
