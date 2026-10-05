@@ -61,8 +61,9 @@ export function Workshop(props: { spec: WorkshopSpec }) {
   const toastTimer = useRef(0);
 
   const toolOk = (id: string) => (limits.tools ? limits.tools.includes(id) : isUnlocked('folds', id));
-  const gadgetOk = (id: string) => id === 'none' || isUnlocked('gadgets', id);
-  const paperOk = (id: string) => isUnlocked('papers', id);
+  const gadgetOk = (id: string) => id === 'none' || (limits.gadgets ? limits.gadgets.includes(id) : isUnlocked('gadgets', id));
+  const paperOk = (id: string) => (limits.papers ? limits.papers.includes(id) : isUnlocked('papers', id));
+  const recipeOk = (id: string) => (limits.recipes ? limits.recipes.includes(id) : isUnlocked('recipes', id));
 
   const flash = (msg: string) => {
     setToast(msg);
@@ -213,7 +214,7 @@ export function Workshop(props: { spec: WorkshopSpec }) {
           }
           onClips={(clips) =>
             setDesign((d) => {
-              d.extras.clips = clips.slice(0, 3);
+              d.extras.clips = clips.slice(0, limits.maxClips ?? 3);
             })
           }
         />
@@ -368,7 +369,7 @@ export function Workshop(props: { spec: WorkshopSpec }) {
           <p class="muted small">Start from a classic. Your current folds will be replaced.</p>
           <div class="ws__recipes">
             {RECIPES.map((r) => {
-              const ok = isUnlocked('recipes', r.id);
+              const ok = recipeOk(r.id);
               return (
                 <button
                   class="ws__recipe card card--plain"
@@ -578,7 +579,7 @@ function ExtrasPanel(props: {
       </span>
       <button
         class="btn btn--small"
-        disabled={d.extras.clips.length >= 3}
+        disabled={d.extras.clips.length >= (props.limits.maxClips ?? 3)}
         onClick={() => set((x) => void x.extras.clips.push(Math.round(sheetDims(x).length * 0.15)))}
       >
         <Icon name="plus" /> Clip

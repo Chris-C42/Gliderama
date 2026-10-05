@@ -383,6 +383,16 @@ export class Session {
     this.sfx('throw', { vol: 0.5 + power * 0.5 });
   }
 
+  /** End the level as a success (mode goals: targets, hoops, distance...). */
+  finish(): void {
+    this.complete();
+  }
+
+  /** Last flight's stats (for goal evaluation by modes). */
+  lastFlight(): FlightStats {
+    return this.flightStats('grounded', null);
+  }
+
   private complete(): void {
     if (this.phase === 'complete') return;
     this.logRoom();

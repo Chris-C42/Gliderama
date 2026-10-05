@@ -47,17 +47,31 @@ export function Play(props: { spec: PlaySpec }) {
     inputRef.current = input;
     input.attach(window);
     const s = settings.peek();
-    const session = new Session(
+    const goal = spec.goal ?? { kind: 'exit' };
+    let hoops = 0;
+    let session!: Session;
+    const goalDone = () => setTimeout(() => session.finish(), 250);
+    session = new Session(
       renderer,
       spec.level,
       spec.design,
-      { autoTrim: s.autoTrim, slowMo: s.slowMo, airMul: spec.airMul, bonusSheets: spec.bonusSheets },
+      { autoTrim: s.autoTrim, slowMo: s.slowMo, airMul: spec.airMul, bonusSheets: spec.bonusSheets, infiniteSheets: spec.infiniteSheets, record: false },
       {
         hud: (h) => setHud(h),
         complete: (r) => setTimeout(() => setEnd({ result: r, won: true }), 900),
         failed: (r) => setEnd({ result: r, won: false }),
         workbench: () => setBench('menu'),
         sfx: (n, o) => sfx(n, o),
+        goal: (kind) => {
+          if (kind === 'hoop') hoops++;
+          if (goal.kind === 'target' && kind === 'target') goalDone();
+          if (goal.kind === 'hoops' && kind === 'hoop' && hoops >= goal.count) goalDone();
+        },
+        flightEnded: (st) => {
+          if (goal.kind === 'distance' && st.distance >= goal.meters) goalDone();
+          else if (goal.kind === 'aloft' && st.timeAloft >= goal.seconds) goalDone();
+          hoops = 0;
+        },
       },
     );
     sessionRef.current = session;

@@ -1,0 +1,76 @@
+.trail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8em;
+}
+.trail__title {
+  margin: 0;
+  font-size: 1.2em;
+}
+.trail__intro,
+.trail__over {
+  max-width: 34em;
+  align-self: center;
+  margin-top: 1em;
+}
+.trail__hub {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18em, 1fr));
+  gap: 0.9em;
+  align-items: start;
+}
+.trail__hub > .btn {
+  justify-self: start;
+}
+.trail__status h2 {
+  margin: 0 0 0.4em;
+}
+.trail__draft {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8em;
+}
+.trail__draft-title {
+  margin: 0.4em 0 0;
+  color: #f4efe2;
+  font-size: 1.1em;
+}
+.trail__offers {
+  display: flex;
+  gap: 1em;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.trail__offer {
+  width: 12em;
+  min-height: 13em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5em;
+  cursor: pointer;
+  transform: rotate(var(--rot));
+  transition: transform 0.1s;
+}
+.trail__offer:hover {
+  transform: rotate(0) translateY(-6px);
+}
+.trail__offer-kind {
+  align-self: flex-start;
+  color: var(--ink-3);
+}
+.trail__offer-icon {
+  display: grid;
+  place-items: center;
+  width: 3em;
+  height: 3em;
+  font-size: 1.4em;
+  background: var(--mustard-l);
+  border: 2px solid var(--ink);
+}
+.trail__offer-title {
+  font-family: var(--font-label);
+  text-transform: uppercase;
+}

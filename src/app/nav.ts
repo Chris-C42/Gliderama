@@ -18,7 +18,18 @@ export interface PlaySpec {
   meta?: Record<string, unknown>;
   /** Called when the level ends; the handler decides where to go next. */
   onEnd?: (result: LevelResult, won: boolean) => void;
+  /** Challenge goal evaluated by the play screen (default: reach the level exit). */
+  goal?: PlayGoal;
+  /** Never run out of sheets (challenges). */
+  infiniteSheets?: boolean;
 }
+
+export type PlayGoal =
+  | { kind: 'exit' }
+  | { kind: 'target' }
+  | { kind: 'hoops'; count: number }
+  | { kind: 'distance'; meters: number }
+  | { kind: 'aloft'; seconds: number };
 
 export interface WorkshopSpec {
   /** Design to edit (cloned on open). */
@@ -37,6 +48,14 @@ export interface WorkshopLimits {
   minClips?: number;
   /** Tools available (unlock ids). Undefined = use campaign unlocks. */
   tools?: string[];
+  /** Paper sizes & stocks available (ids). Undefined = campaign unlocks. */
+  papers?: string[];
+  /** Gadgets available. Undefined = campaign unlocks. */
+  gadgets?: string[];
+  /** Max paperclips allowed. */
+  maxClips?: number;
+  /** Recipes offered. Undefined = campaign unlocks. */
+  recipes?: string[];
   title?: string;
 }
 
