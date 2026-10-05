@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gliderama — hangar lab</title>
+    <link rel="icon" href="data:," />
+    <style>
+      body { margin: 0; background: #1d1828; color: #eee; font: 12px/1.45 ui-monospace, monospace; }
+      h1 { margin: 10px 12px 0; font-size: 15px; }
+      p.hint { margin: 2px 12px 8px; color: #a99fc4; }
+      #root { padding: 8px 10px 24px; display: grid; gap: 14px; }
+      .recipe { background: #2a2338; border-radius: 6px; padding: 10px; }
+      .recipe > h2 { margin: 0 0 8px; font-size: 14px; }
+      .recipe > h2 small { color: #a99fc4; font-weight: normal; margin-left: 8px; }
+      .cells { display: grid; grid-template-columns: repeat(4, max-content); gap: 8px; align-items: start; }
+      .card.report { grid-row: span 3; }
+      .card .row { display: flex; justify-content: space-between; gap: 8px; }
+      canvas { display: block; image-rendering: pixelated; }
+      .card { background: #f4efe2; color: #2b2340; padding: 8px 10px; box-sizing: border-box; font-size: 11px; }
+      .card h3 { margin: 0 0 4px; font-size: 12px; }
+      .stat { display: grid; grid-template-columns: 70px 76px 1fr; gap: 6px; align-items: start; margin: 3px 0; }
+      .bar { display: inline-flex; gap: 1px; margin-top: 2px; }
+      .bar i { width: 6px; height: 8px; background: #d9e4f0; display: block; }
+      .bar i.on { background: #3e5a8e; }
+      .good .bar i.on { background: #3e8c78; }
+      .poor .bar i.on { background: #d0533d; }
+      .remark { color: #4a4162; }
+      .meas { margin-top: 6px; padding-top: 4px; border-top: 1px dashed #bccfe4; }
+      .meas div { display: flex; justify-content: space-between; }
+      .note { margin-top: 3px; padding-left: 8px; border-left: 3px solid #bccfe4; }
+      .note.good { border-color: #3e8c78; }
+      .note.warn { border-color: #dcb446; }
+      .note.bad { border-color: #d0533d; }
+      table.cmp { border-collapse: collapse; width: 100%; }
+      table.cmp td { padding: 1px 4px; }
+      table.cmp td.n, table.cmp th.n { text-align: right; }
+      table.cmp th { font-size: 11px; padding: 1px 4px 4px; }
+      table.cmp tr.a td.A, table.cmp tr.b td.B { font-weight: bold; color: #3e8c78; }
+      .wide { display: grid; grid-template-columns: repeat(3, max-content); gap: 8px; align-items: start; }
+    </style>
+  </head>
+  <body>
+    <h1>Hangar lab: glide test, polar, throw sweep, report card</h1>
+    <p class="hint">Open-air simulator at 120 Hz through the game's flightTick. ?recipe=glider shows one plane, ?scale=2 enlarges the charts.</p>
+    <div id="root"></div>
+    <script type="module" src="/src/lab/hangar.ts"></script>
+  </body>
+</html>
