@@ -4,6 +4,13 @@
  *
  * Layout (landscape): direction pads bottom-left / bottom-right, a gadget button above each pad,
  * pause top-right (top-left when .tc-root--left-handed). Safe-area insets are respected.
+ *
+ * One-thumb layout (.tc-root--joystick): no pads. An invisible .tc-stick-zone covers the left 55 % of
+ * the screen (the right 55 % when .tc-root--left-handed) and catches the thumb; the .tc-stick (a ring
+ * with turn chevrons and a pitch-neutral tick, plus the knob) is drawn where the thumb landed. While
+ * no thumb is down, a faint .tc-stick--ghost marks the spot near the bottom of the zone. The single
+ * gadget button sits bottom-right (bottom-left when left-handed); pause stays in the top corner.
+ * --tc-stick-radius (the knob's travel, from the sliderTravel setting) is set inline on each .tc-stick.
  */
 
 .tc-root {
@@ -145,6 +152,126 @@
   background: rgba(255, 255, 255, 0.45);
 }
 
+/* ---- One-thumb joystick -------------------------------------------------------------------- */
+
+/*
+ * The zone is invisible and only catches the thumb. It sits under the buttons (DOM order) and lets
+ * everything through while the plane waits to be thrown, so the throw drag works anywhere.
+ */
+.tc-stick-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 55%;
+  pointer-events: auto;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tc-root--left-handed .tc-stick-zone {
+  left: auto;
+  right: 0;
+}
+
+.tc-stick-zone--off {
+  pointer-events: none;
+}
+
+/* Centred on the touch-down point by the component (left / top); --tc-stick-radius is set inline. */
+.tc-stick {
+  --tc-stick-size: calc(var(--tc-stick-radius, 50px) * 2 + var(--tc-knob-size));
+  position: absolute;
+  width: var(--tc-stick-size);
+  height: var(--tc-stick-size);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.tc-stick__ring {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  border: 2px solid var(--tc-line);
+  border-radius: 50%;
+  background: var(--tc-fill);
+}
+
+/* Pitch-neutral tick across the middle of the ring. */
+.tc-stick__ring::after {
+  content: '';
+  position: absolute;
+  left: 25%;
+  right: 25%;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--tc-line);
+}
+
+/*
+ * The turn zones: a chevron where the knob ends up at full sideways deflection (the same recipe as
+ * the pad icons: two borders, rotated). The one on the engaged side lights up.
+ */
+.tc-stick__chev {
+  position: absolute;
+  top: 50%;
+  width: 3.4vmin;
+  height: 3.4vmin;
+  box-sizing: border-box;
+  border: solid var(--tc-line);
+  border-width: 0 0 0.8vmin 0.8vmin;
+}
+
+.tc-stick__chev--left {
+  left: calc(var(--tc-knob-size) / 2);
+  transform: translate(-15%, -50%) rotate(45deg);
+}
+
+.tc-stick__chev--right {
+  right: calc(var(--tc-knob-size) / 2);
+  transform: translate(15%, -50%) rotate(-135deg);
+}
+
+.tc-stick__chev--active {
+  border-color: var(--tc-line-strong);
+}
+
+/* Offset from the centre by an inline transform from the component. */
+.tc-stick__knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--tc-knob-size);
+  height: var(--tc-knob-size);
+  box-sizing: border-box;
+  border: 2px solid var(--tc-line-strong);
+  border-radius: 50%;
+  background: var(--tc-fill-held);
+}
+
+/* Idle hint: a faint ring near the bottom of the zone, where the thumb naturally rests. */
+.tc-stick--ghost {
+  top: auto;
+  bottom: var(--tc-inset-bottom);
+  left: calc(var(--tc-inset-left) + var(--tc-stick-size) / 2 + var(--tc-gap));
+  transform: translateX(-50%);
+  opacity: 0.5;
+  animation: tc-stick-ghost-in 0.3s ease-out;
+}
+
+.tc-root--left-handed .tc-stick--ghost {
+  left: auto;
+  right: calc(var(--tc-inset-right) + var(--tc-stick-size) / 2 + var(--tc-gap));
+  transform: translateX(50%);
+}
+
+@keyframes tc-stick-ghost-in {
+  from {
+    opacity: 0;
+  }
+}
+
 /* ---- Gadget buttons ------------------------------------------------------------------------ */
 
 .tc-gadget {
@@ -165,6 +292,11 @@
 .tc-gadget--active {
   background: var(--tc-fill-held);
   border-color: var(--tc-line-strong);
+}
+
+/* One-thumb layout: no pads to sit above, so the single gadget button takes the pad's place. */
+.tc-root--joystick .tc-gadget {
+  bottom: calc(var(--tc-inset-bottom) + (var(--tc-pad-size) - var(--tc-gadget-size)) / 2);
 }
 
 .tc-gadget__icon {

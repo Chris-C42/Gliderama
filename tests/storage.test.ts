@@ -478,6 +478,17 @@ describe('loading fills in missing fields', () => {
     expect(save.seen).toEqual({});
   });
 
+  it('keeps a valid touch layout, and falls back to the pads for anything else', () => {
+    expect(store({ version: 1, settings: { touchLayout: 'joystick' } }).settings.touchLayout).toBe('joystick');
+    expect(store({ version: 1, settings: { touchLayout: 'pads' } }).settings.touchLayout).toBe('pads');
+    // a save from before the setting existed
+    expect(store({ version: 1, settings: { musicVolume: 0.2 } }).settings.touchLayout).toBe('pads');
+    // unknown strings pass the type-guided merge, so they are caught separately; other types are replaced by it
+    for (const bad of ['trackball', '', 'Joystick', ' joystick', 7, null, true, ['joystick'], { v: 'joystick' }]) {
+      expect(store({ version: 1, settings: { touchLayout: bad } }).settings.touchLayout, JSON.stringify(bad)).toBe('pads');
+    }
+  });
+
   it('keeps unknown extra keys (forward compatibility)', () => {
     const save = store({ version: 1, settings: { futureFlag: true }, progress: { future: { a: 1 } }, extra: [1, 2] }) as unknown as Record<string, any>;
     expect(save.settings.futureFlag).toBe(true);
@@ -814,6 +825,21 @@ describe('exportSave / importSave', () => {
     expect(importSave(JSON.stringify(doc))).toBe(true);
     expect(getSave().settings.musicVolume).toBe(1);
     expect(getSave().seen).toEqual({ ok: true });
+  });
+
+  it('round-trips the touch layout, and repairs an unknown one on import', () => {
+    updateSave((s) => void (s.settings.touchLayout = 'joystick'));
+    const exported = exportSave();
+    expect(JSON.parse(exported).settings.touchLayout).toBe('joystick');
+    resetSave();
+    expect(getSave().settings.touchLayout).toBe('pads');
+    expect(importSave(exported)).toBe(true);
+    expect(getSave().settings.touchLayout).toBe('joystick');
+
+    const doc = JSON.parse(exported);
+    doc.settings.touchLayout = 'gamepad-ish';
+    expect(importSave(JSON.stringify(doc))).toBe(true);
+    expect(getSave().settings.touchLayout).toBe('pads');
   });
 
   it('keeps the new save in memory when it cannot be persisted', () => {

@@ -8,7 +8,7 @@
  * edits `getSave().settings` inside `updateSave`), so the UI never shows stale values.
  */
 import { effect, signal } from '@preact/signals';
-import { DEFAULT_SETTINGS } from './types';
+import { DEFAULT_SETTINGS, isTouchLayout } from './types';
 import type { Settings } from './types';
 import { getSave, saveRevision, updateSave } from './storage';
 
@@ -27,6 +27,7 @@ function sanitize<K extends keyof Settings>(key: K, value: Settings[K]): Setting
     if (!Number.isFinite(value)) return undefined;
     if (key === 'musicVolume' || key === 'sfxVolume') return Math.min(1, Math.max(0, value)) as Settings[K];
   }
+  if (key === 'touchLayout' && !isTouchLayout(value)) return undefined;
   return value;
 }
 

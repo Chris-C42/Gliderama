@@ -33,9 +33,12 @@ export function mergeDir(sources: readonly DirSource[]): -1 | 0 | 1 {
 }
 
 export interface PitchSources {
-  /** True while any touch direction pad is held. */
+  /**
+   * True while the touch controls command pitch: a direction pad is held (even at neutral), or the
+   * joystick is pushed up / down.
+   */
   touchActive: boolean;
-  /** Touch slider deflection, -1..1, up = +. */
+  /** Touch slider / joystick deflection, -1..1, up = +. */
   touch: number;
   /** Gamepad pitch with its deadzone already removed (exactly 0 inside the deadzone), -1..1. */
   pad: number;
@@ -44,8 +47,9 @@ export interface PitchSources {
 }
 
 /**
- * Pitch priority: the touch slider while a pad is held (even when it sits at neutral), else the
- * gamepad when its stick is out of the deadzone, else the keyboard. Raw convention: up = +.
+ * Pitch priority: the touch controls while they command pitch (a pad is held, even when its slider
+ * sits at neutral, or the joystick is deflected), else the gamepad when its stick is out of the
+ * deadzone, else the keyboard. Raw convention: up = +.
  */
 export function mergePitch(s: PitchSources): number {
   if (s.touchActive) return s.touch;

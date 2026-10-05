@@ -125,10 +125,14 @@ describe('pitch merging and invertPitch', () => {
     expect(input.getControls().pitch).toBe(-1); // back to the keyboard
   });
 
-  it('touch pitch is ignored when no pad is held', () => {
+  it('touch pitch counts with no direction: the joystick pitches without turning', () => {
     const { input } = setup();
-    input.setTouchState(touch(0, 0.9)); // dir 0 means no pad: pitch must not leak through
-    expect(input.getControls().pitch).toBe(0);
+    input.setTouchState(touch(0, 0.9)); // pushed straight up
+    expect(input.getControls()).toMatchObject({ dir: 0, pitch: 0.9 });
+    input.setTouchState(touch(0, -0.4)); // straight down
+    expect(input.getControls()).toMatchObject({ dir: 0, pitch: -0.4 });
+    input.setTouchState(touch(0)); // thumb lifted
+    expect(input.getControls()).toMatchObject({ dir: 0, pitch: 0 });
   });
 
   it('invertPitch applies once, to the merged result, for every source', () => {
@@ -158,6 +162,86 @@ describe('pitch merging and invertPitch', () => {
     expect(input.getControls().pitch).toBe(-1);
     input.setTouchState(touch(1, -7));
     expect(input.getControls().pitch).toBe(1);
+  });
+});
+
+describe('touch pitch without a direction (the joystick pushed up / down)', () => {
+  it('beats the gamepad and the keyboard while it is deflected, and hands back at neutral', () => {
+    const { input } = setup();
+    input.feedKeyDown('ArrowDown');
+    input.update(0.25); // keyboard fully down: -1
+    input.feedGamepads([pad([0, -1])]); // stick fully up: +1
+    expect(input.getControls().pitch).toBe(1); // gamepad beats keyboard
+
+    input.setTouchState(touch(0, -0.5)); // joystick pushed down, no direction
+    expect(input.getControls().pitch).toBe(-0.5);
+    input.setTouchState(touch(0, 0.25));
+    expect(input.getControls().pitch).toBe(0.25);
+
+    input.setTouchState(touch(0, 0)); // back in the dead zone: nothing commanded, the gamepad owns it again
+    expect(input.getControls().pitch).toBe(1);
+    input.feedGamepads([pad()]);
+    expect(input.getControls().pitch).toBe(-1); // and then the keyboard
+  });
+
+  it('does not take the direction with it: other sources keep theirs', () => {
+    const { input } = setup();
+    input.feedKeyDown('ArrowLeft');
+    input.setTouchState(touch(0, 0.6));
+    expect(input.getControls()).toMatchObject({ dir: -1, pitch: 0.6 });
+    input.feedKeyUp('ArrowLeft');
+    expect(input.getControls()).toMatchObject({ dir: 0, pitch: 0.6 });
+  });
+
+  it('works together with a direction on the same stick', () => {
+    const { input } = setup();
+    input.setTouchState(touch(1, 0.8));
+    expect(input.getControls()).toMatchObject({ dir: 1, pitch: 0.8 });
+    input.setTouchState(touch(1, 0)); // held sideways, pitch in its dead zone: still the touch's call
+    expect(input.getControls()).toMatchObject({ dir: 1, pitch: 0 });
+    input.setTouchState(touch(0, 0.8)); // swung back to straight up: direction goes, pitch stays
+    expect(input.getControls()).toMatchObject({ dir: 0, pitch: 0.8 });
+  });
+
+  it('invertPitch applies to it like to every other source', () => {
+    const { input, settings } = setup({ invertPitch: true });
+    input.setTouchState(touch(0, 0.5));
+    expect(input.getControls().pitch).toBe(-0.5);
+    settings.invertPitch = false;
+    expect(input.getControls().pitch).toBe(0.5);
+  });
+
+  it('is clamped to [-1, 1] and never -0', () => {
+    const { input } = setup({ invertPitch: true });
+    input.setTouchState(touch(0, 9));
+    expect(input.getControls().pitch).toBe(-1);
+    input.setTouchState(touch(0, -9));
+    expect(input.getControls().pitch).toBe(1);
+    input.setTouchState(touch(0, 0));
+    expect(Object.is(input.getControls().pitch, 0)).toBe(true);
+  });
+
+  it('is not a direction change: it does not disturb the most-recent-wins direction merge', () => {
+    const { input } = setup();
+    input.feedGamepads([pad([0.9, 0])]); // gamepad right
+    input.setTouchState(touch(-1, 0)); // touch left: newest
+    input.setTouchState(touch(0, 0.5)); // thumb swings to straight up: touch has no direction now
+    expect(input.getControls().dir).toBe(1); // the gamepad takes over
+    input.setTouchState(touch(0, 0.7)); // same (no) direction: no new "change"
+    expect(input.getControls().dir).toBe(1);
+  });
+
+  it('reset() drops it', () => {
+    const { input } = setup();
+    input.setTouchState(touch(0, 0.9));
+    input.reset();
+    expect(input.getControls().pitch).toBe(0);
+  });
+
+  it('the gadget still rides along', () => {
+    const { input } = setup();
+    input.setTouchState(touch(0, 0.5, true));
+    expect(input.getControls()).toMatchObject({ dir: 0, pitch: 0.5, gadget: true, gadgetPressed: true });
   });
 });
 

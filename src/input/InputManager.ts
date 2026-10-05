@@ -44,12 +44,13 @@
  * ## Merging
  *
  *  - dir: each source has its own direction (keyboard: most recently pressed arrow / A / D still held;
- *    touch: most recently pressed pad still held; gamepad: D-pad, else the left stick). The source
- *    whose direction changed most recently wins; when it lets go, the next most recent held source
- *    takes over; nothing held = 0.
- *  - pitch: touch slider while any pad is held; otherwise the gamepad if its stick is out of the
- *    deadzone (or the D-pad is pressed); otherwise the keyboard ramp. `Settings.invertPitch` is
- *    applied once, to the merged result, for every source. Sources report "up = +".
+ *    touch: most recently pressed pad still held, or the side the joystick is pushed to; gamepad:
+ *    D-pad, else the left stick). The source whose direction changed most recently wins; when it
+ *    lets go, the next most recent held source takes over; nothing held = 0.
+ *  - pitch: touch while a pad is held or the joystick is pushed up / down; otherwise the gamepad if
+ *    its stick is out of the deadzone (or the D-pad is pressed); otherwise the keyboard ramp.
+ *    `Settings.invertPitch` is applied once, to the merged result, for every source. Sources report
+ *    "up = +".
  *  - gadget: any source. Pause: any source.
  *
  * Everything with a DOM dependency is confined to `attach` / `detach` and the private listeners;
@@ -84,9 +85,13 @@ import { finalizePitch, mergeDir, mergePitch } from './merge';
 
 /** What the on-screen controls report. Sent by `TouchControls` whenever something changes. */
 export interface TouchInputState {
-  /** Direction of the active pad: -1 left, +1 right, 0 when no pad is held. */
+  /** Direction of the active pad or the joystick: -1 left, +1 right, 0 when none (or the stick is centred sideways). */
   dir: -1 | 0 | 1;
-  /** Slider deflection of the active pad, -1..1, up = +, *not* inverted. Ignored when `dir` is 0. */
+  /**
+   * Slider deflection of the active pad, or the joystick's up / down, -1..1, up = +, *not* inverted.
+   * The pads only report it while one is held (`dir` != 0); the joystick can pitch with `dir` = 0.
+   * While it is 0 and `dir` is 0 the touch controls don't command pitch at all.
+   */
   pitch: number;
   /** True while either on-screen gadget button is held. */
   gadget: boolean;
@@ -185,7 +190,7 @@ export class InputManager {
       { dir: keyboardDir(this.kb), stamp: this.kbStamp },
     ]);
     const raw = mergePitch({
-      touchActive: this.touch.dir !== 0,
+      touchActive: this.touch.dir !== 0 || this.touch.pitch !== 0,
       touch: this.touch.pitch,
       pad: this.pad.pitch,
       keyboard: this.kb.pitch,
@@ -216,14 +221,16 @@ export class InputManager {
 
   /**
    * Report the on-screen controls' state. A rising `gadget` latches `gadgetPressed`; a change of
-   * `dir` counts as this source "changing" for the most-recent-wins direction merge.
+   * `dir` counts as this source "changing" for the most-recent-wins direction merge. `pitch` counts
+   * with or without a direction (the joystick pushed straight up); the touch pitch wins over the
+   * gamepad and keyboard while it is non-zero or a direction is held.
    */
   setTouchState(next: TouchInputState): void {
     const prev = this.touch;
     const dir = next.dir;
     if (dir !== prev.dir) this.touchStamp = ++this.seq;
     if (next.gadget && !prev.gadget) this.gadgetLatch = true;
-    this.touch = { dir, pitch: dir === 0 ? 0 : clamp(next.pitch, -1, 1), gadget: next.gadget };
+    this.touch = { dir, pitch: clamp(next.pitch, -1, 1), gadget: next.gadget };
   }
 
   /** Latch a pause request (the on-screen pause button; also handy for any other UI). */

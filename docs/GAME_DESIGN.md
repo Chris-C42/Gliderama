@@ -37,7 +37,14 @@ Pages. Landscape for flying; menus/workshop adapt to portrait.
 - Pressing the direction you're facing just engages the pitch slider. Pressing the opposite
   direction performs a **turnaround** (a 3D wingover/stall-turn; duration and height loss depend on
   the design's agility, speed and damage).
-- Options: invert pitch, slider sensitivity, left-handed layout, auto-trim assist, slow-mo assist.
+- **One-thumb touch layout** (Settings → Touch controls): instead of two direction buttons, a floating
+  joystick. The thumb can land anywhere in the dominant-hand 55 % of the screen (left, or right when
+  left-handed) and that point becomes the stick's centre. Sideways turns (engages past 35 % of the reach,
+  lets go under 22 %, so it doesn't flicker), up / down pitches (small dead zone, rescaled to full range)
+  independently of the direction. One gadget button sits in the opposite bottom corner. The zone steps
+  aside while the plane waits to be thrown, so the slingshot drag still works anywhere.
+- Options: invert pitch, slider sensitivity (the joystick's reach), touch layout, left-handed layout,
+  auto-trim assist, slow-mo assist.
 
 ## 3. Flight model (semi-realistic)
 
@@ -199,7 +206,7 @@ physics. Saves in localStorage (versioned with migrations). GitHub Actions → G
 src/
   app/      app shell, screen routing
   core/     loop, rng, math, storage, settings
-  input/    touch sliders, keyboard, gamepad, throw gesture
+  input/    touch pads + joystick, keyboard, gamepad, throw gesture
   audio/    synth, sequencer, sfx, songs
   paper/    fold engine, design schema, recipes, mesh, aero analysis, share codec
   physics/  flight dynamics, wind, collisions, damage

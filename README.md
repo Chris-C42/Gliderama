@@ -19,6 +19,10 @@ It is a PWA: it runs in the browser and installs on Android and iOS, and it work
 Pressing the way you are facing just lets you pitch; pressing the other way turns the plane round.
 Let go of everything and the plane glides at its trim, so a badly folded plane dives or porpoises.
 
+Prefer one thumb? *Settings → Touch controls → One thumb* swaps the two pads for a floating joystick: press anywhere
+on the left side of the screen (the right side when left-handed) and slide. Sideways turns, up and down pitch, and the
+gadget button moves to the bottom corner on the other side. Throwing still works anywhere on the screen.
+
 ### Modes
 
 - **Campaign**: a journey of places. *Home* (Bedtime Launch, Lights Out, Splash Zone) and *Grandma's Cottage*

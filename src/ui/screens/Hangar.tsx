@@ -341,7 +341,9 @@ export function Hangar(props: { design?: Design }) {
         </div>
       )}
       {panel === 'tests' && <HangarTests design={design} onClose={() => setPanel('none')} />}
-      {inputRef.current && panel !== 'build' && <TouchControls input={inputRef.current} settings={() => settings.peek()} />}
+      {inputRef.current && panel !== 'build' && (
+        <TouchControls input={inputRef.current} settings={() => settings.peek()} stickEnabled={h?.phase === 'fly'} />
+      )}
     </div>
   );
 }
