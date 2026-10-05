@@ -7,3 +7,7 @@ dev-dist
 /test-results
 /playwright-report
 .vite
+
+# local tuning harnesses
+*.scratch.test.ts
+lab2.html

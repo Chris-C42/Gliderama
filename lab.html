@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gliderama — fold lab</title>
+    <style>
+      body { margin: 0; background: #1d1828; color: #eee; font: 12px/1.4 ui-monospace, monospace; }
+      #grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px; }
+      .card { background: #2a2338; border-radius: 6px; padding: 8px; }
+      .card h3 { margin: 0 0 6px; font-size: 14px; }
+      .views { display: flex; gap: 6px; align-items: flex-start; }
+      .views canvas, .views svg { background: #3b3350; border-radius: 4px; image-rendering: pixelated; }
+      pre { margin: 6px 0 0; white-space: pre-wrap; font-size: 10px; color: #cfc6e0; }
+    </style>
+  </head>
+  <body>
+    <div id="grid"></div>
+    <script type="module" src="/src/lab/main.ts"></script>
+  </body>
+</html>
