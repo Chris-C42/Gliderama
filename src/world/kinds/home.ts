@@ -820,3 +820,248 @@ export const frontDoorKind: KindDef = {
     return [{ x: it.x + W(it, 96) / 2, y: it.y + H(it, 226) / 2, r: 240, color: '#fff2d8', intensity: 0.8 }];
   },
 };
+
+// ---------------------------------------------------------------------------------------------
+// Bathroom & utility
+
+export const bathtubKind: KindDef = {
+  z: 1,
+  paint(px, it) {
+    const w = W(it, 200);
+    const h = H(it, 70);
+    const { x, y } = it;
+    floorShadow(px, x + 10, w - 20);
+    // claw feet
+    for (const fx of [x + 16, x + w - 26]) {
+      px.ellipse(fx + 5, y + h - 3, 6, 3, R.brass[3]);
+      px.rect(fx + 2, y + h - 10, 6, 8, R.brass[2]);
+    }
+    // tub body: rounded rim
+    px.ellipse(x + w / 2, y + 8, w / 2, 8, '#f6f4ee');
+    px.rect(x + 4, y + 8, w - 8, h - 22, '#eeece6');
+    px.ellipse(x + w / 2, y + h - 14, w / 2 - 6, 10, '#e2dfd8');
+    px.dither(x + 4, y + 30, w - 8, h - 44, '#c9c6c0', 0.35);
+    px.hline(x + 6, y + 2, w - 12, '#ffffff');
+    px.ellipse(x + w / 2, y + 8, w / 2 - 10, 4, '#9fc4e6');
+    px.dither(x + 14, y + 6, w - 28, 3, '#ffffff', 0.4);
+    // tap
+    px.rect(x + w - 30, y - 18, 4, 20, R.steel[4]);
+    px.rect(x + w - 40, y - 20, 14, 4, R.steel[4]);
+    px.px(x + w - 40, y - 16, R.sky[4]);
+  },
+  colliders(it) {
+    const w = W(it, 200);
+    const h = H(it, 70);
+    return [
+      { x: it.x + 2, y: it.y + 4, w: w - 4, h: h - 4 },
+      { x: it.x + w - 40, y: it.y - 20, w: 16, h: 22 },
+    ];
+  },
+};
+
+export const sinkKind: KindDef = {
+  z: 1,
+  paint(px, it) {
+    const { x, y } = it; // basin top-left; pedestal down to the floor
+    const w = W(it, 60);
+    const floor = LAYOUT.floor;
+    floorShadow(px, x + w / 2 - 10, 20);
+    px.rect(x + w / 2 - 7, y + 16, 14, floor - y - 16, '#eceae4');
+    px.vline(x + w / 2 - 7, y + 16, floor - y - 16, '#ffffff');
+    px.vline(x + w / 2 + 6, y + 16, floor - y - 16, '#c9c6c0');
+    px.ellipse(x + w / 2, y + 6, w / 2, 7, '#f6f4ee');
+    px.rect(x, y + 6, w, 10, '#eeece6');
+    px.ellipse(x + w / 2, y + 16, w / 2 - 4, 4, '#dedbd4');
+    px.ellipse(x + w / 2, y + 5, w / 2 - 6, 3, '#c9dceb');
+    // tap
+    px.rect(x + w / 2 - 2, y - 10, 4, 12, R.steel[4]);
+    px.rect(x + w / 2 - 2, y - 12, 12, 3, R.steel[4]);
+    // mirror above
+    if (it.mirror !== false) {
+      const mx = x + w / 2 - 24;
+      const my = y - 96;
+      px.rect(mx - 3, my - 3, 54, 70, R.brass[3]);
+      px.frame(mx - 3, my - 3, 54, 70, R.brass[1]);
+      px.vgrad(mx, my, 48, 64, [R.sky[3], R.sky[4], R.sky[5]]);
+      px.line(mx + 6, my + 30, mx + 22, my + 14, '#ffffff');
+      px.line(mx + 10, my + 36, mx + 30, my + 16, '#eaf4fb');
+    }
+  },
+  colliders(it) {
+    const w = W(it, 60);
+    return [
+      { x: it.x, y: it.y, w, h: 16 },
+      { x: it.x + w / 2 - 7, y: it.y + 16, w: 14, h: LAYOUT.floor - it.y - 16 },
+    ];
+  },
+};
+
+export const towelRailKind: KindDef = {
+  z: 0,
+  paint(px, it) {
+    const { x, y } = it;
+    const w = W(it, 54);
+    const c = pickRamp(it, [R.teal, R.rose, R.mustard, R.navy]);
+    px.rect(x, y, w, 3, R.steel[4]);
+    px.rect(x - 2, y - 2, 4, 6, R.steel[3]);
+    px.rect(x + w - 2, y - 2, 4, 6, R.steel[3]);
+    px.rect(x + 6, y + 2, w - 12, 34, c[3]);
+    for (let k = 0; k < w - 12; k += 4) px.vline(x + 6 + k, y + 2, 34, c[2]);
+    px.rect(x + 6, y + 28, w - 12, 3, c[5] ?? c[4]);
+    px.hline(x + 6, y + 36, w - 12, c[1]);
+  },
+};
+
+export const radiatorKind: KindDef = {
+  z: 1,
+  paint(px, it) {
+    const w = W(it, 90);
+    const h = H(it, 56);
+    const { x, y } = it;
+    floorShadow(px, x, w);
+    px.rect(x, y, w, h, R.cream[4]);
+    for (let k = 0; k < w; k += 10) {
+      px.rect(x + k + 1, y + 2, 8, h - 6, R.cream[5]);
+      px.vline(x + k + 8, y + 2, h - 6, R.cream[2]);
+      px.vline(x + k + 1, y + 2, h - 6, '#ffffff');
+    }
+    px.rect(x, y + h - 4, w, 4, R.cream[2]);
+    px.frame(x, y, w, h, R.cream[1]);
+    px.rect(x + w - 4, y - 6, 6, 6, R.brass[3]);
+  },
+  colliders(it) {
+    return [{ x: it.x, y: it.y, w: W(it, 90), h: H(it, 56) }];
+  },
+  lights(it) {
+    return [{ x: it.x + W(it, 90) / 2, y: it.y, r: 70, color: '#ffb880', intensity: 0.25 }];
+  },
+};
+
+export const ceilingVentKind: KindDef = {
+  z: 0,
+  paint(px, it) {
+    const w = W(it, 48);
+    const { x } = it;
+    const y = LAYOUT.ceiling - 2;
+    px.rect(x - 2, y, w + 4, 8, R.steel[2]);
+    px.rect(x, y + 2, w, 4, R.ink[0]);
+    for (let k = 2; k < w - 1; k += 4) px.vline(x + k, y + 2, 4, R.steel[4]);
+    px.hline(x - 2, y + 7, w + 4, R.steel[1]);
+  },
+  colliders(it) {
+    return [{ x: it.x - 2, y: LAYOUT.ceiling - 2, w: W(it, 48) + 4, h: 8 }];
+  },
+};
+
+export const plantKind: KindDef = {
+  z: 1,
+  paint(px, it) {
+    const { x, y } = it; // pot top-left; pot ~30×26, leaves above
+    const w = W(it, 30);
+    const tall = num(it.tall, 50);
+    const pot = pickRamp(it, [R.peach, R.teal, R.cream, R.red]);
+    floorShadow(px, x, w);
+    // leaves
+    const leaf = R.leaf;
+    for (let k = 0; k < 9; k++) {
+      const a = -Math.PI / 2 + (k - 4) * 0.32;
+      const len = tall * (0.6 + ((k * 37) % 10) / 25);
+      const ex = x + w / 2 + Math.cos(a) * len * 0.55;
+      const ey = y + Math.sin(a) * len;
+      px.line(x + w / 2, y + 2, ex, ey, leaf[2]);
+      px.ellipse(ex, ey, 4, 2.5, leaf[3 + (k % 2)]);
+    }
+    // pot
+    px.poly([[x, y], [x + w, y], [x + w - 4, y + 26], [x + 4, y + 26]], pot[3]);
+    px.rect(x - 2, y, w + 4, 5, pot[4]);
+    px.hline(x - 2, y, w + 4, pot[5] ?? pot[4]);
+    px.vline(x + w - 6, y + 5, 20, pot[2]);
+  },
+  colliders(it) {
+    const w = W(it, 30);
+    const tall = num(it.tall, 50);
+    return [
+      { x: it.x - 2, y: it.y, w: w + 4, h: 26 },
+      { x: it.x + 2, y: it.y - tall * 0.8, w: w - 4, h: tall * 0.8, kind: 'soft' as const },
+    ];
+  },
+};
+
+export const shelfKind: KindDef = {
+  z: 0,
+  paint(px, it) {
+    const w = W(it, 110);
+    const { x, y } = it;
+    const wood = pickRamp(it, [R.oak, R.walnut, R.pine]);
+    px.box(x, y, w, 8, 4, wood);
+    px.poly([[x + 8, y + 8], [x + 14, y + 8], [x + 8, y + 18]], wood[2]);
+    px.poly([[x + w - 14, y + 8], [x + w - 8, y + 8], [x + w - 8, y + 18]], wood[2]);
+    px.dither(x + 2, y + 9, w - 4, 3, R.ink[1], 0.4);
+    // little things on the shelf
+    const cols = [R.red, R.teal, R.mustard, R.plum];
+    let k = 0;
+    for (let bx = x + 8; bx < x + w - 14; bx += 18 + ((k * 7) % 8), k++) {
+      const c = cols[k % cols.length];
+      if (k % 3 === 0) {
+        px.rect(bx, y - 14, 10, 14, c[3]);
+        px.rect(bx + 2, y - 16, 6, 2, c[4]);
+      } else if (k % 3 === 1) {
+        px.ellipse(bx + 5, y - 6, 6, 6, c[4]);
+        px.px(bx + 3, y - 9, '#ffffff');
+      } else {
+        px.rect(bx, y - 20, 5, 20, c[3]);
+        px.rect(bx + 5, y - 17, 5, 17, cols[(k + 1) % cols.length][3]);
+      }
+    }
+  },
+  colliders(it) {
+    return [{ x: it.x, y: it.y, w: W(it, 110), h: 8 }];
+  },
+};
+
+export const banisterKind: KindDef = {
+  z: 1,
+  paint(px, it) {
+    const w = W(it, 160);
+    const h = H(it, 70);
+    const { x, y } = it;
+    const wood = pickRamp(it, [R.walnut, R.oak]);
+    px.rect(x, y, w, 8, wood[3]);
+    px.hline(x, y, w, wood[5]);
+    px.hline(x, y + 7, w, wood[1]);
+    for (let k = 6; k < w - 4; k += 14) {
+      px.rect(x + k, y + 8, 4, h - 8, wood[3]);
+      px.vline(x + k, y + 8, h - 8, wood[4]);
+    }
+    px.rect(x - 4, y - 8, 10, h + 8, wood[2]);
+    px.rect(x + w - 6, y - 8, 10, h + 8, wood[2]);
+    px.ellipse(x + 1, y - 9, 6, 4, wood[4]);
+    px.ellipse(x + w - 1, y - 9, 6, 4, wood[4]);
+  },
+  colliders(it) {
+    const w = W(it, 160);
+    const h = H(it, 70);
+    return [
+      { x: it.x - 4, y: it.y - 12, w: w + 8, h: 12 },
+      { x: it.x, y: it.y, w, h, kind: 'soft' as const },
+    ];
+  },
+};
+
+export const toasterKind: KindDef = {
+  z: 2,
+  paint(px, it) {
+    const { x, y } = it; // 36×24 body
+    px.rect(x, y + 4, 36, 20, R.steel[4]);
+    px.rect(x + 2, y + 2, 32, 4, R.steel[5]);
+    px.hline(x + 2, y + 2, 32, '#ffffff');
+    px.rect(x + 6, y, 10, 3, R.ink[1]);
+    px.rect(x + 20, y, 10, 3, R.ink[1]);
+    px.rect(x + 34, y + 10, 4, 6, R.ink[3]);
+    px.frame(x, y + 2, 36, 22, R.steel[1]);
+    px.vline(x + 30, y + 6, 16, R.steel[3]);
+  },
+  colliders(it) {
+    return [{ x: it.x, y: it.y + 2, w: 36, h: 22 }];
+  },
+};

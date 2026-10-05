@@ -1,0 +1,138 @@
+.camp {
+  display: flex;
+  flex-direction: column;
+}
+.camp__top {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+}
+.camp__title {
+  margin: 0;
+  font-size: 1.2em;
+}
+.camp__plane {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  cursor: pointer;
+  padding: 0.3em 0.6em;
+}
+.camp__road {
+  flex: 1;
+  display: flex;
+  gap: 1.1em;
+  align-items: flex-start;
+  overflow-x: auto;
+  overflow-y: auto;
+  touch-action: pan-x pan-y;
+  padding-bottom: 1.2em;
+}
+.camp__place {
+  flex: 0 0 min(20em, 78vw);
+  background: var(--card);
+  border: 2px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--hard);
+  padding: 0.7em;
+  transform: rotate(var(--rot));
+  border-top: 0.6em solid var(--place);
+}
+.camp__place.is-soon {
+  filter: grayscale(0.6) brightness(0.92);
+}
+.camp__place h2 {
+  margin: 0;
+  font-size: 1em;
+}
+.camp__place-head {
+  display: flex;
+  gap: 0.6em;
+  align-items: center;
+  margin-bottom: 0.6em;
+}
+.camp__place-icon {
+  display: grid;
+  place-items: center;
+  width: 2.2em;
+  height: 2.2em;
+  background: var(--place);
+  border: 2px solid var(--ink);
+  flex: none;
+}
+.camp__soon {
+  font-family: var(--font-label);
+  font-size: 0.85em;
+  padding: 0.8em;
+  text-align: center;
+  color: var(--ink-3);
+  border: 2px dashed var(--ink-3);
+}
+.camp__levels {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+.camp__level {
+  position: relative;
+  display: flex;
+  gap: 0.6em;
+  align-items: flex-start;
+  text-align: left;
+  padding: 0.5em 0.6em;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 0 3px 0 var(--ink);
+  cursor: pointer;
+  flex-wrap: wrap;
+}
+.camp__level:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+.camp__level.is-done {
+  background: #eef6e8;
+}
+.camp__level.is-locked {
+  opacity: 0.55;
+  cursor: default;
+}
+.camp__num {
+  display: grid;
+  place-items: center;
+  width: 1.8em;
+  height: 1.8em;
+  font-family: var(--font-label);
+  background: var(--place);
+  border: 2px solid var(--ink);
+  flex: none;
+}
+.camp__medals {
+  display: flex;
+  gap: 0.2em;
+  margin-top: 0.15em;
+}
+.camp__medal {
+  display: grid;
+  place-items: center;
+  width: 1.5em;
+  height: 1.5em;
+  font-size: 0.8em;
+  border: 1px solid var(--ink-3);
+  color: var(--ink-3);
+  opacity: 0.45;
+}
+.camp__medal.is-got {
+  opacity: 1;
+  background: var(--mustard);
+  color: var(--ink);
+  border-color: var(--ink);
+}
+.camp__lock {
+  position: absolute;
+  right: 0.5em;
+  top: 0.5em;
+}
+.camp__unlock {
+  flex-basis: 100%;
+  color: var(--teal);
+}

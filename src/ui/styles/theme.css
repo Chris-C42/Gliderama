@@ -1,0 +1,471 @@
+/*
+ * Gliderama UI — the craft desk.
+ * Index cards, masking tape, graph paper and cutting mats; chunky pixel buttons with hard shadows.
+ */
+
+:root {
+  --ink: #2b2340;
+  --ink-2: #3d3357;
+  --ink-3: #575070;
+  --ink-soft: #7a7491;
+  --paper: #f4efe2;
+  --paper-2: #ece0c4;
+  --paper-3: #ddc9a6;
+  --card: #fbf8ef;
+  --rule: #cfdcec;
+  --margin: #e9a5a0;
+  --red: #dc6a50;
+  --red-d: #b8413e;
+  --navy: #3e5a8e;
+  --navy-l: #5b7fb0;
+  --sky: #96c2e4;
+  --teal: #3e8c78;
+  --teal-l: #62ae92;
+  --mustard: #dcb446;
+  --mustard-l: #f0d470;
+  --plum: #845c96;
+  --wood: #6b4128;
+  --wood-d: #4a2c1e;
+  --wood-l: #8f5c36;
+  --mat: #2c5e48;
+  --mat-d: #234c3a;
+  --mat-line: rgba(220, 240, 200, 0.22);
+  --hard: rgba(20, 12, 28, 0.55);
+  --font-ui: 'Pixelify Sans', ui-monospace, monospace;
+  --font-label: 'Silkscreen', ui-monospace, monospace;
+  /* base unit scales with the smaller screen dimension */
+  --u: clamp(13px, calc(0.9vmin + 8px), 19px);
+  color-scheme: light;
+}
+
+html,
+body {
+  font-family: var(--font-ui);
+  font-size: var(--u);
+  color: var(--ink);
+  background: #1a1422;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Surfaces
+ */
+
+.desk {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background-color: var(--wood);
+  background-image:
+    radial-gradient(ellipse at 30% 20%, rgba(255, 220, 160, 0.18), transparent 55%),
+    repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.0) 0 46px, rgba(0, 0, 0, 0.18) 46px 48px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 3px, rgba(0, 0, 0, 0.03) 3px 7px),
+    linear-gradient(180deg, var(--wood-l), var(--wood) 40%, var(--wood-d));
+}
+
+.mat {
+  background-color: var(--mat);
+  background-image:
+    linear-gradient(var(--mat-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--mat-line) 1px, transparent 1px),
+    linear-gradient(rgba(220, 240, 200, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(220, 240, 200, 0.08) 1px, transparent 1px);
+  background-size:
+    80px 80px,
+    80px 80px,
+    16px 16px,
+    16px 16px;
+}
+
+.graph {
+  background-color: #fbfaf4;
+  background-image:
+    linear-gradient(#bccfe4 1px, transparent 1px),
+    linear-gradient(90deg, #bccfe4 1px, transparent 1px),
+    linear-gradient(#e2eaf4 1px, transparent 1px),
+    linear-gradient(90deg, #e2eaf4 1px, transparent 1px);
+  background-size:
+    40px 40px,
+    40px 40px,
+    8px 8px,
+    8px 8px;
+}
+
+/* Index card */
+.card {
+  position: relative;
+  background-color: var(--card);
+  background-image: repeating-linear-gradient(
+    180deg,
+    transparent 0,
+    transparent calc(1.5em - 1px),
+    var(--rule) calc(1.5em - 1px),
+    var(--rule) 1.5em
+  );
+  background-position: 0 2.2em;
+  border: 2px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--hard);
+  padding: 0.6em 0.9em 0.8em 1.6em;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  left: 1em;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--margin);
+}
+.card--plain {
+  background-image: none;
+  padding-left: 0.9em;
+}
+.card--plain::before {
+  display: none;
+}
+.card h2,
+.card h3 {
+  margin: 0 0 0.3em;
+}
+
+/* Masking tape label */
+.tape {
+  display: inline-block;
+  font-family: var(--font-label);
+  font-size: 0.85em;
+  letter-spacing: 0.04em;
+  padding: 0.25em 0.9em 0.2em;
+  color: var(--ink);
+  background: rgba(238, 222, 170, 0.92);
+  transform: rotate(-2deg);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.12);
+  clip-path: polygon(0 8%, 3% 0, 97% 4%, 100% 0, 99% 92%, 96% 100%, 4% 96%, 1% 100%);
+}
+.tape--blue {
+  background: rgba(176, 208, 236, 0.92);
+}
+.tape--red {
+  background: rgba(240, 160, 140, 0.92);
+}
+.tape--green {
+  background: rgba(170, 220, 190, 0.92);
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Buttons
+ */
+
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45em;
+  font-family: var(--font-label);
+  font-size: 0.95em;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow:
+    inset -2px -3px 0 rgba(0, 0, 0, 0.12),
+    inset 2px 2px 0 rgba(255, 255, 255, 0.6),
+    0 4px 0 var(--ink);
+  padding: 0.62em 1em 0.55em;
+  margin-bottom: 4px;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  transition: transform 0.05s;
+}
+.btn:hover {
+  filter: brightness(1.04);
+}
+.btn:active,
+.btn.is-down {
+  transform: translateY(3px);
+  box-shadow:
+    inset -2px -3px 0 rgba(0, 0, 0, 0.12),
+    inset 2px 2px 0 rgba(255, 255, 255, 0.6),
+    0 1px 0 var(--ink);
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+  transform: none;
+}
+.btn--primary {
+  background: var(--mustard);
+}
+.btn--red {
+  background: var(--red);
+  color: #fff8ee;
+}
+.btn--blue {
+  background: var(--navy-l);
+  color: #f4f8ff;
+}
+.btn--green {
+  background: var(--teal-l);
+}
+.btn--ghost {
+  background: transparent;
+  box-shadow: none;
+  border-color: transparent;
+  color: inherit;
+}
+.btn--icon {
+  padding: 0.45em;
+  min-width: 2.4em;
+  min-height: 2.4em;
+}
+.btn--small {
+  font-size: 0.75em;
+  padding: 0.5em 0.7em 0.45em;
+}
+.btn--big {
+  font-size: 1.15em;
+  padding: 0.75em 1.3em 0.65em;
+}
+.btn.is-on {
+  background: var(--navy);
+  color: #fff;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Pixel stat bars
+ */
+
+.stat {
+  display: grid;
+  grid-template-columns: 6.2em 1fr auto;
+  align-items: center;
+  gap: 0.5em;
+  font-size: 0.85em;
+  margin: 0.25em 0;
+}
+.stat__label {
+  font-family: var(--font-label);
+  font-size: 0.82em;
+  text-transform: uppercase;
+}
+.stat__bar {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 2px;
+  height: 0.85em;
+}
+.stat__seg {
+  background: rgba(43, 35, 64, 0.12);
+  border: 1px solid rgba(43, 35, 64, 0.25);
+}
+.stat__seg.is-on {
+  background: var(--seg, var(--teal));
+  border-color: var(--ink);
+}
+.stat__seg.is-half {
+  background: linear-gradient(90deg, var(--seg, var(--teal)) 50%, rgba(43, 35, 64, 0.12) 50%);
+  border-color: var(--ink);
+}
+.stat__val {
+  font-family: var(--font-label);
+  font-size: 0.75em;
+  min-width: 3.4em;
+  text-align: right;
+  color: var(--ink-3);
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Modals, chips, misc
+ */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  background: rgba(16, 10, 24, 0.55);
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
+  animation: fadein 0.15s ease-out;
+}
+.modal {
+  max-width: min(92vw, 34em);
+  max-height: 92vh;
+  overflow: auto;
+  animation: popin 0.18s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+@keyframes fadein {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes popin {
+  from {
+    transform: scale(0.92) rotate(-1deg);
+    opacity: 0;
+  }
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  font-family: var(--font-label);
+  font-size: 0.75em;
+  padding: 0.3em 0.6em;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 0 2px 0 var(--ink);
+}
+
+.row {
+  display: flex;
+  gap: 0.6em;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6em;
+}
+.grow {
+  flex: 1;
+}
+.muted {
+  color: var(--ink-3);
+}
+.small {
+  font-size: 0.8em;
+}
+.label {
+  font-family: var(--font-label);
+  font-size: 0.78em;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-label);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+}
+
+.icon {
+  display: inline-block;
+  width: 1.2em;
+  height: 1.2em;
+  shape-rendering: crispEdges;
+  vertical-align: -0.22em;
+  flex: none;
+}
+
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* Range slider in paper style */
+input[type='range'].slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 1.6em;
+  background: transparent;
+}
+input[type='range'].slider::-webkit-slider-runnable-track {
+  height: 6px;
+  background: var(--ink);
+  border: 0;
+}
+input[type='range'].slider::-moz-range-track {
+  height: 6px;
+  background: var(--ink);
+}
+input[type='range'].slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 1.1em;
+  height: 1.4em;
+  margin-top: calc(3px - 0.7em);
+  background: var(--mustard);
+  border: 2px solid var(--ink);
+  box-shadow: 0 2px 0 var(--ink);
+}
+input[type='range'].slider::-moz-range-thumb {
+  width: 1.1em;
+  height: 1.4em;
+  background: var(--mustard);
+  border: 2px solid var(--ink);
+  border-radius: 0;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  cursor: pointer;
+}
+.toggle__box {
+  width: 2.4em;
+  height: 1.3em;
+  border: 2px solid var(--ink);
+  background: var(--paper-2);
+  position: relative;
+}
+.toggle__box::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: calc(1.3em - 8px);
+  height: calc(1.3em - 8px);
+  background: var(--ink-3);
+  transition: left 0.1s;
+}
+.toggle.is-on .toggle__box {
+  background: var(--teal-l);
+}
+.toggle.is-on .toggle__box::after {
+  left: calc(100% - 1.3em + 6px);
+  background: var(--ink);
+}
+
+.screen {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+.safe {
+  padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
+}
+
+.scroll {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  transform: translateX(-50%) rotate(-1deg);
+  z-index: 120;
+  animation: popin 0.2s;
+}

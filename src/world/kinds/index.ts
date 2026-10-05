@@ -24,6 +24,15 @@ export const KINDS: Record<string, KindDef> = {
   candle: home.candleStickKind,
   fan: home.fanStandKind,
   frontDoor: home.frontDoorKind,
+  bathtub: home.bathtubKind,
+  sink: home.sinkKind,
+  towelRail: home.towelRailKind,
+  radiator: home.radiatorKind,
+  ceilingVent: home.ceilingVentKind,
+  plant: home.plantKind,
+  shelf: home.shelfKind,
+  banister: home.banisterKind,
+  toaster: home.toasterKind,
 };
 
 export function registerKinds(extra: Record<string, KindDef>): void {

@@ -1,0 +1,36 @@
+.lib {
+  display: flex;
+  flex-direction: column;
+}
+.lib__top {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+}
+.lib__title {
+  margin: 0;
+  font-size: 1.2em;
+}
+.lib__grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17em, 1fr));
+  gap: 0.9em;
+  align-content: start;
+}
+.lib__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+.lib__card.is-active {
+  outline: 3px solid var(--mustard);
+}
+.lib__stats {
+  font-size: 0.85em;
+}
+.blueprint {
+  background: #2c5e48;
+  border: 2px solid var(--ink);
+  flex: none;
+}
