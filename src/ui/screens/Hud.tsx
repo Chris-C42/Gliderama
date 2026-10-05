@@ -3,10 +3,17 @@ import { Icon } from '../icons';
 
 const COARSE = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
 
+/** Throws seen this app session: the how-to-throw hint is only for the first few. */
+let throwsSeen = 0;
+let lastPhase = '';
+
 export function Hud(props: { hud: HudState; onPause: () => void; flightData: boolean }) {
   const h = props.hud;
   const dmgColor = h.damage < 25 ? 'var(--teal-l)' : h.damage < 60 ? 'var(--mustard)' : 'var(--red)';
   const sheets = Math.max(0, h.sheets);
+  if (lastPhase === 'aim' && h.phase === 'fly') throwsSeen++;
+  lastPhase = h.phase;
+  const showHint = throwsSeen < 3 && !(h.message && /throw/i.test(h.message));
   return (
     <div class="hud safe">
       <div class="hud__top">
@@ -75,7 +82,7 @@ export function Hud(props: { hud: HudState; onPause: () => void; flightData: boo
             <div class="hud__meter-fill" style={{ height: `${Math.round(h.power * 100)}%` }} />
             <div class="hud__meter-ideal" style={{ bottom: `${Math.round(h.idealPower * 100)}%` }} />
           </div>
-          <span class="hud__hint">{COARSE ? 'Drag back anywhere, then let go to throw' : 'Drag back & release to throw · or ↑↓ aim, hold Space'}</span>
+          {showHint && <span class="hud__hint">{COARSE ? 'Drag back anywhere, then let go to throw' : 'Drag back & release to throw · or ↑↓ aim, hold Space'}</span>}
         </div>
       )}
       {props.flightData && h.phase === 'fly' && (

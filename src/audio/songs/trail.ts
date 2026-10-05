@@ -54,7 +54,7 @@ export const trail: SongDef = {
   stepsPerBeat: 4,
   loop: true,
   loopStart: 1,
-  volume: 0.72,
+  volume: 0.56,
 
   instruments: {
     lead: { wave: 'pulse25', env: { a: 0, d: 0.1, s: 0.7, r: 0.1 }, vol: 0.42, vibrato: { depth: 0.2, rate: 6, delay: 0.15 }, slide: 0.05 },

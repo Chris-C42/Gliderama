@@ -27,7 +27,7 @@ export const DEFAULT_SETTINGS: Settings = {
   musicVolume: 0.6,
   sfxVolume: 0.8,
   invertPitch: false,
-  sliderTravel: 70,
+  sliderTravel: 50,
   leftHanded: false,
   autoTrim: false,
   slowMo: false,

@@ -67,7 +67,7 @@ export const puzzle: SongDef = {
   bpm: 96,
   stepsPerBeat: 4,
   loop: true,
-  volume: 0.75,
+  volume: 0.95,
 
   instruments: {
     pluck: { wave: 'pulse12', env: { a: 0, d: 0.16, s: 0, r: 0.05 }, vol: 0.4 },
