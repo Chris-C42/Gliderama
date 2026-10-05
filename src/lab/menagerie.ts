@@ -50,7 +50,7 @@ const KITCHEN: RoomDef = {
   name: 'Kitchen Clutter',
   wall: { pattern: 'tile', base: 'teal', accent: 'stone', wainscot: null, trim: 'cream' },
   floor: { kind: 'checker', ramp: 'stone', accent: 'navy' },
-  exits: { left: { from: 70, to: 340 }, right: { from: 96, to: 330, exit: true } },
+  exits: { left: { from: 70, to: 340 }, right: { from: 70, to: 340 } },
   seed: 13,
   items: [
     { t: 'cloud', x: 420, y: 150 },
@@ -73,11 +73,59 @@ const KITCHEN: RoomDef = {
   ],
 };
 
+const GARDEN: RoomDef = {
+  id: 'lab-garden',
+  name: 'Garden Path',
+  wall: { pattern: 'brick', base: 'red', accent: 'red', wainscot: null, trim: 'stone' },
+  floor: { kind: 'stone', ramp: 'stone' },
+  exits: { left: { from: 70, to: 340 }, right: { from: 70, to: 340 } },
+  seed: 17,
+  items: [
+    { t: 'tiki', x: 60, y: 196, wax: 136 },
+    { t: 'bbq', x: 170, y: 270, wax: 62 },
+    { t: 'mailbox', x: 230, y: 255, dir: -1 },
+    { t: 'flowerBox', x: 380, y: 140 },
+    { t: 'cinderBlock', x: 380, y: 274 },
+    { t: 'cinderBlock', x: 380, y: 208, v: 1 },
+    { t: 'floorVent', x: 460, y: 336, w: 60, look: 'grate' },
+    { t: 'floorVent', x: 540, y: 336, w: 56, look: 'blower' },
+    { t: 'star', x: 300, y: 100, look: 'clock', v: 0 },
+    { t: 'star', x: 340, y: 100, look: 'clock', v: 1 },
+    { t: 'star', x: 380, y: 100, look: 'clock', v: 2 },
+    { t: 'star', x: 430, y: 90, look: 'cuckoo' },
+  ],
+};
+
+const OFFICE: RoomDef = {
+  id: 'lab-office',
+  name: 'Back Office',
+  wall: { pattern: 'pinstripe', base: 'cream', accent: 'teal', wainscot: 'walnut', trim: 'cream' },
+  floor: { kind: 'carpet', ramp: 'plum' },
+  exits: { left: { from: 70, to: 340 }, right: { from: 96, to: 330, exit: true } },
+  seed: 19,
+  items: [
+    { t: 'tubeLight', x: 100, y: 14, w: 100 },
+    { t: 'trackLight', x: 400, y: 14, w: 120 },
+    { t: 'bulletin', x: 140, y: 80 },
+    { t: 'calendar', x: 300, y: 60 },
+    { t: 'filingCabinet', x: 20, y: 226 },
+    { t: 'wasteBasket', x: 120, y: 275 },
+    { t: 'table', x: 220, y: 260 },
+    { t: 'grille', x: 246, y: 251, w: 48, look: 'greco' },
+    { t: 'stool', x: 340, y: 300 },
+    { t: 'trunk', x: 420, y: 255 },
+    { t: 'switch', x: 440, y: 180, look: 'thermostat' },
+    { t: 'switch', x: 470, y: 180, look: 'knife' },
+    { t: 'switch', x: 500, y: 180, look: 'power' },
+    { t: 'switch', x: 530, y: 180, look: 'machine' },
+  ],
+};
+
 export const MENAGERIE: LevelDef = {
   id: 'lab-menagerie',
   name: 'Menagerie',
   place: 'home',
-  rooms: { '0,0': AIRBORNE, '1,0': INDOORS, '2,0': KITCHEN },
+  rooms: { '0,0': AIRBORNE, '1,0': INDOORS, '2,0': KITCHEN, '3,0': GARDEN, '4,0': OFFICE },
   start: { room: '0,0', x: 60, y: 120, facing: 1 },
   sheets: 9,
   par: 60,

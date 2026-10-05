@@ -29,6 +29,9 @@ export interface SimRoom {
   spills: Spill[];
 }
 
+/** Things that set the plane alight. */
+const FLAMES = ['candle', 'fireplace', 'tiki', 'bbq'];
+
 /** A room ready to fly headless. Pass the level and the room's key so air from the rooms above and below counts. */
 export function buildSimRoom(def: RoomDef, where?: { level: Pick<LevelDef, 'rooms'>; key: string }): SimRoom {
   const objects: GameObject[] = [];
@@ -38,7 +41,7 @@ export function buildSimRoom(def: RoomDef, where?: { level: Pick<LevelDef, 'room
     if (f) objects.push(f(it, `${def.id}:${it.t}:${i++}`, null, { dark: !!def.dark, night: !!def.night }));
   }
   const hazards: Rect[] = [];
-  for (const o of objects) if ((o.def.t === 'candle' || o.def.t === 'fireplace') && o.trigger) {
+  for (const o of objects) if (FLAMES.includes(o.def.t) && o.trigger) {
     const r = o.trigger();
     if (r) hazards.push(r);
   }

@@ -83,6 +83,57 @@ export const candle: ObjFactory = (def, id, gfx) => {
   };
 };
 
+/**
+ * A switch, 10 × 16: `look` 'light' a light switch's toggle, 'thermostat' a dial, 'knife' a knife switch on its board,
+ * 'power' a push button, 'machine' a machine's rocker (Glider PRO's switches).
+ */
+function paintSwitch(px: Px, look: string, on: boolean) {
+  switch (look) {
+    case 'thermostat':
+      px.rect(0, 1, 10, 14, R.cream[4]);
+      px.frame(0, 1, 10, 14, R.cream[2]);
+      px.ellipse(5, 7, 3.5, 3.5, R.cream[2]);
+      px.ellipse(5, 7, 2.5, 2.5, R.cream[5]);
+      px.line(5, 7, on ? 7 : 3, 5, R.red[3]);
+      px.hline(2, 12, 6, on ? R.red[3] : R.navy[4]);
+      return;
+    case 'knife':
+      px.rect(0, 0, 10, 16, R.walnut[3]);
+      px.frame(0, 0, 10, 16, R.walnut[1]);
+      px.rect(3, 2, 4, 2, R.brass[3]);
+      px.rect(3, 12, 4, 2, R.brass[3]);
+      if (on) px.rect(4, 3, 2, 10, R.steel[5]);
+      else px.line(5, 12, 9, 7, R.steel[5]);
+      px.rect(on ? 3 : 7, on ? 1 : 5, on ? 4 : 3, 2, R.ink[1]);
+      return;
+    case 'power':
+      px.rect(1, 3, 8, 10, R.ink[2]);
+      px.frame(1, 3, 8, 10, R.ink[1]);
+      px.ellipse(5, 8, 2.5, 2.5, on ? R.moss[5] : R.red[3]);
+      return;
+    case 'machine':
+      px.rect(0, 0, 10, 16, R.steel[3]);
+      px.frame(0, 0, 10, 16, R.steel[1]);
+      px.rect(3, 3, 4, 10, R.ink[1]);
+      if (on) px.rect(3, 3, 4, 5, R.red[4]);
+      else px.rect(3, 8, 4, 5, R.red[2]);
+      px.px(1, 1, R.steel[5]);
+      px.px(8, 14, R.steel[5]);
+      return;
+    default:
+      px.rect(0, 0, 10, 16, R.cream[5]);
+      px.frame(0, 0, 10, 16, R.cream[2]);
+      px.rect(3, 3, 4, 10, R.cream[2]);
+      if (on) {
+        px.rect(3, 3, 4, 5, '#ffffff');
+        px.hline(3, 8, 4, R.cream[1]);
+      } else {
+        px.rect(3, 8, 4, 5, '#ffffff');
+        px.hline(3, 7, 4, R.cream[1]);
+      }
+  }
+}
+
 // ---------------------------------------------------------------------------------------------
 // Light switch: fly into it to flip the room lights (or a named group, e.g. a fan).
 
@@ -95,16 +146,7 @@ export const lightSwitch: ObjFactory = (def, id, gfx) => {
   const draw = (on: boolean) => {
     if (!px || !sprite) return;
     px.ctx.clearRect(0, 0, 10, 16);
-    px.rect(0, 0, 10, 16, R.cream[5]);
-    px.frame(0, 0, 10, 16, R.cream[2]);
-    px.rect(3, 3, 4, 10, R.cream[2]);
-    if (on) {
-      px.rect(3, 3, 4, 5, '#ffffff');
-      px.hline(3, 8, 4, R.cream[1]);
-    } else {
-      px.rect(3, 8, 4, 5, '#ffffff');
-      px.hline(3, 7, 4, R.cream[1]);
-    }
+    paintSwitch(px, str(def.look, 'light'), on);
     sprite.refresh();
   };
   sprite?.set(def.x, def.y);
@@ -151,18 +193,64 @@ function starPixels(px: Px, cx: number, cy: number, sx: number, col: string, edg
   px.poly(inner, col);
 }
 
+/** Glider PRO's bonus clocks, collected like stars: an alarm clock (`v` 0 red, 1 blue, 2 yellow) ringing as it bobs. */
+function clockPixels(px: Px, v: number, f: number) {
+  const c = [R.red, R.navy, R.mustard][v % 3];
+  const ring = f % 2 ? 1 : -1;
+  // the bells and the hammer between them
+  px.ellipse(4, 4 + (ring > 0 ? 0 : 1), 3, 2, R.brass[4]);
+  px.ellipse(14, 4 + (ring > 0 ? 1 : 0), 3, 2, R.brass[4]);
+  px.px(3, 3, R.brass[5]);
+  px.px(13, 3, R.brass[5]);
+  px.vline(9 + ring, 1, 4, R.steel[3]);
+  // the case, the face and its hands
+  px.ellipse(9, 10, 7, 7, c[1]);
+  px.ellipse(9, 10, 6, 6, c[3]);
+  px.ellipse(9, 10, 4, 4, R.cream[5]);
+  px.vline(9, 7, 3, R.ink[1]);
+  px.hline(9, 10, 3, R.ink[1]);
+  px.px(7, 7, c[5]);
+  // the feet
+  px.px(4, 16, c[1]);
+  px.px(14, 16, c[1]);
+}
+
+/** A cuckoo clock (Glider PRO's cuckoo bonus): the bird pops out of its door now and then. */
+function cuckooPixels(px: Px, f: number) {
+  px.poly([[1, 7], [9, 0], [17, 7]], R.walnut[2]);
+  px.poly([[3, 7], [9, 2], [15, 7]], R.walnut[4]);
+  px.rect(3, 7, 12, 12, R.oak[3]);
+  px.vline(3, 7, 12, R.oak[5]);
+  px.rect(7, 8, 4, 3, f === 1 ? R.ink[1] : R.oak[2]);
+  if (f === 1) px.rect(8, 8, 3, 2, R.mustard[4]);
+  px.ellipse(9, 14, 3, 3, R.cream[5]);
+  px.px(9, 13, R.ink[1]);
+  px.px(10, 14, R.ink[1]);
+  px.vline(6, 19, 4, R.brass[3]);
+  px.vline(12, 19, 6, R.brass[3]);
+  px.rect(5, 23, 3, 3, R.brass[4]);
+  px.rect(11, 25, 3, 3, R.brass[4]);
+}
+
 export const star: ObjFactory = (def, id, gfx) => {
-  const sprite = gfx?.createSprite(16, 16, 1, 7) ?? null;
+  const look = def.look === 'clock' || def.look === 'cuckoo' ? def.look : 'star';
+  const SW = look === 'star' ? 16 : 18;
+  const SH = look === 'star' ? 16 : look === 'clock' ? 18 : 28;
+  const sprite = gfx?.createSprite(SW, SH, 1, 7) ?? null;
   const px = sprite ? new Px(sprite.canvas, 4) : null;
   let t = Math.random() * 6;
   let frame = -1;
   let gone = false;
   const draw = (f: number) => {
     if (!px || !sprite) return;
-    px.ctx.clearRect(0, 0, 16, 16);
-    const sx = [1, 0.8, 0.45, 0.8][f];
-    starPixels(px, 8, 8.5, sx, R.mustard[5], R.brass[2]);
-    if (f === 0) px.px(6, 6, '#ffffff');
+    px.ctx.clearRect(0, 0, SW, SH);
+    if (look === 'clock') clockPixels(px, def.v ?? 0, f);
+    else if (look === 'cuckoo') cuckooPixels(px, f % 3 === 1 ? 1 : 0);
+    else {
+      const sx = [1, 0.8, 0.45, 0.8][f];
+      starPixels(px, 8, 8.5, sx, R.mustard[5], R.brass[2]);
+      if (f === 0) px.px(6, 6, '#ffffff');
+    }
     sprite.refresh();
   };
   return {
@@ -181,7 +269,7 @@ export const star: ObjFactory = (def, id, gfx) => {
         frame = f;
         draw(f);
       }
-      sprite?.set(def.x - 8, def.y - 8 + Math.round(Math.sin(t * 2.5) * 2));
+      sprite?.set(def.x - SW / 2, def.y - SH / 2 + Math.round(Math.sin(t * 2.5) * 2));
       if (Math.random() < ctx.dt * 2) {
         ctx.particles.spawn({ x: def.x + (Math.random() - 0.5) * 14, y: def.y + (Math.random() - 0.5) * 14, vy: -6, life: 0.5, max: 0.5, ...rgb('#fff6c0'), a: 1 });
       }

@@ -43,6 +43,9 @@ export const OBJECTS: Record<string, ObjFactory> = {
   grease,
   guitar,
   chimes,
+  // a tiki torch and a barbecue burn like candles
+  tiki: candle,
+  bbq: candle,
 };
 
 export function registerObjects(extra: Record<string, ObjFactory>): void {

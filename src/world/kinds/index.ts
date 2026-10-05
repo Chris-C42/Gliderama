@@ -5,6 +5,9 @@ import * as cottage from './cottage';
 import * as stairs from './stairs';
 import * as gliderpro from './gliderpro';
 import * as appliances from './appliances';
+import * as outdoor from './outdoor';
+import * as furnishings from './furnishings';
+import * as fixtures from './fixtures';
 
 export const KINDS: Record<string, KindDef> = {
   window: home.windowKind,
@@ -86,6 +89,21 @@ export const KINDS: Record<string, KindDef> = {
   stereo: appliances.stereoKind,
   coffee: appliances.coffeeKind,
   cds: appliances.cdsKind,
+  tiki: outdoor.tikiKind,
+  bbq: outdoor.bbqKind,
+  mailbox: outdoor.mailboxKind,
+  flowerBox: outdoor.flowerBoxKind,
+  cinderBlock: outdoor.cinderBlockKind,
+  filingCabinet: furnishings.filingCabinetKind,
+  wasteBasket: furnishings.wasteBasketKind,
+  trunk: furnishings.trunkKind,
+  stool: furnishings.stoolKind,
+  table: furnishings.tableKind,
+  bulletin: furnishings.bulletinKind,
+  calendar: furnishings.calendarKind,
+  tubeLight: fixtures.tubeLightKind,
+  trackLight: fixtures.trackLightKind,
+  grille: fixtures.grilleKind,
 };
 
 export function registerKinds(extra: Record<string, KindDef>): void {
