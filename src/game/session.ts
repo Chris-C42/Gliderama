@@ -16,7 +16,7 @@ import { paintRoom, type RoomArt } from '../render/roomArt';
 import type { ActiveLight, GameRenderer } from '../render/GameRenderer';
 import { rgb } from '../render/particles';
 import { OBJECTS } from './objects';
-import type { GameObject, ObjCtx, SessionApi, WindOut } from './objects/types';
+import type { AirFlow, GameObject, ObjCtx, SessionApi, WindOut } from './objects/types';
 import { bounds, polyVsBox, profileHull, surfaceBelow, type V } from './collide';
 import { countStars, neighbour, type LevelDef } from './level';
 import type { Collider, ItemDef, RoomDef } from '../world/types';
@@ -159,6 +159,10 @@ class RoomRuntime {
     return out;
   }
 
+  airflows(): AirFlow[] {
+    return this.objects.flatMap((o) => o.airflow?.() ?? []);
+  }
+
   lights(): ActiveLight[] {
     const out: ActiveLight[] = [];
     for (const l of this.art.lights) {
@@ -276,6 +280,7 @@ export class Session {
     this.renderer.setRoom(art);
     this.renderer.particles.clear();
     this.room = new RoomRuntime(key, def, art, this.renderer, this.switches);
+    this.renderer.setAir(this.room.airflows());
     if (this.switches.get(`lights:${key}`) !== undefined) this.room.lightsOn = this.switches.get(`lights:${key}`)!;
     this.roomsVisited.add(key);
     this.roomDamage0 = this.plane ? structural(this.plane.damage) : 0;
@@ -704,6 +709,7 @@ export class Session {
     const art = this.artFor(key);
     this.renderer.setRoom(art);
     this.room = new RoomRuntime(key, def, art, this.renderer, this.switches);
+    this.renderer.setAir(this.room.airflows());
   }
 
   // ------------------------------------------------------------------------------------------

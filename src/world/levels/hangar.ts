@@ -4,6 +4,8 @@ import type { LevelDef } from '../../game/level';
 import type { ItemDef, RoomDef } from '../types';
 
 export const HANGAR_BAYS = 8;
+/** Where the plane leaves the launcher in bay 1: the floor markers count metres from here. */
+export const HANGAR_START_X = 76;
 
 export function hangarBay(i: number, extra: ItemDef[] = []): RoomDef {
   const items: ItemDef[] = [
@@ -12,7 +14,7 @@ export function hangarBay(i: number, extra: ItemDef[] = []): RoomDef {
     { t: 'hangarWindow', x: 70, y: 74, w: 200, h: 74 },
     { t: 'hangarWindow', x: 370, y: 74, w: 200, h: 74 },
     { t: 'baySign', x: 290, y: 176, label: `BAY ${i + 1}` },
-    { t: 'markers', x: 0, y: 0, startM: i * 5 },
+    { t: 'markers', x: 0, y: 0, startM: i * 5, offset: -HANGAR_START_X },
   ];
   if (i === 0) items.push({ t: 'launcher', x: 40, y: 200 });
   return {
@@ -38,7 +40,7 @@ export function hangarLevel(extras: Record<number, ItemDef[]> = {}): LevelDef {
     name: 'Test Hangar',
     place: 'hangar',
     rooms,
-    start: { room: '0,0', x: 76, y: 176, facing: 1 },
+    start: { room: '0,0', x: HANGAR_START_X, y: 176, facing: 1 },
     sheets: 99,
     par: 0,
   };

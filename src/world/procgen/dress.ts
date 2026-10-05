@@ -86,11 +86,14 @@ export function dress(inp: DressInput): Scene {
     const span = io.exitSpan;
     const w = rng.pick([80, 88, 96]);
     const y = span.from + 8;
-    const x = dirX > 0 ? 628 - w : 12;
+    // clear of the side wall: the casing is 8 px wide and the open leaf swings 10 px out
+    const x = dirX > 0 ? 628 - w - 14 : 12 + 14;
     const door: ItemDef = { t: 'frontDoor', x, y, w, h: span.to - y };
     if (dirX < 0) door.flip = true;
     scene.addFixed(door, 'frontDoor');
-    scene.reservedWall.push({ x: x - 10, y: y - 12, w: w + 30, h: 240 });
+    scene.reservedWall.push({ x: x - 14, y: y - 12, w: w + 28, h: 240 });
+    // and nothing stands in front of it
+    scene.reservedFloor.push({ x0: x - 14, x1: x + w + 14 });
   }
 
   // ---- the first room: furniture under the launch point

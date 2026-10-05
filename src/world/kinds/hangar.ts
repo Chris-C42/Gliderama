@@ -54,6 +54,7 @@ export const markersKind: KindDef = {
   paint(px, it) {
     const startM = num(it.startM, 0);
     const y0 = LAYOUT.wallBase + 6;
+    // `offset` shifts the zero mark (a negative offset puts 0 m at the launch point)
     for (let k = 0; k < 6; k++) {
       const x = Math.round(k * 128 - (num(it.offset, 0) % 128));
       if (x < 0 || x > 640) continue;
@@ -79,12 +80,20 @@ export const baySignKind: KindDef = {
 
 export const hazardStripeKind: KindDef = {
   z: 0,
-  paint(px) {
+  paint(px, _it, room) {
     const y = LAYOUT.baseboard;
-    for (let x = 0; x < 640; x += 16) {
+    // runs along the back wall only: it stops at the side walls (an open hangar side has none)
+    const x0 = room.open && room.exits.left ? 0 : LAYOUT.sideWall;
+    const x1 = room.open && room.exits.right ? 640 : 640 - LAYOUT.sideWall;
+    px.ctx.save();
+    px.ctx.beginPath();
+    px.ctx.rect(x0, y, x1 - x0, 10);
+    px.ctx.clip();
+    for (let x = x0 - 16; x < x1; x += 16) {
       px.poly([[x, y], [x + 8, y], [x + 18, y + 10], [x + 10, y + 10]], R.mustard[4]);
       px.poly([[x + 8, y], [x + 16, y], [x + 26, y + 10], [x + 18, y + 10]], R.ink[1]);
     }
+    px.ctx.restore();
   },
 };
 

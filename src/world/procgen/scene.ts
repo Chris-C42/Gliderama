@@ -6,7 +6,7 @@
 import type { Rng } from '../../core/rng';
 import { KINDS } from '../kinds';
 import { LAYOUT, type ItemDef, type RoomDef } from '../types';
-import { CATALOG, CANDLE, boxOf, floorY, surfaceOf } from './catalog';
+import { CATALOG, CANDLE, boxOf, floorY, surfaceOf, wallAboveOf } from './catalog';
 import { Band, overlaps, translate, unionX } from './geom';
 import type { Where } from './themes';
 import type { Box } from './types';
@@ -232,6 +232,8 @@ export class Scene {
     const pick = this.rng.weighted(cands.map((c) => ({ item: c, w: c.w })));
     item.x = pick.x - u0.x0; // the collider union then starts at pick.x
     const p = this.register(item, spec.tag, { removable: spec.removable ?? true });
+    const above = wallAboveOf(item);
+    if (above) this.reservedWall.push(above);
     p.span = { x0: pick.x, x1: pick.x + width };
     const s = surfaceOf(item);
     if (s) this.surfaces.push({ host: p, x0: s.x0, x1: s.x1, top: s.top, used: [] });
@@ -310,8 +312,8 @@ export class Scene {
         if (this.reservedWall.some((rw) => overlaps(box, rw, 4))) continue;
         // clear of tall furniture (and what stands on it) by 6 px
         if (tops.some((t) => box.x < t.x1 + 6 && t.x0 < box.x + box.w + 6 && box.y + box.h > t.top - 6)) continue;
-        // the solid sill of a window must be out of the plane's way
-        if (spec.kind === 'window' && !this.boxesOf(item).every((b) => this.band.clear(b, 14, 14))) continue;
+        // anything solid on the wall (a window's sill, a cottage window's flower box) must be out of the plane's way
+        if (!this.boxesOf(item).every((b) => this.band.clear(b, 14, 14))) continue;
         if (this.hitsLanding(item)) continue;
         cands.push({ x, y, w: this.scoreWall(box, spec, tops) });
       }

@@ -7,7 +7,7 @@
 import { neighbour, parseKey, type LevelDef } from '../../game/level';
 import { roomColliders } from '../colliders';
 import { LAYOUT, type ExitSpan, type ItemDef } from '../types';
-import { CANDLE, CATALOG, boxOf, sizeOf, surfaceOf } from './catalog';
+import { CANDLE, CATALOG, boxOf, sizeOf, surfaceOf, wallAboveOf } from './catalog';
 import { overlaps, unionX } from './geom';
 import { routeIO, traceRoute } from './route';
 import { KINDS } from '../kinds';
@@ -177,6 +177,10 @@ function validateRoom(level: LevelDef, key: string): string[] {
     if (wall[i].t !== 'frontDoor' && wall[i].t !== 'switchPlate' && (a.y < 26 || a.y + a.h > LAYOUT.dado + 2)) bad(`${wall[i].t} at (${wall[i].x}, ${wall[i].y}) is outside the wall band`);
     for (let j = i + 1; j < wall.length; j++) if (overlaps(a, boxOf(wall[j]), 0)) bad(`${wall[i].t} overlaps ${wall[j].t}`);
     for (const t of tops) if (a.x < t.x1 + 4 && t.x0 < a.x + a.w + 4 && a.y + a.h > t.top - 5 && wall[i].t !== 'frontDoor') bad(`${wall[i].t} hangs into the top of a piece of furniture`);
+    for (const it of items) {
+      const breast = wallAboveOf(it);
+      if (breast && overlaps(a, breast, 2)) bad(`${wall[i].t} is hidden by the chimney breast of the ${it.t}`);
+    }
   }
 
   // ---- dark rooms and their switch

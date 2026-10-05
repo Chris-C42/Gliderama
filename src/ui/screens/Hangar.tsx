@@ -11,7 +11,7 @@ import { settings } from '../../core/settings';
 import type { ThrowState } from '../../core/types';
 import type { Design } from '../../paper/design';
 import type { ItemDef } from '../../world/types';
-import { HANGAR_BAYS, hangarLevel } from '../../world/levels/hangar';
+import { HANGAR_BAYS, hangarLevel, HANGAR_START_X } from '../../world/levels/hangar';
 import { Icon } from '../icons';
 import { sfx } from '../../audio/bridge';
 import { HangarTests } from './HangarTests';
@@ -201,7 +201,7 @@ export function Hangar(props: { design?: Design }) {
         ambient.update(dt, session.ambience());
         // after a landing, go back to the launcher
         if (session.phase === 'aim' && session.checkpoint.room !== '0,0') {
-          session.checkpoint = { room: '0,0', x: 76, y: 176, facing: 1 };
+          session.checkpoint = { room: '0,0', x: HANGAR_START_X, y: 176, facing: 1 };
           session.beginAim();
         }
       },

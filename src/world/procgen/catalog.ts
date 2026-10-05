@@ -52,7 +52,17 @@ export interface CatalogEntry {
   pad?: Pad;
   /** Names of the `v` variants in the order the painter indexes them. */
   variants?: readonly string[];
+  /** Floor furniture that owns the wall above it up to the ceiling (a chimney breast), inset from its sides. */
+  wallAbove?: { inset: number };
   tags: readonly string[];
+}
+
+/** The wall a piece of furniture claims above itself (a fireplace's chimney breast), if any. */
+export function wallAboveOf(it: ItemDef): Box | null {
+  const e = CATALOG[it.t];
+  if (!e?.wallAbove) return null;
+  const { w } = sizeOf(it);
+  return { x: it.x + e.wallAbove.inset, y: 0, w: w - 2 * e.wallAbove.inset, h: it.y };
 }
 
 const WOOD3 = ['oak', 'walnut', 'pine'] as const;
@@ -132,6 +142,7 @@ export const CATALOG: Record<string, CatalogEntry> = {
     w: 170,
     h: 150,
     surface: { dx: -10, extra: 20, top: 0 },
+    wallAbove: { inset: 10 },
     tags: ['furniture', 'table', 'fire', 'lift', 'cottage'],
   },
   armchair: { kind: 'armchair', placement: 'floor', w: 96, h: 110, variants: ['rose', 'moss', 'plum', 'mustard'], tags: ['seat', 'furniture', 'cottage'] },

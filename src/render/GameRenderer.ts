@@ -9,6 +9,7 @@ import type { RoomArt } from './roomArt';
 import { createLightUniforms, createRoomMaterial, createSpriteMaterial, MAX_LIGHTS, nearestTexture, type LightUniforms } from './lit';
 import { PlaneView } from './PlaneView';
 import { Particles } from './particles';
+import { AirLines, type AirFlow } from './airLines';
 import type { Look } from '../paper/design';
 
 THREE.ColorManagement.enabled = false;
@@ -40,6 +41,7 @@ export class GameRenderer {
   readonly plane: PlaneView;
   readonly particles = new Particles();
   readonly sprites = new THREE.Group();
+  readonly air: AirLines;
   private guide: THREE.Points;
   private guidePos = new Float32Array(64 * 3);
   private guideCol = new Float32Array(64 * 4);
@@ -61,6 +63,8 @@ export class GameRenderer {
     this.roomMesh = new THREE.Mesh(new THREE.PlaneGeometry(640, 360), this.roomMat);
     this.roomMesh.position.set(320, 180, 0);
     this.scene.add(this.roomMesh);
+    this.air = new AirLines(this.lightU);
+    this.scene.add(this.air.points);
     this.scene.add(this.sprites);
     this.plane = new PlaneView(look);
     this.scene.add(this.plane.shadow);
@@ -148,6 +152,11 @@ export class GameRenderer {
     this.roomMat.uniforms.uGlow.value = this.glowTex;
   }
 
+  /** The current room's air currents (squiggly lines that end where the air stops). */
+  setAir(flows: AirFlow[]): void {
+    this.air.set(flows);
+  }
+
   setGlow(strength: number): void {
     this.roomMat.uniforms.uGlowStrength.value = strength;
   }
@@ -210,6 +219,7 @@ export class GameRenderer {
 
   render(time: number): void {
     this.lightU.uTime.value = time;
+    this.air.update(time);
     this.plane.render(this.renderer);
     this.renderer.setRenderTarget(null);
     this.renderer.setClearColor(0x120f18, 1);
@@ -218,6 +228,7 @@ export class GameRenderer {
 
   dispose(): void {
     this.clearSprites();
+    this.air.dispose();
     this.plane.dispose();
     this.albedoTex?.dispose();
     this.glowTex?.dispose();

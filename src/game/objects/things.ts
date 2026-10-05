@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { R } from '../../render/palette';
 import { Px } from '../../render/pixel';
 import { rgb } from '../../render/particles';
+import { fanOut } from './airflow';
 import type { ObjFactory } from './types';
 
 const num = (v: unknown, d: number) => (typeof v === 'number' ? v : d);
@@ -68,6 +69,10 @@ export const candle: ObjFactory = (def, id, gfx) => {
     },
     sound() {
       return { loop: 'fire', x: fx, y: fy - 6, vol: 0.4 };
+    },
+    airflow() {
+      // a thin plume from above the flame, petering out 140 px up
+      return [{ lines: fanOut(2, { x: fx - 2, y: fy - 15 }, { x: fx + 2, y: fy - 15 }, { x: fx - 6, y: fy - 140 }, { x: fx + 6, y: fy - 140 }), power: 1, warm: true, fade: 44 }];
     },
     lights() {
       return [light];

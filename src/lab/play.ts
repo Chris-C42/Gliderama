@@ -3,6 +3,7 @@ import { Session } from '../game/session';
 import { RECIPES } from '../paper/recipes';
 import { SAMPLE_LEVEL } from '../world/levels/sample';
 import { allLevels } from '../world/campaign';
+import { CHALLENGES } from '../modes/challenges';
 import type { ControlState, ThrowState } from '../core/types';
 
 const q = new URLSearchParams(location.search);
@@ -11,8 +12,15 @@ const hudEl = document.getElementById('hud')!;
 const recipe = RECIPES.find((r) => r.id === (q.get('plane') ?? 'dart'))!;
 const design = recipe.make();
 const renderer = new GameRenderer(canvas, design.look);
-// ?level=cottage-1 plays a campaign level
-const level = (q.get('level') && allLevels().find((l) => l.id === q.get('level'))?.build()) || SAMPLE_LEVEL;
+// &noair hides the air-current lines (for checking the art underneath)
+if (q.has('noair')) renderer.air.setVisible(false);
+// ?level=cottage-1 plays a campaign level, ?challenge=gale a Paper Lab challenge
+const level =
+  (q.get('level') && allLevels().find((l) => l.id === q.get('level'))?.build()) ||
+  (q.get('challenge') && CHALLENGES.find((c) => c.id === q.get('challenge'))?.level()) ||
+  SAMPLE_LEVEL;
+// &room=1,0 starts in another room of the level (for looking at its art and air)
+if (q.get('room') && level.rooms[q.get('room')!]) level.start = { ...level.start, room: q.get('room')! };
 const session = new Session(renderer, level, design, { autoTrim: q.has('autotrim'), slowMo: false }, {
   hud(h) {
     hudEl.textContent = `${h.roomName}  phase:${h.phase}  sheets:${h.sheets}  stars:${h.stars}/${h.starsTotal}  dmg:${h.damage}%  t:${h.time.toFixed(1)}\nV ${h.speed.toFixed(2)} m/s  α ${h.alpha.toFixed(1)}°  L/D ${h.ld.toFixed(1)} ${h.stall > 0.5 ? 'STALL' : ''}  ${h.message ?? ''}`;

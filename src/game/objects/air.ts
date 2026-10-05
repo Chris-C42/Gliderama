@@ -4,6 +4,7 @@ import { R } from '../../render/palette';
 import { Px } from '../../render/pixel';
 import { rgb } from '../../render/particles';
 import { LAYOUT } from '../../world/types';
+import { fanOut, lerp, lineCount } from './airflow';
 import type { ObjFactory } from './types';
 
 const num = (v: unknown, d: number) => (typeof v === 'number' ? v : d);
@@ -42,6 +43,16 @@ export const floorVent: ObjFactory = (def, id) => {
     on: true,
     sound() {
       return this.on ? { loop: 'vent', x: def.x + w / 2, y: baseY, vol: Math.min(1, 0.45 + power / 8) } : null;
+    },
+    airflow() {
+      // from the grille up to `reach` (or out of the top of the room), widening like the column does
+      const yEnd = Math.max(top, 0);
+      const sp = 30 + (baseY - yEnd) * flare;
+      const a = def.x - sp;
+      const b = def.x + w + sp;
+      const n = lineCount((w * 0.76 + (b - a) * 0.56) / 2, 30, 2, 6);
+      const lines = fanOut(n, { x: def.x + w * 0.12, y: baseY }, { x: def.x + w * 0.88, y: baseY }, { x: lerp(a, b, 0.22), y: yEnd }, { x: lerp(a, b, 0.78), y: yEnd });
+      return [{ lines, power, on: group ? () => this.on : undefined }];
     },
     update(ctx) {
       if (group) this.on = ctx.api.switchOn(group);
@@ -88,6 +99,14 @@ export const ceilingVent: ObjFactory = (def, id) => {
     },
     sound() {
       return { loop: 'vent', x: def.x + w / 2, y: y0, vol: 0.5 };
+    },
+    airflow() {
+      const yEnd = Math.min(bottom, 360);
+      const sp = 6 + (yEnd - y0) * 0.12;
+      const a = def.x - sp;
+      const b = def.x + w + sp;
+      const n = lineCount((w * 0.76 + (b - a) * 0.6) / 2, 26, 2, 5);
+      return [{ lines: fanOut(n, { x: def.x + w * 0.12, y: y0 + 5 }, { x: def.x + w * 0.88, y: y0 + 5 }, { x: lerp(a, b, 0.2), y: yEnd }, { x: lerp(a, b, 0.8), y: yEnd }), power }];
     },
     update(ctx) {
       acc += ctx.dt * (5 + w * 0.1);
@@ -167,6 +186,17 @@ export const deskFan: ObjFactory = (def, id, gfx) => {
     sound() {
       return on ? { loop: 'fan', x: cx, y: cy, vol: Math.min(1, 0.5 + power / 8) } : null;
     },
+    airflow() {
+      // a widening cone from the blades out to `reach` (or the edge of the room); it dies away towards the end
+      const dxEnd = Math.min(reach, dir > 0 ? 640 - cx : cx);
+      const h0 = 0.55 * (14 + 15 * 0.32);
+      const h1 = 0.55 * (14 + dxEnd * 0.32);
+      const n = lineCount(h1 * 1.2, 30, 3, 5);
+      const x0 = cx + dir * 15;
+      const x1 = cx + dir * dxEnd;
+      const lines = fanOut(n, { x: x0, y: cy - h0 }, { x: x0, y: cy + h0 }, { x: x1, y: cy - h1 }, { x: x1, y: cy + h1 });
+      return [{ lines, power, fade: dxEnd < reach ? 0 : Math.min(48, reach * 0.2), on: group ? () => on : undefined }];
+    },
     update(ctx) {
       if (group) on = ctx.api.switchOn(group);
       if (on) angle += ctx.dt * 30;
@@ -222,6 +252,13 @@ export const radiator: ObjFactory = (def, id) => {
     sound() {
       return { loop: 'vent', x: def.x + w / 2, y: baseY, vol: 0.22 };
     },
+    airflow() {
+      const yEnd = LAYOUT.ceiling;
+      const g = (baseY - yEnd) * 0.08;
+      const n = lineCount(w * 0.7, 32, 2, 5);
+      const lines = fanOut(n, { x: lerp(def.x - 4, def.x + w + 4, 0.16), y: baseY - 2 }, { x: lerp(def.x - 4, def.x + w + 4, 0.84), y: baseY - 2 }, { x: lerp(def.x - 4 - g, def.x + w + 4 + g, 0.2), y: yEnd }, { x: lerp(def.x - 4 - g, def.x + w + 4 + g, 0.8), y: yEnd });
+      return [{ lines, power, warm: true }];
+    },
     update(ctx) {
       acc += ctx.dt * 5;
       while (acc > 1) {
@@ -251,6 +288,16 @@ export const draft: ObjFactory = (def, id) => {
     },
     sound() {
       return { loop: 'vent', x: def.x + w / 2, y: Math.min(y0, 330), vol: 0.3 };
+    },
+    airflow() {
+      // no fixture: the lines rise out of the floor (or the room below) and fade where the draft tapers off
+      const yStart = Math.min(y0, 360);
+      const yEnd = Math.max(top, 0);
+      const a = def.x - 12;
+      const b = def.x + w + 12;
+      const n = lineCount((b - a) * 0.64, 34, 2, 5);
+      const lines = fanOut(n, { x: lerp(a, b, 0.18), y: yStart }, { x: lerp(a, b, 0.82), y: yStart }, { x: lerp(a, b, 0.18), y: yEnd }, { x: lerp(a, b, 0.82), y: yEnd });
+      return [{ lines, power, warm: true, fade: top > 0 ? 56 : 0 }];
     },
     update(ctx) {
       acc += ctx.dt * w * 0.08;

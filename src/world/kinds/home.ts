@@ -158,9 +158,18 @@ export const bedKind: KindDef = {
     const fb = 14;
     px.box(x + w - fb, y + 44, fb, h - 44, 4, wood);
     px.ellipse(x + w - fb / 2, y + 44, fb / 2, 4, wood[5]);
-    // mattress edge
-    px.rect(x + hb, mattTop, w - hb - fb, 12, '#efe8dc');
-    px.hline(x + hb, mattTop, w - hb - fb, '#ffffff');
+    // side rail under the mattress, and the dark space beneath the bed
+    const inner = w - hb - fb;
+    const rail = mattTop + 12;
+    px.dither(x + hb, rail + 9, inner, y + h - rail - 9, R.ink[1], 0.5);
+    px.rect(x + hb, rail, inner, 9, wood[3]);
+    px.hline(x + hb, rail, inner, wood[5]);
+    px.hline(x + hb, rail + 8, inner, wood[1]);
+    // mattress: a white sheet with a crisp outline, so it reads against pale walls
+    px.rect(x + hb, mattTop, inner, 12, '#f6f3ec');
+    px.hline(x + hb, mattTop, inner, '#ffffff');
+    px.hline(x + hb, mattTop + 11, inner, '#b8b0a2');
+    px.dither(x + hb, mattTop + 8, inner, 3, '#d6d0c4', 0.5);
     // pillow
     px.ellipse(x + hb + 26, mattTop - 6, 24, 10, '#d9d2c6');
     px.ellipse(x + hb + 25, mattTop - 8, 22, 8, '#f8f4ec');
@@ -319,10 +328,6 @@ export const deskLampKind: KindDef = {
     px.line(x + 2, y + 18, x + 16, y + 24, '#fff4c0');
     px.line(x + 3, y + 19, x + 15, y + 23, '#ffe6a0');
   },
-  glow(px, it) {
-    px.line(it.x + 2, it.y + 18, it.x + 16, it.y + 24, '#fff4c0');
-    px.line(it.x + 3, it.y + 19, it.x + 15, it.y + 23, '#ffe6a0');
-  },
   colliders(it) {
     return [
       { x: it.x + 2, y: it.y + 4, w: 20, h: 20 },
@@ -330,6 +335,7 @@ export const deskLampKind: KindDef = {
     ];
   },
   lights(it) {
+    // a switched light has no glow: a lamp that is off must not shine in a dark room
     return [{ x: it.x + 10, y: it.y + 34, r: 90, color: '#ffd890', intensity: 0.9, switched: true }];
   },
 };
@@ -358,17 +364,13 @@ export const pendantLampKind: KindDef = {
     px.hline(x - 18, sy + 16, 37, c[2]);
     px.ellipse(x, sy + 18, 4, 2, '#fff8d8');
   },
-  glow(px, it) {
-    const sy = LAYOUT.ceiling + 2 + num(it.len, 60);
-    px.ellipse(it.x, sy + 18, 4, 2, '#fff8d8');
-    px.hline(it.x - 17, sy + 16, 35, '#ffe7a0');
-  },
   colliders(it) {
     const sy = LAYOUT.ceiling + 2 + num(it.len, 60);
     return [{ x: it.x - 18, y: sy, w: 37, h: 17 }];
   },
   lights(it) {
     const sy = LAYOUT.ceiling + 2 + num(it.len, 60);
+    // switched, so no glow (see the desk lamp)
     return [{ x: it.x, y: sy + 30, r: 230, color: '#ffe2a8', intensity: 1.0, switched: true }];
   },
 };
@@ -813,38 +815,64 @@ export const fanStandKind: KindDef = {
 };
 
 /** An open front door with daylight beyond: the classic level exit. */
+/**
+ * The way out: an open door in the back wall. Its threshold sits where the wall meets the floor (whatever
+ * `h` says), with a step and a doormat on the floor in front, so it lines up with the room around it.
+ */
+export function doorBottom(it: ItemDef): number {
+  return Math.min(it.y + H(it, 226), LAYOUT.wallBase);
+}
+
 export const frontDoorKind: KindDef = {
   z: 0,
   paint(px, it, room) {
     const w = W(it, 96);
-    const h = H(it, 226);
     const { x, y } = it;
+    const bot = doorBottom(it);
+    const h = bot - y;
     const trim = R[room.wall.trim];
+    // casing: head and jambs, down to the floor
     px.rect(x - 8, y - 8, w + 16, h + 8, trim[trim.length - 2]);
     px.frame(x - 8, y - 8, w + 16, h + 8, trim[1]);
     px.hline(x - 8, y - 8, w + 16, trim[trim.length - 1]);
-    // daylight outside: sky, garden path
+    px.vline(x - 1, y, h, trim[1]);
+    px.vline(x + w, y, h, trim[1]);
+    // daylight outside: sky, a lawn and the garden path running up to the step
     px.vgrad(x, y, w, h, [R.sky[3], R.sky[4], R.sky[5], '#fff6dc']);
-    px.rect(x, y + h - 40, w, 40, R.moss[4]);
-    px.poly([[x + w * 0.35, y + h - 40], [x + w * 0.65, y + h - 40], [x + w, y + h], [x, y + h]], R.cream[3]);
-    px.ellipse(x + 20, y + h - 46, 14, 10, R.leaf[3]);
-    // open door leaf, hinged on the side away from the room (`flip` for doors on the left wall)
+    const lawn = Math.min(40, Math.round(h * 0.24));
+    px.rect(x, bot - lawn, w, lawn, R.moss[4]);
+    px.dither(x, bot - lawn, w, 3, R.moss[2], 0.4);
+    px.poly([[x + w * 0.4, bot - lawn], [x + w * 0.6, bot - lawn], [x + w * 0.86, bot], [x + w * 0.14, bot]], R.cream[3]);
+    px.ellipse(x + 20, bot - lawn - 6, 14, 10, R.leaf[3]);
+    px.ellipse(x + 18, bot - lawn - 8, 9, 6, R.leaf[4]);
+    // stone step across the threshold
+    px.rect(x - 8, bot - 3, w + 16, 4, R.stone[3]);
+    px.hline(x - 8, bot - 3, w + 16, R.stone[5]);
+    px.hline(x - 8, bot, w + 16, R.stone[1]);
+    // doormat on the floor in front, in perspective
+    const my = LAYOUT.wallBase + 4;
+    px.poly([[x + 12, my], [x + w - 12, my], [x + w - 6, my + 9], [x + 6, my + 9]], R.mustard[2]);
+    px.poly([[x + 15, my + 2], [x + w - 15, my + 2], [x + w - 10, my + 7], [x + 10, my + 7]], R.mustard[3]);
+    px.dither(x + 14, my + 2, w - 28, 5, R.mustard[1], 0.25);
+    // open door leaf, hinged on the side away from the room (`flip` for doors on the left)
     const door = pickRamp(it, [R.red, R.teal, R.navy]);
     if (it.flip) {
-      px.poly([[x + 4, y], [x - 10, y + 10], [x - 10, y + h - 4], [x + 4, y + h]], door[3]);
+      px.poly([[x + 4, y], [x - 10, y + 10], [x - 10, bot - 4], [x + 4, bot]], door[3]);
       px.line(x + 4, y, x - 10, y + 10, door[5]);
+      px.line(x - 10, y + 10, x - 10, bot - 4, door[2]);
       px.rect(x - 7, y + h / 2, 3, 6, R.brass[4]);
     } else {
-      px.poly([[x + w - 4, y], [x + w + 10, y + 10], [x + w + 10, y + h - 4], [x + w - 4, y + h]], door[3]);
+      px.poly([[x + w - 4, y], [x + w + 10, y + 10], [x + w + 10, bot - 4], [x + w - 4, bot]], door[3]);
       px.line(x + w - 4, y, x + w + 10, y + 10, door[5]);
+      px.line(x + w + 10, y + 10, x + w + 10, bot - 4, door[2]);
       px.rect(x + w + 4, y + h / 2, 3, 6, R.brass[4]);
     }
   },
   glow(px, it) {
-    px.rect(it.x, it.y, W(it, 96), H(it, 226), '#e8f2ff');
+    px.rect(it.x, it.y, W(it, 96), doorBottom(it) - it.y, '#e8f2ff');
   },
   lights(it) {
-    return [{ x: it.x + W(it, 96) / 2, y: it.y + H(it, 226) / 2, r: 240, color: '#fff2d8', intensity: 0.8 }];
+    return [{ x: it.x + W(it, 96) / 2, y: (it.y + doorBottom(it)) / 2, r: 240, color: '#fff2d8', intensity: 0.8 }];
   },
 };
 
@@ -960,7 +988,7 @@ export const radiatorKind: KindDef = {
     return [{ x: it.x, y: it.y, w: W(it, 90), h: H(it, 56) }];
   },
   lights(it) {
-    return [{ x: it.x + W(it, 90) / 2, y: it.y, r: 70, color: '#ffb880', intensity: 0.25 }];
+    return [{ x: it.x + W(it, 90) / 2, y: it.y, r: 60, color: '#ffb880', intensity: 0.14 }];
   },
 };
 

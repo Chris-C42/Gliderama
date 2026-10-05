@@ -77,8 +77,10 @@ export function threadTheNeedle(): LevelDef {
 /** Distance: a 20 m hall with gentle radiator thermals. */
 export function longHall(): LevelDef {
   const rooms: Record<string, RoomDef> = {};
+  const start = fromLauncher(30, 110);
   for (let i = 0; i < 4; i++) {
-    const items: ItemDef[] = [...windows(110, 400), { t: 'markers', x: 0, y: 0, startM: i * 5 }];
+    // the markers count metres from the launch point, as the distance goal does
+    const items: ItemDef[] = [...windows(110, 400), { t: 'markers', x: 0, y: 0, startM: i * 5, offset: -start.x }];
     if (i === 0) items.push(launcher(30, 110));
     if (i === 1 || i === 2) items.push({ t: 'radiator', x: 270, y: 284, w: 110 });
     rooms[`${i},0`] = lab(`hall-${i}`, `Paper Lab · Long Hall ${i + 1}`, items, {
@@ -87,7 +89,7 @@ export function longHall(): LevelDef {
       seed: 720 + i,
     });
   }
-  return level('long-hall', 'Long Hall', rooms, fromLauncher(30, 110), 'Glide as far down the hall as you can.');
+  return level('long-hall', 'Long Hall', rooms, start, 'Glide as far down the hall as you can.');
 }
 
 /** Endurance: stay up over two vents. */

@@ -36,17 +36,25 @@ function bricks(px: Px, x: number, y: number, w: number, h: number, ramp: Ramp, 
 
 export const fireplaceKind: KindDef = {
   z: 1,
-  paint(px, it) {
+  paint(px, it, room) {
     const w = W(it, 170);
     const h = H(it, 150);
     const { x, y } = it;
     const wood = R.walnut;
     floorShadow(px, x - 10, w + 20);
-    // the chimney breast stands proud of the wall: just its edges and a shadow down one side
-    const top = LAYOUT.ceiling;
-    px.dither(x + w - 10, top, 6, y - top, R.ink[1], 0.35);
-    px.vline(x + 10, top, y - top, 'rgba(255,255,255,0.35)');
-    px.vline(x + w - 11, top, y - top, 'rgba(20,16,25,0.45)');
+    // the chimney breast stands proud of the wall up to the ceiling: plain lime-washed plaster in the
+    // wall's colour, lit on the left, a shadow cast down the right
+    const top = LAYOUT.ceiling + 2;
+    const b = R[room.wall.base];
+    const bx = x + 10;
+    const bw = w - 20;
+    px.rect(bx, top, bw, y - top, b[b.length - 2]);
+    px.speckle(bx, top, bw, y - top, [b[b.length - 3]], 0.02);
+    px.dither(bx, top, bw, 8, R.ink[1], 0.3);
+    px.vline(bx, top, y - top, b[b.length - 1]);
+    px.dither(bx + 1, top, 2, y - top, b[b.length - 1], 0.5);
+    px.vline(bx + bw - 1, top, y - top, b[Math.max(0, b.length - 4)]);
+    px.dither(bx + bw, top, 5, y - top, R.ink[1], 0.4);
     // brick surround
     bricks(px, x, y + 10, w, h - 10, R.red, R.cream[1]);
     px.frame(x, y + 10, w, h - 10, R.red[0]);

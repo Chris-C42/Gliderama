@@ -4,7 +4,8 @@ import { R } from '../../render/palette';
 import { Px } from '../../render/pixel';
 import { rgb } from '../../render/particles';
 import { LAYOUT } from '../../world/types';
-import type { ObjFactory } from './types';
+import { fanOut, lerp } from './airflow';
+import type { AirFlow, ObjFactory } from './types';
 
 const num = (v: unknown, d: number) => (typeof v === 'number' ? v : d);
 const smoke = rgb('#cfc8c0');
@@ -85,6 +86,12 @@ export const fireplace: ObjFactory = (def, id, gfx) => {
     },
     sound() {
       return { loop: 'fire', x: def.x + w / 2, y: fy + fh / 2, vol: 0.85 };
+    },
+    airflow() {
+      // warm air off the whole chimney breast, from the mantel shelf to the ceiling
+      const a = def.x - 14;
+      const b = def.x + w + 14;
+      return [{ lines: fanOut(5, { x: lerp(a, b, 0.16), y: def.y - 1 }, { x: lerp(a, b, 0.84), y: def.y - 1 }, { x: lerp(a, b, 0.16), y: LAYOUT.ceiling }, { x: lerp(a, b, 0.84), y: LAYOUT.ceiling }), power, warm: true }];
     },
     dispose() {
       sprite?.dispose();
@@ -352,6 +359,16 @@ export const kettle: ObjFactory = (def, id) => {
     sound() {
       return { loop: 'vent', x: sx, y: sy - 30, vol: 0.35 };
     },
+    airflow() {
+      // the jet leans away from the spout as it rises and dies away at `reach`
+      const yEnd = Math.max(sy - reach, 0);
+      const d1 = sy - yEnd;
+      const h0 = 0.5 * (9 + 2 * 0.3);
+      const h1 = 0.5 * (9 + d1 * 0.3);
+      const c0 = sx + 2 * 0.12;
+      const c1 = sx + d1 * 0.12;
+      return [{ lines: fanOut(3, { x: c0 - h0, y: sy - 2 }, { x: c0 + h0, y: sy - 2 }, { x: c1 - h1, y: yEnd }, { x: c1 + h1, y: yEnd }), power, fade: 50 }];
+    },
   };
 };
 
@@ -436,5 +453,22 @@ export const stove: ObjFactory = (def, id, gfx, room) => {
     trigger: steam?.trigger,
     onTouch: steam?.onTouch,
     sound: () => ({ loop: 'vent', x: def.x + w / 2, y: def.y - 20, vol: 0.4 }),
+    airflow() {
+      // warm air off the hob; lines start above the kettle and the stovepipe rather than through them
+      const a = def.x - 12;
+      const b = def.x + w + 12;
+      const lines = [0.18, 0.39, 0.61, 0.82].map((u) => {
+        const x = lerp(a, b, u);
+        let y0 = def.y - 3;
+        if (steam && x > def.x + 4 && x < def.x + 40) y0 = def.y - 30;
+        if (x > def.x + w - 32 && x < def.x + w - 13) y0 = def.y - 56;
+        return [
+          { x, y: y0 },
+          { x, y: LAYOUT.ceiling },
+        ];
+      });
+      const flows: AirFlow[] = [{ lines, power, warm: true }];
+      return steam?.airflow ? flows.concat(steam.airflow()) : flows;
+    },
   };
 };

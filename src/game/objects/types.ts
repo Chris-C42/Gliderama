@@ -1,4 +1,5 @@
 import type { ActiveLight, SpriteHandle } from '../../render/GameRenderer';
+import type { AirFlow } from '../../render/airLines';
 import type { Particle } from '../../render/particles';
 import type { Collider, ItemDef, Rect } from '../../world/types';
 
@@ -63,8 +64,12 @@ export interface GameObject {
   lights?(): ActiveLight[];
   /** Ambient sound source (room px) for the mixer, or null when silent. */
   sound?(): AmbientSound | null;
+  /** The shape of this object's air current, drawn as squiggly lines that end where the wind ends. */
+  airflow?(): AirFlow[];
   dispose?(): void;
 }
+
+export type { AirFlow };
 
 export interface AmbientSound {
   loop: 'vent' | 'fan' | 'fire';
