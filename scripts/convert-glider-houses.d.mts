@@ -9,4 +9,8 @@ export function convertHouse(
   house: GPHouse,
   rsrc: Record<string, Resource[] | { id: number; data: ArrayLike<number> }[]>,
   file?: string,
+  pictures?: Record<string, unknown> | null,
 ): Record<string, unknown>;
+
+/** What each room looks like in the original, in a few numbers ({ [room index]: summary }). */
+export function pictureSummary(house: GPHouse, rsrc: Record<string, Resource[]>, builtin?: Record<string, Resource[]>): Record<string, unknown>;

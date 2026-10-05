@@ -16,6 +16,7 @@ import { paintRoom, type RoomArt } from '../render/roomArt';
 import type { ActiveLight, GameRenderer } from '../render/GameRenderer';
 import { rgb } from '../render/particles';
 import { OBJECTS } from './objects';
+import { TRANSPORT_REST } from './objects/classic';
 import type { AirFlow, GameObject, ObjCtx, SessionApi, WindOut } from './objects/types';
 import { bounds, polyVsBox, profileHull, surfaceBelow, type V } from './collide';
 import { countStars, entryCheckpoint, goalStarIds, neighbour, type LevelDef } from './level';
@@ -236,6 +237,8 @@ export class Session {
   private flight = { x0: 0, y0: 0, t0: 0, maxH: 0, path: [] as { x: number; y: number }[], k: 0 };
   /** The hover assist, while it is circling the plane. */
   private hover: HoverPilot | null = null;
+  /** When the plane last came out of a transport (it may come out inside another one's mouth). */
+  private transportedAt = -Infinity;
 
   constructor(
     readonly renderer: GameRenderer,
@@ -377,6 +380,9 @@ export class Session {
     },
     transport: (toRoom, x, y, facing) => {
       if (this.phase !== 'fly' || !this.level.rooms[toRoom]) return;
+      // just out of one: not straight back into the next (linked transports often face each other)
+      if (this.time - this.transportedAt < TRANSPORT_REST) return;
+      this.transportedAt = this.time;
       this.arriveAt(toRoom, x, y, facing);
       this.sfx('stairsUp', { pitch: 4 });
     },

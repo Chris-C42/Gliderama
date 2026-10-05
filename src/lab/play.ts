@@ -114,17 +114,19 @@ w.__hold = (code: string, ms: number) => {
   setTimeout(() => keys.delete(code), ms);
 };
 
-// __autopilot(plan) replays flights tick for tick: { stepTicks, flights: [{ angle, power, steps: [{ dir, pitch }] }] }
+// __autopilot(plan) replays flights tick for tick: { flights: [{ angle, power, stepTicks, steps: [{ dir, pitch }] }] }
 // (the bot pilot's solutions, tests/helpers/houseSolver.ts); __pilotLog collects what happened
 interface PilotFlight {
   from?: { room: string; x: number; y: number };
   angle: number;
   power: number;
+  /** Game ticks per entry of `steps`. */
+  stepTicks: number;
   steps: { dir: -1 | 0 | 1; pitch: number }[];
 }
-let pilot: { stepTicks: number; flights: PilotFlight[]; i: number; tick: number; thrown: boolean } | null = null;
+let pilot: { flights: PilotFlight[]; i: number; tick: number; thrown: boolean } | null = null;
 w.__pilotLog = [] as string[];
-w.__autopilot = (plan: { stepTicks: number; flights: PilotFlight[] }) => {
+w.__autopilot = (plan: { flights: PilotFlight[] }) => {
   pilot = { ...plan, i: 0, tick: 0, thrown: false };
 };
 function drive() {
@@ -143,7 +145,7 @@ function drive() {
     p.thrown = true;
     p.tick = 0;
   } else if (session.phase === 'fly' && p.thrown) {
-    const s = f.steps[Math.floor(p.tick / p.stepTicks)];
+    const s = f.steps[Math.floor(p.tick / f.stepTicks)];
     if (s) {
       ctl.dir = s.dir;
       ctl.pitch = s.pitch;

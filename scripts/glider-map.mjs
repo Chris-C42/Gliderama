@@ -10,6 +10,8 @@
  * proportions within ~15 % and every original height has a Gliderama height.
  */
 
+import fs from 'node:fs';
+
 // ---------------------------------------------------------------------------------------------
 // Geometry
 
@@ -61,28 +63,34 @@ export const AIR = {
 };
 
 // ---------------------------------------------------------------------------------------------
-// Backgrounds → looks. Built-in backgrounds 2000-2017; custom (house) backgrounds >= 3000 get an indoor look
-// picked by their id, or an outdoor one when the room is not a structure.
+// Backgrounds → looks. The built-in backgrounds 2000-2017 have a look each, after the game's own pictures
+// (PICT 2000-2017 in Glider PRO.r). A house's own background pictures (>= 3000) get the closest look to their
+// colours (pictureLook below); without the picture, an indoor look picked by the picture's id, or the outdoors
+// when the room is not a structure. `solid`: the colour of the room's obstacles (unless the picture says).
 
 const wall = (pattern, base, accent, wainscot, trim) => ({ pattern, base, accent, wainscot, trim });
 
 export const LOOKS = {
-  simpleRoom: { wall: wall('pinstripe', 'cream', 'stone', null, 'cream'), floor: { kind: 'planks', ramp: 'oak' } },
-  paneledRoom: { wall: wall('plain', 'pine', 'oak', 'walnut', 'oak'), floor: { kind: 'carpet', ramp: 'red' } },
-  basement: { wall: wall('brick', 'stone', 'stone', null, 'stone'), floor: { kind: 'concrete', ramp: 'stone' } },
-  childsRoom: { wall: wall('planes', 'sky', 'navy', 'cream', 'cream'), floor: { kind: 'planks', ramp: 'pine' } },
-  asianRoom: { wall: wall('diamonds', 'red', 'mustard', null, 'walnut'), floor: { kind: 'tiles', ramp: 'mustard' } },
-  unfinishedRoom: { wall: wall('boards', 'pine', 'oak', null, 'pine'), floor: { kind: 'planks', ramp: 'pine' } },
-  swingersRoom: { wall: wall('dots', 'plum', 'mustard', null, 'cream'), floor: { kind: 'carpet', ramp: 'mustard' } },
-  bathroom: { wall: wall('tile', 'teal', 'stone', null, 'cream'), floor: { kind: 'checker', ramp: 'stone', accent: 'navy' } },
-  library: { wall: wall('damask', 'moss', 'mustard', 'walnut', 'cream'), floor: { kind: 'carpet', ramp: 'plum' } },
-  skywalk: { wall: wall('corrugated', 'steel', 'steel', null, 'steel'), floor: { kind: 'concrete', ramp: 'steel' } },
-  dirt: { wall: wall('plain', 'walnut', 'oak', null, 'walnut'), floor: { kind: 'stone', ramp: 'walnut' } },
+  simpleRoom: { wall: wall('plain', 'cream', 'mustard', null, 'cream'), floor: { kind: 'planks', ramp: 'oak' }, solid: 'oak' },
+  paneledRoom: { wall: wall('plain', 'stone', 'stone', 'walnut', 'oak'), floor: { kind: 'planks', ramp: 'oak' }, solid: 'walnut' },
+  basement: { wall: wall('brick', 'ink', 'stone', null, 'stone'), floor: { kind: 'concrete', ramp: 'stone' }, solid: 'stone' },
+  childsRoom: { wall: wall('planes', 'sky', 'mustard', null, 'cream'), floor: { kind: 'carpet', ramp: 'navy' }, solid: 'pine' },
+  asianRoom: { wall: wall('floral', 'cream', 'leaf', null, 'walnut'), floor: { kind: 'carpet', ramp: 'moss' }, solid: 'walnut' },
+  unfinishedRoom: { wall: wall('boards', 'pine', 'oak', null, 'pine'), floor: { kind: 'planks', ramp: 'pine' }, solid: 'pine' },
+  swingersRoom: { wall: wall('damask', 'red', 'red', null, 'cream'), floor: { kind: 'carpet', ramp: 'red' }, solid: 'walnut' },
+  bathroom: { wall: wall('tile', 'stone', 'sky', null, 'cream'), floor: { kind: 'checker', ramp: 'stone', accent: 'navy' }, solid: 'stone' },
+  library: { wall: wall('boards', 'oak', 'walnut', 'walnut', 'oak'), floor: { kind: 'carpet', ramp: 'navy' }, solid: 'walnut' },
+  // a covered walkway: windows above, wood below
+  skywalk: { wall: wall('plain', 'sky', 'sky', 'oak', 'oak'), floor: { kind: 'planks', ramp: 'oak' }, solid: 'oak' },
+  dirt: { wall: wall('plain', 'walnut', 'oak', null, 'walnut'), floor: { kind: 'stone', ramp: 'walnut' }, solid: 'walnut' },
   /** Outdoors: the wall is hidden behind the sky backdrop; the floor is grass. */
-  outdoors: { wall: wall('plain', 'sky', 'sky', null, 'cream'), floor: { kind: 'carpet', ramp: 'moss' } },
+  outdoors: { wall: wall('plain', 'sky', 'sky', null, 'cream'), floor: { kind: 'carpet', ramp: 'moss' }, solid: 'stone' },
 };
 
-/** Indoor looks for custom backgrounds, chosen by background id so rooms sharing a picture share a look. */
+/** The roof (built-in background 2014) is red clay tiles. */
+export const ROOF_RAMP = 'red';
+
+/** Indoor looks for custom backgrounds without their picture, chosen by background id so rooms sharing a picture share a look. */
 export const CUSTOM_LOOKS = [
   { wall: wall('stripes', 'cream', 'rose', null, 'cream'), floor: { kind: 'planks', ramp: 'oak' } },
   { wall: wall('pinstripe', 'cream', 'teal', 'walnut', 'cream'), floor: { kind: 'planks', ramp: 'oak' } },
@@ -119,6 +127,109 @@ export const BUILTIN = {
 
 /** Built-in outdoor backgrounds and how they are drawn: ground = sky with hills and grass, sky = open sky, space = night sky. */
 export const OUTDOOR = { garden: 'ground', meadow: 'ground', field: 'ground', roof: 'sky', sky: 'sky', stratosphere: 'space', stars: 'space' };
+
+/** Gliderama's colour ramps, read from the game's palette (src/render/palette.ts) so the match is with what is drawn. */
+const PALETTE = (() => {
+  const text = fs.readFileSync(new URL('../src/render/palette.ts', import.meta.url), 'utf8');
+  const body = text.slice(text.indexOf('export const R = {'), text.indexOf('} as const;'));
+  const out = {};
+  for (const m of body.matchAll(/(\w+): \[([^\]]*)\]/g))
+    out[m[1]] = [...m[2].matchAll(/'#([0-9a-f]{6})'/gi)].map(([, h]) => [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)));
+  return out;
+})();
+const WALL_RAMPS = 'stone cream oak walnut pine red rose plum navy teal moss mustard peach sky night steel leaf ink'.split(' ');
+
+/** sRGB → CIE L*a*b* (D65). */
+function lab([r, g, b]) {
+  const lin = (v) => ((v /= 255) > 0.04045 ? ((v + 0.055) / 1.055) ** 2.4 : v / 12.92);
+  const [R, G, B] = [lin(r), lin(g), lin(b)];
+  const f = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+  const x = f((0.4124 * R + 0.3576 * G + 0.1805 * B) / 0.95047);
+  const y = f(0.2126 * R + 0.7152 * G + 0.0722 * B);
+  const z = f((0.0193 * R + 0.1192 * G + 0.9505 * B) / 1.08883);
+  return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+}
+
+/** How colourful a colour is (L*a*b* chroma). */
+const chroma = (rgb) => Math.hypot(...lab(rgb).slice(1));
+const NEUTRAL = ['stone', 'steel', 'ink', 'cream'];
+
+/** The shades rooms are painted with (wallpaper, its pattern, floors): a ramp's two lightest but one. */
+const PAINTED = Object.fromEntries(Object.entries(PALETTE).map(([n, r]) => [n, r.slice(-3, -1).map(lab)]));
+
+/**
+ * The ramp whose painted shades are closest to `rgb`. Hue counts more than lightness (Gliderama paints in light
+ * shades: a deep red wall becomes a light red one, not brown), except for greys.
+ */
+export function rampFor(rgb, names = WALL_RAMPS) {
+  const [L, a, b] = lab(rgb);
+  const c = Math.hypot(a, b);
+  const kL = 0.5 + 0.5 * Math.max(0, 1 - c / 30);
+  // greys go to the greys (and white to cream)
+  const pool = c < 8 ? names.filter((n) => NEUTRAL.includes(n)) : names;
+  let best = pool[0];
+  let bd = Infinity;
+  for (const n of pool)
+    for (const [L2, a2, b2] of PAINTED[n] ?? []) {
+      const d = Math.hypot(kL * (L - L2), a - a2, b - b2);
+      if (d < bd) {
+        bd = d;
+        best = n;
+      }
+    }
+  return best;
+}
+
+/**
+ * The closest look to a room's own picture (its summary from the converter's pictureSummary): a sky behind it
+ * (Glider PRO skies are bright blue) or a starry night is the outdoors; otherwise the wallpaper takes the
+ * picture's main colour (of two about as common, the more colourful, the other making its pattern), a lower wall
+ * of another colour a wainscot, the floor strip the floor. Wood is boards; anything else plain (the pictures are
+ * of whole rooms, so their texture says little about the wallpaper).
+ */
+export function pictureLook(pic, floorOpen) {
+  if (pic.sky >= 0.4) return { look: LOOKS.outdoors, outdoor: floorOpen ? 'sky' : 'ground', solid: 'stone' };
+  // black with stars (isolated bright specks), not a dark room with things drawn in it
+  if (pic.dark >= 0.45 && pic.specks >= 0.003) return { look: LOOKS.outdoors, outdoor: 'space', solid: 'steel' };
+  // two colours about as common (red flock on black): the more colourful one is the wallpaper, the other its pattern
+  const sec = pic.wall2;
+  const two = !!sec && pic.wall.share < 0.5 && sec.share >= 0.15;
+  const [main, other] = two && chroma(sec.rgb) > chroma(pic.wall.rgb) ? [sec, pic.wall] : [pic.wall, sec];
+  const base = rampFor(main.rgb);
+  const second = other && other.share >= 0.12 ? rampFor(other.rgb) : null;
+  const reds = ['red', 'rose'].includes(base);
+  const pattern = ['oak', 'walnut', 'pine'].includes(base) ? 'boards' : two ? (reds ? 'damask' : 'pinstripe') : 'plain';
+  // a lower wall of its own colour (panelling): a wainscot
+  const lower = pic.lower && pic.lower.share >= 0.25 ? rampFor(pic.lower.rgb) : null;
+  const wainscot = lower && lower !== base && lower !== rampFor(pic.wall.rgb) ? lower : null;
+  const trim = ['ink', 'night', 'walnut'].includes(base) ? 'walnut' : 'cream';
+  const fr = pic.floor ? rampFor(pic.floor.rgb) : 'oak';
+  return { look: { wall: wall(pattern, base, second ?? base, wainscot, trim), floor: { kind: floorKind(fr), ramp: fr } }, solid: base };
+}
+
+/** What a floor of each colour is made of (the rest are carpets). */
+const FLOOR_KINDS = { planks: 'oak walnut pine mustard', stone: 'stone steel ink night', tiles: 'cream sky peach' };
+const floorKind = (ramp) => Object.keys(FLOOR_KINDS).find((k) => FLOOR_KINDS[k].split(' ').includes(ramp)) ?? 'carpet';
+
+/** A room's look: { look, outdoor?, solid } from its background (and its picture's summary, when there is one). */
+export function roomLook(room, pic, floorOpen) {
+  const name = BUILTIN[room.background];
+  if (name)
+    return OUTDOOR[name] ? { look: LOOKS.outdoors, outdoor: OUTDOOR[name], solid: LOOKS.outdoors.solid } : { look: LOOKS[name], solid: LOOKS[name].solid };
+  if (pic?.wall) return pictureLook(pic, floorOpen);
+  // no picture to go by: structures are indoors, the rest outdoors (Sources/Room.c IsRoomAStructure)
+  const structure = room.bounds !== 0 ? (room.bounds & 32) === 32 : room.background < 3300;
+  if (!structure) return { look: LOOKS.outdoors, outdoor: floorOpen ? 'sky' : 'ground', solid: 'stone' };
+  return { look: CUSTOM_LOOKS[room.background % CUSTOM_LOOKS.length], solid: 'oak' };
+}
+
+/** The colour of an obstacle that stands for something drawn in the picture (`rgb`, if known), else the room's. */
+export function solidRamp(rgb, fallback) {
+  if (!rgb) return fallback;
+  const r = rampFor(rgb);
+  // an invisible wall in the open air: drawn like the room's own obstacles
+  return r === 'sky' || r === 'night' ? fallback : r;
+}
 
 // ---------------------------------------------------------------------------------------------
 // Openings (Sources/Room.c DetermineRoomOpenings, DoesRoomHaveFloor/Ceiling, Interactions.c CheckEscape*).
@@ -461,6 +572,21 @@ function liftArea(ob, c) {
   if (!dir) return c.drop(ob.type, `unknown direction ${ob.vector}`);
   const r = rectOf(b);
   const power = dir === 'up' ? AIR.upPower(r.h) : dir === 'down' ? AIR.downPower : AIR.sidePower;
+  // rising air up to the ceiling carries on through an opening there, as from a vent
+  if (dir === 'up' && b.top <= GP.ceiling + 16 && c.opensUpAt((b.left + b.right) / 2)) {
+    r.h += r.y + AIR.carryOn;
+    r.y = -AIR.carryOn;
+  }
+  // as wide as the invisible columns (a plane weaves to climb), as tall as the sideways bands
+  if (dir === 'up' || dir === 'down') {
+    const w = Math.max(r.w, AIR.columnW);
+    r.x = r1(r.x + r.w / 2 - w / 2);
+    r.w = w;
+  } else {
+    const h = Math.max(r.h, AIR.bandH);
+    r.y = r1(r.y + r.h / 2 - h / 2);
+    r.h = h;
+  }
   c.emit({ t: 'current', dir, x: r.x, y: r.y, w: Math.max(12, r.w), h: Math.max(12, r.h), power, ...g });
 }
 
@@ -499,13 +625,14 @@ function cabinet(ob, c) {
   else c.emit({ t: 'bookshelf', ...r, v: 1 });
 }
 
-/** Invisible obstacles stand for things drawn into the original's background pictures: big ones are drawn as plain blocks. */
+/**
+ * Invisible obstacles stand for things drawn into the original's pictures (walls, pipes, ledges): without the
+ * picture they are drawn as plain blocks in its colour there, so that nothing in a room is solid unseen.
+ */
 function obstacle(ob, c) {
-  const b = ob.bounds;
-  const r = rectOf(b);
+  const r = rectOf(ob.bounds);
   if (r.w <= 0 || r.h <= 0) return c.drop(ob.type, 'empty rectangle');
-  const big = b.right - b.left >= 40 && b.bottom - b.top >= 40;
-  c.emit({ t: big ? 'block' : 'solid', ...r });
+  c.emit({ t: 'solid', ...r, ramp: c.solidRamp(ob) });
 }
 
 function books(ob, c) {
@@ -574,11 +701,18 @@ export function transportArrival(dest) {
 
 function transport(ob, c) {
   const link = c.link(ob);
-  if (!link) return c.drop(ob.type, 'not linked to another transport');
-  if (!link.target) return c.drop(ob.type, 'linked to a missing room or object');
   const r = rectOf(transportTrigger(ob));
-  const a = transportArrival(link.target);
   const look = ob.type === 'floorTrans' ? 'floorDuct' : ob.type === 'ceilingTrans' ? 'ceilingDuct' : undefined;
+  if (!link || !link.target) {
+    // the far end of another transport: the glider only comes out of it (a duct is still drawn)
+    if (c.isArrival(ob)) {
+      if (look) c.emit({ t: 'transport', ...r, look });
+      if (ob.type === 'mailboxLf' || ob.type === 'mailboxRt') c.missing(ob.type, 'no mailbox art (the far end of a transport)');
+      return;
+    }
+    return c.drop(ob.type, link ? 'linked to a missing room or object' : 'not linked to another transport');
+  }
+  const a = transportArrival(link.target);
   // deluxe transports carry their on/off state in the low nibble of `wide` (initial state in the high nibble)
   const off = ob.type === 'deluxeTrans' && !((ob.wide >> 4) & 0x0f);
   c.emit({ t: 'transport', ...r, to: link.key, ax: a.x, ay: a.y, facing: a.facing, ...(look ? { look } : {}), ...c.group(ob, !off) });
@@ -754,7 +888,7 @@ export const OBJECT_MAP = {
   invisLight: light,
 
   toaster: (ob, c) => c.emit({ t: 'toaster', x: r1(X(ob.topLeft.h + 4)), y: r1(Y(ob.topLeft.v + 27) - 24) }),
-  cinderBlock: (ob, c) => c.emit({ t: 'block', ...rectOf(objectRect(ob), true) }),
+  cinderBlock: (ob, c) => c.emit({ t: 'solid', ...rectOf(objectRect(ob), true), ramp: 'stone' }),
   flowerBox: (ob, c) => plantFrom({ bounds: objectRect(ob) }, c),
   shredder: null,
   macPlus: null,
@@ -895,8 +1029,9 @@ export const OVERRIDES = {};
 /**
  * What the flight check (tests/classicReport.test.ts, see docs/classic-houses.md) found for each house:
  * { flyable: the bot pilot collected every star, reached: how far it got, par: seconds for the Swift medal (the
- * bot's time with some to spare), note }.
+ * bot's time with some to spare), lost: sheets the bot lost on the way (the house gives half as many again, and
+ * a few), note }.
  */
 export const STATUS = {
-  'Demo House': { flyable: true, reached: 'the star, through 13 rooms', par: 85, note: 'bot pilot: 58 s of flying, no sheet lost' },
+  'Demo House': { flyable: true, reached: 'the star, through 13 rooms', par: 85, lost: 0, note: 'bot pilot: 58 s of flying, no sheet lost' },
 };

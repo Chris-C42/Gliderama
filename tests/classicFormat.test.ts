@@ -1,8 +1,10 @@
 /**
  * The Glider PRO house pipeline (scripts/): BinHex 4.0 decoding with its CRCs, the house data fork parser, and
  * the converter, which must reproduce the committed Demo House exactly (so the data is never stale).
- * Fixtures from the Glider PRO release (GPL v2): Sampler.binhex as shipped, the Demo House's data fork and its
- * 'bnds' resources (the rest of its resource fork is pictures and sounds).
+ * Fixtures from the Glider PRO release (GPL v2): Sampler.binhex as shipped, the Demo House's data fork, its 'bnds'
+ * resources and the summary of its pictures (the resource fork itself is 650 KB of pictures and sounds), and one
+ * small picture of its own, "Soup Can". `node scripts/convert-glider-houses.mjs <GliderPRO> "Demo House" --fixtures`
+ * writes the Demo House ones again.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -10,6 +12,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { BinHexError, crc16, decodeBinHex, parseResourceFork } from '../scripts/glider/binhex.mjs';
 import { extractFloorSuite, parseHouse } from '../scripts/glider/house.mjs';
+import { colourStats, decodePict } from '../scripts/glider/pict.mjs';
+import { parseRez } from '../scripts/glider/rez.mjs';
 import { convertHouse } from '../scripts/convert-glider-houses.mjs';
 
 const FIX = path.join(__dirname, 'fixtures/glider');
@@ -99,10 +103,30 @@ describe('house data fork', () => {
   });
 });
 
+describe('pictures', () => {
+  it('decodes a PICT (version 2, packed 8-bit pixel map)', () => {
+    const img = decodePict(new Uint8Array(fs.readFileSync(path.join(FIX, 'soup-can.pict'))))!;
+    expect({ width: img.width, height: img.height }).toEqual({ width: 19, height: 27 });
+    const st = colourStats(img, 0, 0, 19, 27);
+    // a grey can with a red label, on black
+    expect(st.colours[0].share).toBeGreaterThan(0.2);
+    expect(st.colours.some((c) => c.rgb[0] > 150 && c.rgb[1] < 90 && c.rgb[2] < 90)).toBe(true);
+  });
+
+  it('reads resources from Rez source (how Glider PRO keeps its own pictures)', () => {
+    const rez = parseRez(`data 'PICT' (2000, "Simple Room") {\n\t$"0001 0203"            /* .... */\n\t$"04"\n};\n\ndata 'snd ' (1) {\n\t$"FF"\n};\n`, [
+      'PICT',
+    ]);
+    expect(rez.PICT).toEqual([{ id: 2000, name: 'Simple Room', data: new Uint8Array([0, 1, 2, 3, 4]) }]);
+    expect(rez['snd ']).toBeUndefined();
+  });
+});
+
 describe('converter', () => {
   it('reproduces the committed Demo House', async () => {
     const bnds = JSON.parse(fs.readFileSync(path.join(FIX, 'demo-house-bnds.json'), 'utf8')) as { id: number; data: number[] }[];
-    const level = convertHouse('Demo House', parseHouse(demoData()), { bnds }, 'Houses/Demo House.binhex');
+    const pictures = JSON.parse(fs.readFileSync(path.join(FIX, 'demo-house-pictures.json'), 'utf8'));
+    const level = convertHouse('Demo House', parseHouse(demoData()), { bnds }, 'Houses/Demo House.binhex', pictures);
     const committed = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/world/classic/houses/demo-house.json'), 'utf8'));
     expect(JSON.parse(JSON.stringify(level))).toEqual(committed);
   });

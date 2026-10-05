@@ -3,10 +3,13 @@
  * fly (turn or not, pitch, as a player can), and when a flight ends throw the next sheet from wherever the
  * session's checkpoint is by then — until it has collected every goal star (or reached an exit).
  *
- * Each flight is a beam search over short stretches of stick input. Flights are steered towards the nearest star
- * still to find, room by room along the house's map (side openings, floor and ceiling openings, stairs,
- * transports); a flight that dies leaves its checkpoint behind, and the next sheet is thrown from the most
- * promising checkpoint any flight reached. If the bot finds a way through, a player with the same controls can.
+ * Each flight is a beam search over short stretches of stick input. Flights are steered towards a target, room by
+ * room along the house's map (side openings, floor and ceiling openings, stairs, transports): the nearest star
+ * still to find, or, when the way to every star is shut, a switch that opens one (Glider PRO houses switch
+ * transports on and off). A flight that dies leaves its checkpoint behind, and the next sheet is thrown from the
+ * most promising checkpoint any flight reached; when no flight gets anywhere new, the bot tries another target.
+ * Flights that stop getting anywhere (circling in an updraft) are given up. If the bot finds a way through, a
+ * player with the same controls can.
  */
 
 import { analyzeDesign } from '../../src/paper/aero';
@@ -20,9 +23,10 @@ import { createPlane, launch, planePx, type FlightInput, type Plane } from '../.
 import { damagePct } from '../../src/physics/damage';
 import { PX_PER_M, ROOM_H, ROOM_W } from '../../src/physics/config';
 import type { ObjCtx, SessionApi, WindOut } from '../../src/game/objects/types';
-import type { ItemDef, Rect } from '../../src/world/types';
+import { LAYOUT, type Rect, type RoomDef } from '../../src/world/types';
 import { stairsArrival, stairsDownGeom, stairsUpGeom } from '../../src/world/stairs';
 import { spillWind, updateSpills } from '../../src/game/roomAir';
+import { TRANSPORT_REST } from '../../src/game/objects/classic';
 
 const TICK = 1 / 120;
 type Side = 'left' | 'right' | 'up' | 'down';
@@ -35,7 +39,7 @@ interface Checkpoint {
 }
 
 /** One way out of a room: a side / floor / ceiling opening, stairs or a transport. */
-interface Way {
+export interface Way {
   to: string;
   kind: 'side' | 'up' | 'down' | 'rect';
   side?: 'left' | 'right';
@@ -45,6 +49,21 @@ interface Way {
   cx?: number;
   /** Stairs doorway, transport mouth. */
   rect?: Rect;
+  /** The switch group of a switched transport (`!g`: open while g is switched off). */
+  gate?: string;
+  /** A ceiling opening with rising air up to it (false: no plane can glide up there). */
+  lift?: boolean;
+}
+
+/** Something to fly to: a goal star, or a switch (that opens the way to one). */
+interface Target {
+  key: string;
+  kind: 'star' | 'switch';
+  room: string;
+  x: number;
+  y: number;
+  /** The group a switch target flips. */
+  group?: string;
 }
 
 /** The stick input of one search step, linked back to the step before (a flight's whole input, cheaply shared). */
@@ -59,6 +78,7 @@ export interface Flight {
   from: Checkpoint;
   angle: number;
   power: number;
+  stepTicks: number;
   steps: { dir: -1 | 0 | 1; pitch: number }[];
 }
 
@@ -71,10 +91,15 @@ interface Node {
   switches: Map<string, boolean>;
   checkpoint: Checkpoint;
   score: number;
-  /** Goal stars this flight has collected. */
+  /** Best score so far, and when: a flight that stops improving is given up. */
+  peak: number;
+  peakT: number;
+  /** When the flight last came out of a transport. */
+  transT: number;
+  /** Goal stars this flight has collected ('toggled:<group>' for switches flipped). */
   got: string[];
   trace: string[];
-  thrown: { from: Checkpoint; angle: number; power: number };
+  thrown: { from: Checkpoint; angle: number; power: number; stepTicks: number };
   steps: Steps | null;
 }
 
@@ -85,7 +110,7 @@ export interface HouseSolveResult {
   stars: string[];
   /** Sheets thrown after the first (each lost flight costs one). */
   sheetsUsed: number;
-  /** Seconds of flying (game time). */
+  /** Seconds of flying (game time), the lost flights' too. */
   t: number;
   /** Rooms flown through, in order. */
   rooms: string[];
@@ -96,7 +121,7 @@ export interface HouseSolveResult {
   trace: string[];
   /** Every flight of the solution, in order (the lost ones too: they are how the player gets to the next checkpoint). */
   flights: Flight[];
-  /** Game ticks (1/120 s) per entry of a flight's `steps`. */
+  /** Game ticks (1/120 s) per entry of a flight's `steps` (the first try's; each flight says its own). */
   stepTicks: number;
   /** Search steps used (of `maxSteps`). */
   steps?: number;
@@ -115,7 +140,8 @@ export function houseMap(level: LevelDef): Map<string, Way[]> {
       const span = room.exits[side];
       const to = span && neighbour(level, key, side);
       if (!span || !to) continue;
-      if (side === 'up' || side === 'down') ways.push({ to, kind: side, cx: (span.from + span.to) / 2 });
+      if (side === 'down') ways.push({ to, kind: side, cx: (span.from + span.to) / 2 });
+      else if (side === 'up') ways.push({ to, kind: side, cx: (span.from + span.to) / 2, lift: liftUnder(room, span.from, span.to) });
       else ways.push({ to, kind: 'side', side, from: span.from });
     }
     for (const it of room.items) {
@@ -123,30 +149,63 @@ export function houseMap(level: LevelDef): Map<string, Way[]> {
         const to = neighbour(level, key, it.t === 'stairsUp' ? 'up' : 'down');
         if (to) ways.push({ to, kind: 'rect', rect: it.t === 'stairsUp' ? stairsUpGeom(it).door : stairsDownGeom(it).trigger });
       }
-      if (it.t === 'transport' && typeof it.to === 'string' && level.rooms[it.to])
-        ways.push({ to: it.to, kind: 'rect', rect: { x: it.x, y: it.y, w: it.w ?? 60, h: it.h ?? 40 } });
+      if (it.t === 'transport' && typeof it.to === 'string' && level.rooms[it.to]) {
+        const rect = { x: it.x, y: it.y, w: it.w ?? 60, h: it.h ?? 40 };
+        ways.push({ to: it.to, kind: 'rect', rect, ...(typeof it.group === 'string' ? { gate: it.group } : {}) });
+      }
     }
     out.set(key, ways);
   }
   return out;
 }
 
-/** Rooms → how many rooms away from `target` (following the ways in), Infinity when it can't be reached. */
-export function distancesTo(map: Map<string, Way[]>, target: string): Map<string, number> {
-  const back = new Map<string, string[]>();
-  for (const [k, ways] of map) for (const w of ways) (back.get(w.to) ?? back.set(w.to, []).get(w.to)!).push(k);
+/** Rising air up to the top of a room somewhere between x0 and x1 (what it takes to leave through the ceiling). */
+function liftUnder(room: RoomDef, x0: number, x1: number): boolean {
+  return room.items.some((it) => {
+    const w = Number(it.w ?? 60);
+    if (it.x > x1 || it.x + w < x0) return false;
+    if (it.t === 'floorVent') return Number(it.reach ?? LAYOUT.floor) <= 30;
+    if (it.t === 'current') return (it.dir ?? 'up') === 'up' && it.y <= 30;
+    return false;
+  });
+}
+
+/** Whether a switch group is on (`!g`: on while g is switched off; switches start on). */
+function groupOn(group: string, switches: Map<string, boolean>): boolean {
+  return group.startsWith('!') ? !(switches.get(group.slice(1)) ?? true) : (switches.get(group) ?? true);
+}
+
+/**
+ * Rooms → how far from `target` (following the ways in that `open` allows, each costing `cost`, 1 room by
+ * default); missing = can't get there.
+ */
+export function distancesTo(
+  map: Map<string, Way[]>,
+  target: string,
+  open: (w: Way) => boolean = () => true,
+  cost: (w: Way) => number = () => 1,
+): Map<string, number> {
+  const back = new Map<string, { from: string; c: number }[]>();
+  for (const [k, ways] of map) for (const w of ways) if (open(w)) (back.get(w.to) ?? back.set(w.to, []).get(w.to)!).push({ from: k, c: cost(w) });
   const dist = new Map<string, number>([[target, 0]]);
-  const queue = [target];
-  while (queue.length) {
-    const k = queue.shift()!;
-    for (const p of back.get(k) ?? []) {
-      if (dist.has(p)) continue;
-      dist.set(p, dist.get(k)! + 1);
-      queue.push(p);
+  const done = new Set<string>();
+  // Dijkstra, small integer costs: a plain scan for the nearest room is quick enough for a few hundred rooms
+  for (;;) {
+    let k: string | null = null;
+    for (const [r, d] of dist) if (!done.has(r) && (k === null || d < dist.get(k)!)) k = r;
+    if (k === null) break;
+    done.add(k);
+    for (const { from, c } of back.get(k) ?? []) {
+      const d = dist.get(k)! + c;
+      if (d < (dist.get(from) ?? Infinity)) dist.set(from, d);
     }
   }
   return dist;
 }
+
+/** What an up way without rising air costs the planner, in rooms (a plane would need luck to get up there). */
+const NO_LIFT = 10;
+const wayCost = (w: Way) => (w.lift === false ? 1 + NO_LIFT : 1);
 
 /** How promising a position is for leaving through `w`: distance made good, height counted at about a glide ratio. */
 function progress(w: Way, x: number, y: number): number {
@@ -160,8 +219,8 @@ function progress(w: Way, x: number, y: number): number {
   return 1500 - dx - 3 * below + H * (340 - Math.max(y, r.y + 10));
 }
 
-/** Closing in on a star at (sx, sy): being below it is worse than being above (a plane can always glide down). */
-function towardStar(x: number, y: number, sx: number, sy: number): number {
+/** Closing in on a target at (sx, sy): being below it is worse than being above (a plane can always glide down). */
+function toward(x: number, y: number, sx: number, sy: number): number {
   return 2500 - Math.abs(x - sx) - 3 * Math.max(0, y - sy) - 0.4 * Math.max(0, sy - y);
 }
 
@@ -171,6 +230,8 @@ export interface HouseSolveOptions {
   step?: number;
   /** Longest single flight (game seconds). */
   maxFlight?: number;
+  /** A flight whose score has not improved for this long (game seconds) is given up. */
+  stall?: number;
   /** Sheets the bot may throw in all. */
   maxSheets?: number;
   /** Give up after this many search steps in all (time budget). */
@@ -193,15 +254,36 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
   const roomOf = (k: string) => rooms.get(k) ?? rooms.set(k, buildSimRoom(level.rooms[k], { level, key: k })).get(k)!;
   const beamW = opts.beam ?? 50;
   const stepTicks = Math.round((opts.step ?? 0.35) / TICK);
-  const maxFlight = opts.maxFlight ?? 90;
+  // throwing from the same checkpoint again searches differently (finer steps, a wider beam, more pitches)
+  const TRIES = [
+    { beam: beamW, step: stepTicks, pitches: [-0.8, -0.3, 0, 0.4, 0.9] },
+    { beam: Math.round(beamW * 1.6), step: Math.round(0.25 / TICK), pitches: [-0.8, -0.3, 0, 0.4, 0.9] },
+    { beam: Math.round(beamW * 2.4), step: stepTicks, pitches: [-1, -0.55, -0.2, 0, 0.25, 0.6, 1] },
+  ];
+  let tryNow = TRIES[0];
+  const maxFlight = opts.maxFlight ?? 150;
+  const stall = opts.stall ?? 15;
   const maxSheets = opts.maxSheets ?? 60;
   const budget = opts.maxSteps ?? 4000;
   let stepsLeft = budget;
-  const pitches = [-0.8, -0.3, 0, 0.4, 0.9];
   const goals = goalStarIds(level);
-  const starAt = new Map<string, { room: string; it: ItemDef }>();
+
+  // what there is to fly to: goal stars, and the switches of switched transports
+  const stars = new Map<string, Target>();
+  const switchesOf = new Map<string, Target[]>();
+  const gates = new Set<string>();
+  for (const ways of map.values()) for (const w of ways) if (w.gate) gates.add(w.gate.replace(/^!/, ''));
   for (const [k, r] of Object.entries(level.rooms))
-    for (const it of r.items) if (it.t === 'star' && it.goal && typeof it.id === 'string') starAt.set(it.id, { room: k, it });
+    r.items.forEach((it, i) => {
+      if (it.t === 'star' && it.goal && typeof it.id === 'string') stars.set(it.id, { key: it.id, kind: 'star', room: k, x: it.x, y: it.y });
+      if (it.t === 'switch' && typeof it.group === 'string' && gates.has(it.group)) {
+        const w = it.hidden ? Number(it.w ?? 16) : 10;
+        const h = it.hidden ? Number(it.h ?? 16) : 16;
+        const s: Target = { key: `switch ${k}#${i}`, kind: 'switch', room: k, x: it.x + w / 2, y: it.y + h / 2, group: it.group };
+        (switchesOf.get(it.group) ?? switchesOf.set(it.group, []).get(it.group)!).push(s);
+      }
+    });
+
   const got = new Set<string>();
   const order: string[] = [];
   const visited: string[] = [level.start.room];
@@ -210,18 +292,44 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
   let flying: Node[] | null = null;
   let checkpoint: Checkpoint = { ...level.start };
   let totalT = 0;
+  // switch states carried from flight to flight (a switch stays flipped)
+  let switchesNow = new Map<string, boolean>();
+
+  // distances to a room, as the switches are (only the gates' states matter): a ceiling opening without rising
+  // air counts as a long way round
   const distCache = new Map<string, Map<string, number>>();
-  const distTo = (room: string) => distCache.get(room) ?? distCache.set(room, distancesTo(map, room)).get(room)!;
-  /** The star still to find that is fewest rooms away from `room`. */
-  const nextStar = (room: string, have: Set<string>) => {
-    let best: string | null = null;
+  const open = (sw: Map<string, boolean>) => (w: Way) => !w.gate || groupOn(w.gate, sw);
+  const distTo = (room: string, sw: Map<string, boolean>) => {
+    const k = `${room}|${[...gates].map((g) => (groupOn(g, sw) ? 1 : 0)).join('')}`;
+    return distCache.get(k) ?? distCache.set(k, distancesTo(map, room, open(sw), wayCost)).get(k)!;
+  };
+  /**
+   * What to fly to from `room`: the nearest star still to find; if the way to every one is shut, the switch that
+   * opens the shortest way to one. `skip`: targets that got nowhere from here.
+   */
+  const chooseTarget = (room: string, sw: Map<string, boolean>, skip: Set<string>): Target | null => {
+    const left = goals.filter((id) => !got.has(id) && !skip.has(id)).map((id) => stars.get(id)!);
+    let best: Target | null = null;
     let bd = Infinity;
-    for (const id of goals) {
-      if (have.has(id)) continue;
-      const d = distTo(starAt.get(id)!.room).get(room) ?? Infinity;
+    for (const s of left) {
+      const d = distTo(s.room, sw).get(room) ?? Infinity;
       if (d < bd) {
         bd = d;
-        best = id;
+        best = s;
+      }
+    }
+    if (best) return best;
+    for (const [group, list] of switchesOf) {
+      const flipped = new Map(sw).set(group, !(sw.get(group) ?? true));
+      for (const s of list) {
+        if (skip.has(s.key)) continue;
+        const toSwitch = distTo(s.room, sw).get(room) ?? Infinity;
+        if (toSwitch === Infinity) continue;
+        const after = Math.min(...left.map((t) => distTo(t.room, flipped).get(s.room) ?? Infinity), Infinity);
+        if (after < Infinity && toSwitch + after < bd) {
+          bd = toSwitch + after;
+          best = s;
+        }
       }
     }
     return best;
@@ -250,19 +358,24 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
           switches: new Map(switchesNow),
           checkpoint: { ...cp },
           score: 0,
+          peak: -Infinity,
+          peakT: 0,
+          transT: -Infinity,
           got: [],
           trace: [`throw ${facing > 0 ? '>' : '<'} a${angle} p${power} from ${cp.room}`],
-          thrown: { from: { ...cp }, angle: facing > 0 ? angle : Math.PI - angle, power },
+          thrown: { from: { ...cp }, angle: facing > 0 ? angle : Math.PI - angle, power, stepTicks: tryNow.step },
           steps: null,
         });
       }
     return out;
   };
-  // switch states carried from flight to flight (a switch stays flipped)
-  let switchesNow = new Map<string, boolean>();
+
+  /** Whether a flight has reached `target` (or an exit). */
+  const reached = (n: Node, target: Target | null) =>
+    !!target && (n.got.includes(target.kind === 'star' ? target.key : `toggled:${target.group}`) || n.got.includes('exit'));
 
   /** Advance a node by one stretch of input; null when its flight is over. `onDeath` hears about it. */
-  const advance = (n0: Node, input: FlightInput, target: string | null, onDeath: (n: Node) => void): Node | null => {
+  const advance = (n0: Node, input: FlightInput, target: Target | null, onDeath: (n: Node) => void): Node | null => {
     const n: Node = {
       ...n0,
       plane: clonePlane(n0.plane),
@@ -314,7 +427,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       onDeath(n);
       return null;
     };
-    for (let k = 0; k < stepTicks; k++) {
+    for (let k = 0; k < n.thrown.stepTicks; k++) {
       ctx.time = n.t;
       for (const o of room.objects) if (typeof o.def.group === 'string') o.update?.(ctx);
       updateSpills(room.spills, ctx);
@@ -335,10 +448,13 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
         const tr = o.trigger?.();
         if (!tr || bb.x1 < tr.x || bb.x0 > tr.x + tr.w || bb.y1 < tr.y || bb.y0 > tr.y + tr.h || !polyVsBox(hw, { ...tr })) continue;
         if (t === 'switch') {
+          // a switch is flipped once (flying back through it would only undo it)
           const g = typeof o.def.group === 'string' ? o.def.group : 'lights';
           if (g !== 'lights' && !n.switches.has(`touched:${o.id}`)) {
             n.switches.set(`touched:${o.id}`, true);
             n.switches.set(g, !(n.switches.get(g) ?? true));
+            n.got.push(`toggled:${g}`);
+            n.trace = [...n.trace, `switch ${g} in ${n.key} @${(totalT + n.t).toFixed(1)}s`];
           }
         } else if (t === 'star') {
           const id = o.def.id;
@@ -359,11 +475,9 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
           moved = true;
           break;
         } else if (t === 'transport' && typeof o.def.to === 'string' && level.rooms[o.def.to]) {
-          if (typeof o.def.group === 'string') {
-            const g = o.def.group;
-            const on = g.startsWith('!') ? !(n.switches.get(g.slice(1)) ?? true) : (n.switches.get(g) ?? true);
-            if (!on) continue;
-          }
+          if (typeof o.def.group === 'string' && !groupOn(o.def.group, n.switches)) continue;
+          if (n.t - n.transT < TRANSPORT_REST) continue;
+          n.transT = n.t;
           n.trace = [...n.trace, `transport -> ${o.def.to} @${(totalT + n.t).toFixed(1)}s`];
           arrive(o.def.to, Number(o.def.ax), Number(o.def.ay), Number(o.def.facing) < 0 ? -1 : 1);
           moved = true;
@@ -371,7 +485,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
         }
       }
       if (moved) continue;
-      if (target && (n.got.includes(target) || n.got.includes('exit'))) return n;
+      if (reached(n, target)) return n;
       const pos = planePx(n.plane);
       let side: Side | null = null;
       if (pos.x < -2) side = 'left';
@@ -421,14 +535,17 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       switches: new Map(),
       checkpoint: { ...f.from },
       score: 0,
+      peak: -Infinity,
+      peakT: 0,
+      transT: -Infinity,
       got: [],
       trace: [],
-      thrown: f,
+      thrown: { ...f, stepTicks: f.stepTicks ?? stepTicks },
       steps: null,
     };
     for (const s of f.steps) {
       const prev: Node = n!;
-      n = advance(prev, { dir: s.dir, pitch: s.pitch, boost: false }, '-', () => {});
+      n = advance(prev, { dir: s.dir, pitch: s.pitch, boost: false }, null, () => {});
       opts.onReplay?.(n ?? prev, !n);
       if (!n) break;
     }
@@ -446,14 +563,15 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
   }
 
   /** Score a live node for the search towards `target`. */
-  const scoreOf = (n: Node, target: string): number => {
-    const star = starAt.get(target)!;
-    const dist = distTo(star.room);
-    const d = dist.get(n.key) ?? 99;
+  const scoreOf = (n: Node, target: Target): number => {
+    const dist = distTo(target.room, n.switches);
+    const d = dist.get(n.key) ?? 999;
     const q = planePx(n.plane);
     let best = -1e9;
-    if (n.key === star.room) best = towardStar(q.x, q.y, star.it.x, star.it.y);
-    else for (const w of map.get(n.key) ?? []) if ((dist.get(w.to) ?? 99) < d) best = Math.max(best, progress(w, q.x, q.y));
+    if (n.key === target.room) best = toward(q.x, q.y, target.x, target.y);
+    else
+      for (const w of map.get(n.key) ?? [])
+        if ((!w.gate || groupOn(w.gate, n.switches)) && wayCost(w) + (dist.get(w.to) ?? 999) <= d) best = Math.max(best, progress(w, q.x, q.y));
     // a flight in a steep dive or about to stall is worth less than its position suggests
     const dive = Math.max(0, -n.plane.vy - 0.9) * 60 + Math.max(0, -n.plane.theta - 0.5) * 80;
     const slow = n.plane.V < 1 ? (1 - n.plane.V) * 120 : 0;
@@ -461,11 +579,14 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
   };
 
   /** How good a checkpoint is to throw from, for `target`. */
-  const cpRank = (cp: Checkpoint, target: string): number => {
-    const star = starAt.get(target)!;
-    const d = distTo(star.room).get(cp.room) ?? 99;
-    return -d * 10000 + (cp.room === star.room ? towardStar(cp.x, cp.y, star.it.x, star.it.y) : 0);
+  const cpRank = (cp: Checkpoint, target: Target, sw: Map<string, boolean>): number => {
+    const d = distTo(target.room, sw).get(cp.room) ?? 999;
+    return -d * 10000 + (cp.room === target.room ? toward(cp.x, cp.y, target.x, target.y) : 0);
   };
+
+  /** The rooms a flight went into, from its trace. */
+  const roomsOf = (lines: string[]) =>
+    lines.filter((s) => s.startsWith('->') || s.startsWith('stairs') || s.startsWith('transport')).map((s) => s.split(' ').slice(-2)[0]);
 
   const flightOf = (n: Node): Flight => {
     const steps: Flight['steps'] = [];
@@ -473,31 +594,42 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
     return { ...n.thrown, steps: steps.reverse() };
   };
   const flights: Flight[] = [];
-  // the search is deterministic: a checkpoint already thrown from would only fly the same flights again
-  const thrownFrom = new Set<string>();
-  const cpKey = (cp: Checkpoint, target: string) => `${target}|${cp.room}@${Math.round(cp.x)},${Math.round(cp.y)},${cp.facing}`;
+  // the search is deterministic: from a checkpoint already thrown from (near enough) it would only fly the same
+  // flights again, so each try searches differently; after the last, that checkpoint is used up for the target
+  const tries = new Map<string, number>();
+  const cpKey = (cp: Checkpoint, target: Target) => `${target.key}|${cp.room}@${Math.round(cp.x / 48)},${Math.round(cp.y / 40)},${cp.facing}`;
+  // targets that got nowhere from the checkpoint's room (tried again once the bot is somewhere else)
+  let skip = new Set<string>();
+  let skipRoom = checkpoint.room;
+  let target: Target | null = null;
   outer: while (got.size < goals.length) {
-    const target = nextStar(flying?.[0]?.key ?? checkpoint.room, got);
-    if (!target) break;
-    if (!flying) {
-      if (sheets > maxSheets) break;
-      thrownFrom.add(cpKey(checkpoint, target));
-      flying = throwsFrom(checkpoint);
-      if (sheets > 0 || got.size > 0) trace.push(`sheet ${sheets} from ${checkpoint.room} (${Math.round(checkpoint.x)},${Math.round(checkpoint.y)})`);
+    if (checkpoint.room !== skipRoom) {
+      skip = new Set();
+      skipRoom = checkpoint.room;
     }
+    if (!flying) {
+      target = chooseTarget(checkpoint.room, switchesNow, skip);
+      if (!target || sheets > maxSheets) break;
+      const k = cpKey(checkpoint, target);
+      tryNow = TRIES[tries.get(k) ?? 0];
+      tries.set(k, (tries.get(k) ?? 0) + 1);
+      flying = throwsFrom(checkpoint);
+      if (sheets > 0 || got.size > 0)
+        trace.push(`sheet ${sheets} from ${checkpoint.room} (${Math.round(checkpoint.x)},${Math.round(checkpoint.y)}) for ${target.key}`);
+    }
+    const tgt = target!;
     let beam = flying;
     flying = null;
-    // where the flights that end leave the checkpoint: the best one not thrown from yet is where the next sheet goes
+    // where the flights that end leave the checkpoint: the best one not used up yet is where the next sheet goes
     let bestDeath: { cp: Checkpoint; rank: number; trace: string[]; at: string; node?: Node } | null = null;
     const consider = (cp: Checkpoint, n?: Node) => {
-      if (thrownFrom.has(cpKey(cp, target))) return;
-      const rank = cpRank(cp, target);
+      if ((tries.get(cpKey(cp, tgt)) ?? 0) >= TRIES.length) return;
+      const rank = cpRank(cp, tgt, n?.switches ?? switchesNow);
       if (!bestDeath || rank > bestDeath.rank) {
         const q = n ? planePx(n.plane) : { x: cp.x, y: cp.y };
         bestDeath = { cp, rank, trace: n?.trace ?? [], at: `${n?.key ?? cp.room} @${Math.round(q.x)},${Math.round(q.y)} t${(n?.t ?? 0).toFixed(1)}`, node: n };
       }
     };
-    consider(checkpoint);
     const onDeath = (n: Node) => consider(n.checkpoint, n);
     for (;;) {
       if (stepsLeft-- <= 0) break outer;
@@ -506,14 +638,22 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       for (const n of beam) {
         for (const turn of [false, true]) {
           if (turn && n.plane.turn) continue;
-          for (const pitch of pitches) {
-            const r = advance(n, { dir: turn ? ((n.plane.facing > 0 ? -1 : 1) as -1 | 1) : 0, pitch, boost: false }, target, onDeath);
+          for (const pitch of tryNow.pitches) {
+            const r = advance(n, { dir: turn ? ((n.plane.facing > 0 ? -1 : 1) as -1 | 1) : 0, pitch, boost: false }, tgt, onDeath);
             if (!r) continue;
-            if (r.got.includes(target) || r.got.includes('exit')) {
+            if (reached(r, tgt)) {
               done = r;
               break;
             }
-            r.score = scoreOf(r, target);
+            r.score = scoreOf(r, tgt);
+            // getting nowhere (circling in an updraft that leads nowhere): give the flight up
+            if (r.score > r.peak + 40) {
+              r.peak = r.score;
+              r.peakT = r.t;
+            } else if (r.t - r.peakT > stall) {
+              onDeath(r);
+              continue;
+            }
             next.push(r);
           }
           if (done) break;
@@ -521,15 +661,14 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
         if (done) break;
       }
       if (done) {
-        // found it: carry on flying from here (the flight goes on after a star)
+        // found it: carry on flying from here (the flight goes on after a star or a switch)
         for (const id of done.got)
-          if (id !== 'exit' && !got.has(id)) {
+          if (goals.includes(id) && !got.has(id)) {
             got.add(id);
             order.push(id);
           }
         totalT += done.t;
-        for (const s of done.trace.filter((s) => s.startsWith('->') || s.startsWith('stairs') || s.startsWith('transport')))
-          visited.push(s.split(' ').slice(-2)[0]);
+        visited.push(...roomsOf(done.trace));
         trace.push(...done.trace);
         checkpoint = done.checkpoint;
         switchesNow = done.switches;
@@ -537,10 +676,18 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
           flights.push(flightOf(done));
           break outer;
         }
-        opts.log?.(`star ${target} in ${starAt.get(target)!.room} after ${totalT.toFixed(1)}s, ${sheets} sheets`);
+        opts.log?.(`${tgt.kind} ${tgt.key} in ${tgt.room} after ${totalT.toFixed(1)}s, ${sheets} sheets`);
+        skip = new Set();
         done.t = 0;
+        done.peak = -Infinity;
+        done.peakT = 0;
         done.got = [];
         done.trace = [];
+        target = chooseTarget(done.key, switchesNow, skip);
+        if (!target) {
+          flights.push(flightOf(done));
+          break outer;
+        }
         flying = [done];
         continue outer;
       }
@@ -555,25 +702,38 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
         if (seen.has(k)) continue;
         seen.add(k);
         beam.push(n);
-        if (beam.length >= beamW) break;
+        if (beam.length >= tryNow.beam) break;
       }
     }
     // every flight of this sheet is over: the next one is thrown from the best new checkpoint any of them reached
     const bd = bestDeath as { cp: Checkpoint; rank: number; trace: string[]; at: string; node?: Node } | null;
-    if (!bd) break;
-    opts.log?.(`sheet ${sheets} for ${target}: best flight ended in ${bd.at} -> next from ${cpKey(bd.cp, target)} [${bd.trace.join(' | ')}]`);
+    if (!bd) {
+      // nowhere new to throw from for this target: try another one from here
+      opts.log?.(`no way on to ${tgt.key} from ${checkpoint.room}: another target`);
+      skip.add(tgt.key);
+      continue;
+    }
+    opts.log?.(`sheet ${sheets} for ${tgt.key}: best flight ended in ${bd.at} -> next from ${cpKey(bd.cp, tgt)} [${bd.trace.join(' | ')}]`);
     // the flight that got there is part of the way (a checkpoint carried over from before needs none)
     if (bd.node) {
       flights.push(flightOf(bd.node));
       switchesNow = bd.node.switches;
+      // its time and rooms count too (the player flies it)
+      totalT += bd.node.t;
+      visited.push(...roomsOf(bd.node.trace));
+      for (const id of bd.node.got)
+        if (goals.includes(id) && !got.has(id)) {
+          got.add(id);
+          order.push(id);
+        }
     }
     checkpoint = bd.cp;
     if (!visited.includes(checkpoint.room)) visited.push(checkpoint.room);
     sheets++;
   }
   const solved = got.size >= goals.length;
-  const stuckTarget = nextStar(checkpoint.room, got);
-  const short = stuckTarget ? distTo(starAt.get(stuckTarget)!.room).get(checkpoint.room) : undefined;
+  const stuckTarget = solved ? null : chooseTarget(checkpoint.room, switchesNow, new Set());
+  const short = stuckTarget ? distancesTo(map, stuckTarget.room, open(switchesNow)).get(checkpoint.room) : undefined;
   return {
     solved,
     starsTotal: goals.length,

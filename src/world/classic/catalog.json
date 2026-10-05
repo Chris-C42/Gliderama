@@ -16,7 +16,362 @@
    "flyable": true,
    "reached": "the star, through 13 rooms",
    "par": 85,
+   "lost": 0,
    "note": "bot pilot: 58 s of flying, no sheet lost"
+  }
+ },
+ {
+  "slug": "sampler",
+  "id": "classic-sampler",
+  "name": "Sampler",
+  "authors": [],
+  "credit": null,
+  "rooms": 2,
+  "stars": 1,
+  "goal": "stars",
+  "blurb": null,
+  "status": {
+   "flyable": false,
+   "note": "not checked yet"
+  }
+ },
+ {
+  "slug": "california-or-bust",
+  "id": "classic-california-or-bust",
+  "name": "California or Bust!",
+  "authors": [],
+  "credit": null,
+  "rooms": 16,
+  "stars": 1,
+  "goal": "stars",
+  "blurb": null,
+  "status": {
+   "flyable": false,
+   "note": "not checked yet"
+  }
+ },
+ {
+  "slug": "fun-house",
+  "id": "classic-fun-house",
+  "name": "Fun House",
+  "authors": [],
+  "credit": null,
+  "rooms": 43,
+  "stars": 0,
+  "goal": "none",
+  "blurb": null,
+  "status": {
+   "flyable": false,
+   "note": "not checked yet"
+  }
+ },
+ {
+  "slug": "castle-o-the-air",
+  "id": "classic-castle-o-the-air",
+  "name": "Castle o' the Air",
+  "authors": [
+   "John Calhoun"
+  ],
+  "credit": "John Calhoun",
+  "rooms": 85,
+  "stars": 4,
+  "goal": "stars",
+  "blurb": null,
+  "status": {
+   "flyable": false,
+   "note": "not checked yet"
+  }
+ },
+ {
+  "slug": "empty-house",
+  "id": "classic-empty-house",
+  "name": "Empty House",
+  "authors": [],
+  "credit": null,
+  "rooms": 35,
+  "stars": 1,
+  "goal": "stars",
+  "blurb": null,
+  "status": {
+   "flyable": false,
+   "note": "not checked yet"
+  }
+ },
+ {
+  "slug": "davis-station",
+  "id": "classic-davis-station",
+  "name": "Davis Station",
+  "authors": [
+   "Jonathan Chin (alias Paul Finn)",
+   "John Calhoun"
+  ],
+  "credit": "Jonathan Chin (alias Paul Finn) & John Calhoun",
+  "rooms": 65,
+  "stars": 4,
+  "goal": "stars",
+  "blurb": null,
+  "status": {
+   "flyable": false,
+   "note": "not checked yet"
+  }
+ },
+ {
+  "slug": "in-the-mirror",
+  "id": "classic-in-the-mirror",
+  "name": "In The Mirror",
+  "authors": [
+   "Jonathan Chin (alias Paul Finn)"
+  ],
+  "credit": "Jonathan Chin (alias Paul Finn)",
+  "rooms": 97,
+  "stars": 1,
+  "goal": "stars",
+  "blurb": null,
+  "status": {
+   "flyable": false,
+   "note": "not checked yet"
+  }
+ },
+ {
+  "slug": "art-museum",
+  "id": "classic-art-museum",
+  "name": "Art Museum",
+  "authors": [],
+  "credit": null,
+  "rooms": 109,
+  "stars": 6,
+  "goal": "stars",
+  "blurb": null,
+  "status": {
+   "flyable": false,
+   "note": "not checked yet"
+  }
+ },
+ {
+  "slug": "nemos-market",
+  "id": "classic-nemos-market",
+  "name": "Nemo's Market",
+  "authors": [
+   "Ward Hartenstein"
+  ],
+  "credit": "Ward Hartenstein",
+  "rooms": 124,
+  "stars": 5,
+  "goal": "stars",
+  "blurb": null,
+  "status": {
+   "flyable": false,
+   "note": "not checked yet"
+  }
+ },
+ {
+  "slug": "metropolis",
+  "id": "classic-metropolis",
+  "name": "Metropolis",
+  "authors": [
+   "Jonathan Chin (alias Paul Finn)",
+   "John Calhoun"
+  ],
+  "credit": "Jonathan Chin (alias Paul Finn) & John Calhoun",
+  "rooms": 127,
+  "stars": 4,
+  "goal": "stars",
+  "blurb": "Home of a thousand drips, darts and ducts.",
+  "status": {
+   "flyable": false,
+   "note": "not checked yet"
+  }
+ },
+ {
+  "slug": "the-asylum-pro",
+  "id": "classic-the-asylum-pro",
+  "name": "The Asylum Pro",
+  "authors": [
+   "Steve Sullivan"
+  ],
+  "credit": "Steve Sullivan",
+  "rooms": 140,
+  "stars": 1,
+  "goal": "stars",
+  "blurb": null,
+  "status": {
+   "flyable": false,
+   "note": "not checked yet"
+  }
+ },
+ {
+  "slug": "grand-prix",
+  "id": "classic-grand-prix",
+  "name": "Grand Prix",
+  "authors": [
+   "Jonathan Chin (alias Paul Finn)"
+  ],
+  "credit": "Jonathan Chin (alias Paul Finn)",
+  "rooms": 175,
+  "stars": 3,
+  "goal": "stars",
+  "blurb": null,
+  "status": {
+   "flyable": false,
+   "note": "not checked yet"
+  }
+ },
+ {
+  "slug": "cd-demo-house",
+  "id": "classic-cd-demo-house",
+  "name": "CD Demo House",
+  "authors": [
+   "John Calhoun",
+   "Kim Money"
+  ],
+  "credit": "John Calhoun & Kim Money",
+  "rooms": 206,
+  "stars": 9,
+  "goal": "stars",
+  "blurb": "Sample rooms from the CD houses.",
+  "status": {
+   "flyable": false,
+   "note": "not checked yet"
+  }
+ },
+ {
+  "slug": "titanic",
+  "id": "classic-titanic",
+  "name": "Titanic",
+  "authors": [
+   "Jonathan Chin (alias Paul Finn)",
+   "John Calhoun"
+  ],
+  "credit": "Jonathan Chin (alias Paul Finn) & John Calhoun",
+  "rooms": 208,
+  "stars": 1,
+  "goal": "stars",
+  "blurb": "Find the front of the ship.",
+  "status": {
+   "flyable": false,
+   "note": "not checked yet"
+  }
+ },
+ {
+  "slug": "rainbows-end",
+  "id": "classic-rainbows-end",
+  "name": "Rainbow's End",
+  "authors": [
+   "Ward Hartenstein"
+  ],
+  "credit": "Ward Hartenstein",
+  "rooms": 223,
+  "stars": 5,
+  "goal": "stars",
+  "blurb": null,
+  "status": {
+   "flyable": false,
+   "note": "not checked yet"
+  }
+ },
+ {
+  "slug": "imaginehouse-pro-ii",
+  "id": "classic-imaginehouse-pro-ii",
+  "name": "ImagineHouse PRO II",
+  "authors": [
+   "Jonathan Chin (alias Paul Finn)"
+  ],
+  "credit": "Jonathan Chin (alias Paul Finn)",
+  "rooms": 279,
+  "stars": 3,
+  "goal": "stars",
+  "blurb": null,
+  "status": {
+   "flyable": false,
+   "note": "not checked yet"
+  }
+ },
+ {
+  "slug": "land-of-illusion",
+  "id": "classic-land-of-illusion",
+  "name": "Land of Illusion",
+  "authors": [
+   "Ward Hartenstein"
+  ],
+  "credit": "Ward Hartenstein",
+  "rooms": 303,
+  "stars": 5,
+  "goal": "stars",
+  "blurb": null,
+  "status": {
+   "flyable": false,
+   "note": "not checked yet"
+  }
+ },
+ {
+  "slug": "slumberland",
+  "id": "classic-slumberland",
+  "name": "Slumberland",
+  "authors": [
+   "John Calhoun",
+   "Jonathan Chin (alias Paul Finn)",
+   "Steve Sullivan",
+   "Ward Hartenstein"
+  ],
+  "credit": "John Calhoun (first house and top of fourth house), Jonathan Chin (second house), Steve Sullivan (third house), Ward Hartenstein (bottom of fourth house)",
+  "rooms": 383,
+  "stars": 6,
+  "goal": "stars",
+  "blurb": null,
+  "status": {
+   "flyable": false,
+   "note": "not checked yet"
+  }
+ },
+ {
+  "slug": "spacepods",
+  "id": "classic-spacepods",
+  "name": "SpacePods",
+  "authors": [
+   "Ward Hartenstein"
+  ],
+  "credit": "Ward Hartenstein",
+  "rooms": 402,
+  "stars": 1,
+  "goal": "stars",
+  "blurb": null,
+  "status": {
+   "flyable": false,
+   "note": "not checked yet"
+  }
+ },
+ {
+  "slug": "leviathan",
+  "id": "classic-leviathan",
+  "name": "Leviathan",
+  "authors": [
+   "Jonathan Chin (alias Paul Finn)"
+  ],
+  "credit": "Jonathan Chin (alias Paul Finn)",
+  "rooms": 472,
+  "stars": 6,
+  "goal": "stars",
+  "blurb": null,
+  "status": {
+   "flyable": false,
+   "note": "not checked yet"
+  }
+ },
+ {
+  "slug": "teddy-world",
+  "id": "classic-teddy-world",
+  "name": "Teddy World",
+  "authors": [
+   "Shawn Brenneman"
+  ],
+  "credit": "Shawn Brenneman",
+  "rooms": 531,
+  "stars": 1,
+  "goal": "stars",
+  "blurb": null,
+  "status": {
+   "flyable": false,
+   "note": "not checked yet"
   }
  }
 ]

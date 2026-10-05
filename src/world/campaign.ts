@@ -39,11 +39,15 @@ export interface PlaceDef {
   open?: boolean;
 }
 
+/** What the card says about finishing a house: none to finish, or not shown to be finishable as converted. */
+const classicCaveat = (h: (typeof CLASSIC_HOUSES)[number]) =>
+  h.goal === 'none' ? ' · no stars: free flight' : h.status.flyable ? '' : ' · may not be finishable here';
+
 /** Glider PRO's houses, as in the original: all of them open from the start. */
 const CLASSIC_LEVELS: CampaignLevel[] = CLASSIC_HOUSES.map((h) => ({
   id: h.id,
   name: h.name,
-  blurb: `${classicCredit(h)} · ${h.rooms} room${h.rooms === 1 ? '' : 's'}${h.goal === 'none' ? ' · no stars: free flight' : ''}`,
+  blurb: `${classicCredit(h)} · ${h.rooms} room${h.rooms === 1 ? '' : 's'}${classicCaveat(h)}`,
   load: () => loadClassicHouse(h.slug),
   unlocks: [],
 }));
@@ -72,7 +76,7 @@ export const PLACES: PlaceDef[] = [
   {
     id: 'classic',
     name: 'Classic Houses',
-    blurb: "John Calhoun's Glider PRO houses and their authors' (GPL v2). Find every star to finish a house.",
+    blurb: "The houses that came with John Calhoun's Glider PRO (GPL v2), by their authors. Find every star to finish a house.",
     color: '#e8dcc0',
     icon: 'star',
     levels: CLASSIC_LEVELS,

@@ -5,6 +5,9 @@ import { groupOn } from './air';
 import type { ObjFactory } from './types';
 
 const num = (v: unknown, d: number) => (typeof v === 'number' ? v : d);
+
+/** Seconds after coming out of a transport before another one takes the plane (it may come out in one's mouth). */
+export const TRANSPORT_REST = 0.6;
 const glint = rgb('#e8f2ff');
 
 /**

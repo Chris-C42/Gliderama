@@ -38,20 +38,23 @@ describe.skipIf(!which)('Classic Houses flight check', () => {
         const n = goalStarIds(level).length;
         const secs = Math.round(r.t);
         const lost = r.sheetsUsed ? `${r.sheetsUsed} sheet${r.sheetsUsed === 1 ? '' : 's'} lost` : 'no sheet lost';
+        const rooms = `${r.rooms.length} room${r.rooms.length === 1 ? '' : 's'}`;
         let status: Record<string, unknown>;
         if (!n) status = { flyable: false, reached: 'no stars to find (free flight)', note: 'the house has no stars, as in Glider PRO' };
         else if (r.solved)
           status = {
             flyable: true,
-            reached: `${n === 1 ? 'the star' : `all ${n} stars`}, through ${r.rooms.length} rooms`,
+            reached: `${n === 1 ? 'the star' : `all ${n} stars`}, through ${rooms}`,
             par: parFor(r.t, r.sheetsUsed),
+            lost: r.sheetsUsed,
             note: `bot pilot: ${secs} s of flying, ${lost}`,
           };
         else {
           const key = r.stuck!.split(' ')[0];
           status = {
             flyable: false,
-            reached: `${r.stars.length} of ${n} stars, through ${r.rooms.length} rooms; stuck in "${level.rooms[key]?.name}" (${key}), ${r.roomsShort ?? '?'} rooms from the next star`,
+            reached: `${r.stars.length} of ${n} stars, through ${rooms}; stuck in "${level.rooms[key]?.name}" (${key}), ${r.roomsShort ?? '?'} rooms from the next star`,
+            lost: r.sheetsUsed,
             note: `bot pilot: ${secs} s of flying, ${lost}`,
           };
         }

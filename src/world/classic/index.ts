@@ -15,6 +15,8 @@ export interface ClassicStatus {
   note?: string;
   /** Seconds for the Swift medal. */
   par?: number;
+  /** Sheets the bot pilot lost on the way (the house gives half as many again, and a few). */
+  lost?: number;
 }
 
 export interface ClassicHouse {

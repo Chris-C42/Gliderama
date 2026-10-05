@@ -87,7 +87,9 @@ describe('Classic Houses data', () => {
               expect(it.y, `${key} ${it.t} y`).toBeGreaterThanOrEqual(0);
               expect(it.y, `${key} ${it.t} y`).toBeLessThanOrEqual(360);
             }
-            if (it.t === 'transport') expect(level.rooms[it.to as string], `${key}: transport to ${it.to}`).toBeDefined();
+            // a transport leads to a room; one without `to` is the far end of another, drawn as a duct
+            if (it.t === 'transport')
+              expect(it.to === undefined ? typeof it.look === 'string' : !!level.rooms[it.to as string], `${key}: transport to ${it.to}`).toBe(true);
             if (it.t === 'stairsUp' || it.t === 'stairsDown')
               expect(neighbour(level, key, it.t === 'stairsUp' ? 'up' : 'down'), `${key}: ${it.t} lead somewhere`).not.toBeNull();
           }

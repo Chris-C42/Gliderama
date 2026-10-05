@@ -20,6 +20,13 @@ House credits, from the Glider PRO release:
 - Teddy World: Shawn Brenneman
 - The Asylum Pro: Steve Sullivan
 
+Castle o' the Air is credited to John Calhoun by its own opening banner ("by john calhoun"). The release does not
+name the authors of Art Museum, California or Bust!, Fun House, Empty House (a blank template) or Sampler (whose
+banner reads "Welcome to Omid's Happy Home."); the game says so on their cards.
+
+The houses are converted by `scripts/convert-glider-houses.mjs`; what was changed or left out is listed in
+`docs/classic-houses.md`. No Glider PRO pictures or sounds are used.
+
 ## Licence
 
 Gliderama is free software: you can redistribute it and/or modify it under the terms of the GNU General
