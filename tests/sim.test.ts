@@ -19,12 +19,32 @@ describe('headless room simulation', () => {
     expect(r.path.length).toBeGreaterThan(10);
   });
 
-  it('a glider carried by the hall vent climbs', () => {
+  it('a glider passing over the hall vent climbs', () => {
     const { aero, mesh } = plane('glider');
     const room = buildSimRoom(HALL);
-    // start low, right above the vent, flying slowly to the right
-    const r = simulateRoom(room, aero, mesh, { x: 240, y: 250, vx: 1.2, vy: 0, facing: 1 }, undefined, { maxT: 2 });
+    // thrown level just before the vent: the rising air lifts it above its start height
+    const r = simulateRoom(room, aero, mesh, { x: 230, y: 250, angle: 0, power: 0.35 }, undefined, { maxT: 3 });
     const minY = Math.min(...r.path.map((p) => p.y));
     expect(minY).toBeLessThan(240);
+  });
+});
+
+describe('thermalling', () => {
+  it('turning back and forth over a vent climbs towards the ceiling', () => {
+    const { aero, mesh } = plane('glider');
+    const r = simulateRoom(
+      buildSimRoom(HALL),
+      aero,
+      mesh,
+      { x: 236, y: 230, angle: 0, power: 0.3 },
+      (p) => {
+        const px = p.x * 128;
+        if (px > 296 && p.facing > 0 && !p.turn) return { dir: -1, pitch: 0, boost: false };
+        if (px < 262 && p.facing < 0 && !p.turn) return { dir: 1, pitch: 0, boost: false };
+        return { dir: 0, pitch: 0, boost: false };
+      },
+      { maxT: 8 },
+    );
+    expect(Math.min(...r.path.map((p) => p.y))).toBeLessThan(120);
   });
 });
