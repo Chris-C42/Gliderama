@@ -397,3 +397,39 @@ export const exitPortal: ObjFactory = (def, id) => {
     },
   };
 };
+
+// ---------------------------------------------------------------------------------------------
+// Goals: landing targets and hoops (sandbox & challenges).
+
+export const target: ObjFactory = (def, id) => {
+  const w = def.w ?? 90;
+  return {
+    id,
+    def,
+    trigger() {
+      return { x: def.x, y: 300, w, h: 44 };
+    },
+  };
+};
+
+export const hoop: ObjFactory = (def, id) => {
+  const r = num(def.r, 26);
+  let passed = false;
+  return {
+    id,
+    def,
+    trigger() {
+      return passed ? null : { x: def.x - 3, y: def.y - r + 6, w: 6, h: 2 * r - 12 };
+    },
+    onTouch(ctx) {
+      if (passed) return;
+      passed = true;
+      ctx.api.goal?.('hoop', id);
+      ctx.api.sfx('star', { pitch: 5 });
+      for (let k = 0; k < 16; k++) {
+        const a = (k / 16) * Math.PI * 2;
+        ctx.particles.spawn({ x: def.x, y: def.y, vx: Math.cos(a) * 40, vy: Math.sin(a) * 90, life: 0.5, max: 0.5, ...rgb('#f09a72'), a: 1, drag: 2 });
+      }
+    },
+  };
+};

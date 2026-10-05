@@ -34,6 +34,28 @@ export interface SessionOptions {
   charges?: Partial<Charges>;
   /** Stars already collected (e.g. resuming). */
   collected?: string[];
+  /** Never run out of sheets (sandbox). */
+  infiniteSheets?: boolean;
+  /** Record the flight path (for ghosts / reports). */
+  record?: boolean;
+}
+
+export interface FlightStats {
+  reason: 'grounded' | 'crashed' | 'target';
+  /** Horizontal distance from the launch point (m), across rooms. */
+  distance: number;
+  /** Real seconds in the air. */
+  timeAloft: number;
+  /** Highest point above the floor (m). */
+  maxHeight: number;
+  /** Height lost from launch to landing (m). */
+  heightLost: number;
+  /** Global path samples (room grid aware): x = gx*640 + px, y = gy*360 + py. */
+  path: { x: number; y: number }[];
+  damage: number;
+  landedRoom: string;
+  landedX: number;
+  targetId: string | null;
 }
 
 export interface Charges {
@@ -84,6 +106,10 @@ export interface SessionCallbacks {
   workbench?(): void;
   room?(key: string, def: RoomDef): void;
   sfx?(name: string, opts?: { vol?: number; pitch?: number }): void;
+  /** A flight ended (landing / crash / target), with stats. */
+  flightEnded?(stats: FlightStats): void;
+  /** A goal object fired (hoop passed, target hit...). */
+  goal?(kind: string, id: string): void;
 }
 
 const DEG = Math.PI / 180;
@@ -166,6 +192,7 @@ export class Session {
   private realTime = 0;
   private roomDamage0 = 0;
   private triggeredThisTick = new Set<string>();
+  private flight = { x0: 0, y0: 0, t0: 0, maxH: 0, path: [] as { x: number; y: number }[], k: 0 };
 
   constructor(
     readonly renderer: GameRenderer,
@@ -301,6 +328,9 @@ export class Session {
     },
     isCollected: (id) => this.collected.has(id),
     lightsOn: () => this.room.lightsOn,
+    goal: (kind: string, id: string) => {
+      this.cb.goal?.(kind, id);
+    },
   };
 
   private sfx(name: string, opts?: { vol?: number; pitch?: number }): void {
@@ -348,6 +378,8 @@ export class Session {
     this.tick.groundT = 0;
     this.tick.stillT = 0;
     this.message = null;
+    const g = this.globalPos(cp.x, cp.y);
+    this.flight = { x0: g.x, y0: g.y, t0: this.time, maxH: 0, path: [g], k: 0 };
     this.sfx('throw', { vol: 0.5 + power * 0.5 });
   }
 
@@ -375,8 +407,27 @@ export class Session {
 
   private flightOver(reason: 'grounded' | 'crashed'): void {
     if (this.phase !== 'fly') return;
+    // landed in a target zone?
+    let targetId: string | null = null;
+    if (reason === 'grounded') {
+      const q = planePx(this.plane);
+      for (const o of this.room.objects) {
+        if (o.def.t !== 'target') continue;
+        const r = o.trigger?.();
+        if (r && q.x >= r.x && q.x <= r.x + r.w && q.y >= r.y - 30 && q.y <= r.y + r.h + 10) targetId = o.id;
+      }
+    }
+    this.cb.flightEnded?.(this.flightStats(targetId ? 'target' : reason, targetId));
+    if (targetId) {
+      this.cb.goal?.('target', targetId);
+      this.sfx('win');
+    }
     this.phase = 'down';
     this.downT = 0;
+    if (this.opts.infiniteSheets) {
+      this.message = targetId ? 'Bullseye!' : reason === 'crashed' ? 'Crumpled!' : 'Landed.';
+      return;
+    }
     this.crashes++;
     this.sheetsUsed++;
     this.sheets--;
@@ -524,6 +575,7 @@ export class Session {
       return;
     }
 
+    this.recordPath();
     // room transitions
     this.edges(pos);
   }
@@ -561,6 +613,55 @@ export class Session {
     if (entry === 'down') cy = 280;
     if (entry === 'up') cy = 60;
     this.checkpoint = { room: next, x: cx, y: cy, facing: p.facing };
+  }
+
+  /** Room-grid-aware global pixel position. */
+  globalPos(x: number, y: number): { x: number; y: number } {
+    const [gx, gy] = this.room.key.split(',').map(Number);
+    return { x: gx * ROOM_W + x, y: gy * ROOM_H + y };
+  }
+
+  private recordPath(): void {
+    const q = planePx(this.plane);
+    const g = this.globalPos(q.x, q.y);
+    const f = this.flight;
+    f.maxH = Math.max(f.maxH, (340 - q.y) / PX_PER_M);
+    if (this.opts.record && f.k++ % 4 === 0) {
+      f.path.push(g);
+      if (f.path.length > 3000) f.path.shift();
+    }
+  }
+
+  private flightStats(reason: FlightStats['reason'], targetId: string | null): FlightStats {
+    const q = planePx(this.plane);
+    const g = this.globalPos(q.x, q.y);
+    const f = this.flight;
+    if (this.opts.record) f.path.push(g);
+    return {
+      reason,
+      distance: Math.abs(g.x - f.x0) / PX_PER_M,
+      timeAloft: this.time - f.t0,
+      maxHeight: f.maxH,
+      heightLost: (g.y - f.y0) / PX_PER_M,
+      path: f.path,
+      damage: damagePct(this.plane.damage),
+      landedRoom: this.room.key,
+      landedX: q.x,
+      targetId,
+    };
+  }
+
+  /** Swap in edited rooms (sandbox builder): clears cached art and rebuilds the current room. */
+  reloadRooms(rooms: LevelDef['rooms']): void {
+    (this.level as { rooms: LevelDef['rooms'] }).rooms = rooms;
+    this.artCache.clear();
+    const key = this.room.key;
+    this.room.dispose();
+    this.renderer.clearSprites();
+    const def = this.level.rooms[key];
+    const art = this.artFor(key);
+    this.renderer.setRoom(art);
+    this.room = new RoomRuntime(key, def, art, this.renderer, this.switches);
   }
 
   // ------------------------------------------------------------------------------------------

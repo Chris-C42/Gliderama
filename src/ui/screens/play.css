@@ -94,6 +94,12 @@
   .hud__pause {
     display: none; /* the touch controls carry their own pause button */
   }
+  .hud__group--right {
+    margin-right: calc(var(--tc-pause-size, 12vmin) + 1.2em);
+  }
+}
+.no-gadget .tc-gadget {
+  display: none;
 }
 .hud__msg {
   position: absolute;

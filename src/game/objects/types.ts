@@ -28,6 +28,8 @@ export interface SessionApi {
   plane(): { x: number; y: number; vx: number; vy: number; alive: boolean };
   isCollected(id: string): boolean;
   lightsOn(): boolean;
+  /** Report a goal event (hoops, targets) to the mode. */
+  goal?(kind: string, id: string): void;
 }
 
 /** Where objects can emit particles (a no-op sink when simulating headless). */

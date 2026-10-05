@@ -14,7 +14,8 @@ export type WallPattern =
   | 'diamonds'
   | 'tile'
   | 'brick'
-  | 'boards';
+  | 'boards'
+  | 'corrugated';
 
 export interface WallStyle {
   pattern: WallPattern;
@@ -25,7 +26,7 @@ export interface WallStyle {
   trim: RampName;
 }
 
-export type FloorKind = 'planks' | 'carpet' | 'tiles' | 'checker' | 'stone';
+export type FloorKind = 'planks' | 'carpet' | 'tiles' | 'checker' | 'stone' | 'concrete';
 
 export interface FloorStyle {
   kind: FloorKind;
@@ -67,6 +68,8 @@ export interface RoomDef {
   items: ItemDef[];
   /** Optional seed for art variation. */
   seed?: number;
+  /** Continuous open space (hangar): no side walls or door casings are drawn at openings. */
+  open?: boolean;
 }
 
 /** Layout constants shared by art and collisions. */

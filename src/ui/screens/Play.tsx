@@ -138,7 +138,7 @@ export function Play(props: { spec: PlaySpec }) {
   };
 
   return (
-    <div class="screen play" ref={wrap}>
+    <div class={`screen play ${spec.design.extras.gadget === 'none' ? 'no-gadget' : ''}`} ref={wrap}>
       <canvas ref={canvas} class="play__canvas pixelated" width={640} height={360} />
       {hud && <Hud hud={hud} onPause={() => setPause(true)} flightData={settings.value.flightData} />}
       {inputRef.current && !end && !paused && !bench && (

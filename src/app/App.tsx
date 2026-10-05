@@ -7,6 +7,7 @@ import { Campaign } from '../ui/screens/Campaign';
 import { SettingsScreen } from '../ui/screens/Settings';
 import { Library } from '../ui/screens/Library';
 import { Placeholder } from '../ui/screens/Placeholder';
+import { Hangar } from '../ui/screens/Hangar';
 import { parseImportFromHash } from '../core/share';
 import { decodeDesign } from '../paper/codec';
 import { saveDesign } from './library';
@@ -50,6 +51,9 @@ export function App() {
       break;
     case 'library':
       screen = <Library />;
+      break;
+    case 'hangar':
+      screen = <Hangar design={r.design} />;
       break;
     default:
       screen = <Placeholder name={r.name} />;

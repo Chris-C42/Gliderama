@@ -136,6 +136,20 @@ export function paintWallpaper(px: Px, x0: number, y0: number, w: number, h: num
       }
       break;
     }
+    case 'corrugated': {
+      for (let x = x0; x < x1; x += 8) {
+        px.vline(x, y0, h, b[b.length - 1]);
+        px.vline(x + 1, y0, h, b[b.length - 1]);
+        px.vline(x + 5, y0, h, b[b.length - 3]);
+        px.vline(x + 6, y0, h, b[b.length - 4]);
+      }
+      // panel seams and rivets
+      for (let y = y0 + 60; y < y1; y += 70) {
+        px.hline(x0, y, w, b[b.length - 4]);
+        for (let x = x0 + 4; x < x1; x += 16) px.px(x, y - 2, b[b.length - 5] ?? b[1]);
+      }
+      break;
+    }
     default:
       px.speckle(x0, y0, w, h, [b[b.length - 3]], 0.01);
   }
@@ -196,6 +210,15 @@ function paintFloor(px: Px, room: RoomDef): void {
       // grain
       px.speckle(0, ya + 1, W, Math.max(1, yb - ya - 1), [r[Math.max(0, shadeI - 1)]], 0.02);
     }
+  } else if (f.kind === 'concrete') {
+    px.vgrad(0, y0, W, H - y0, [r[2], r[3], r[3], r[4]]);
+    px.speckle(0, y0, W, H - y0, [r[2], r[4], r[1]], 0.05);
+    // expansion joints in perspective
+    for (let k = -6; k <= 6; k++) {
+      const xb = 320 + k * 110;
+      px.line(320 + k * 60, y0, xb, H, r[1]);
+    }
+    px.hline(0, y0 + 20, W, r[1]);
   } else if (f.kind === 'carpet') {
     px.vgrad(0, y0, W, H - y0, [r[2], r[3], r[3], r[4]]);
     px.speckle(0, y0, W, H - y0, [r[2], r[4]], 0.08);
@@ -226,6 +249,7 @@ function paintSideWalls(px: Px, room: RoomDef, wallTop: number): void {
   const t = ramp(room.wall.trim);
   for (const side of ['left', 'right'] as const) {
     const ex = room.exits[side];
+    if (room.open && ex) continue;
     const left = side === 'left';
     const x0 = left ? 0 : W - sw;
     const wallCol = b[Math.max(0, b.length - 4)];

@@ -1,6 +1,8 @@
 import type { HudState } from '../../game/session';
 import { Icon } from '../icons';
 
+const COARSE = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
+
 export function Hud(props: { hud: HudState; onPause: () => void; flightData: boolean }) {
   const h = props.hud;
   const dmgColor = h.damage < 25 ? 'var(--teal-l)' : h.damage < 60 ? 'var(--mustard)' : 'var(--red)';
@@ -66,7 +68,7 @@ export function Hud(props: { hud: HudState; onPause: () => void; flightData: boo
             <div class="hud__meter-fill" style={{ height: `${Math.round(h.power * 100)}%` }} />
             <div class="hud__meter-ideal" style={{ bottom: `${Math.round(h.idealPower * 100)}%` }} />
           </div>
-          <span class="hud__hint">Drag back &amp; release to throw · keys: ↑↓ aim, hold Space</span>
+          <span class="hud__hint">{COARSE ? 'Drag back anywhere, then let go to throw' : 'Drag back & release to throw · or ↑↓ aim, hold Space'}</span>
         </div>
       )}
       {props.flightData && h.phase === 'fly' && (

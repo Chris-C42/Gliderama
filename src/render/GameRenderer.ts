@@ -85,6 +85,39 @@ export class GameRenderer {
     this.scene.add(this.guide);
   }
 
+  private ghost: THREE.Points | null = null;
+  private ghostPos = new Float32Array(1500 * 3);
+
+  /** Ghost trail of a previous flight (room px, already clipped to this room). */
+  setGhost(pts: { x: number; y: number }[]): void {
+    if (!this.ghost) {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(this.ghostPos, 3));
+      this.ghost = new THREE.Points(
+        g,
+        new THREE.ShaderMaterial({
+          glslVersion: THREE.GLSL3,
+          transparent: true,
+          depthWrite: false,
+          vertexShader: `void main(){ gl_PointSize = 2.0; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+          fragmentShader: `precision highp float; out vec4 fragColor; void main(){ fragColor = vec4(0.62, 0.8, 1.0, 0.75); }`,
+        }),
+      );
+      this.ghost.frustumCulled = false;
+      this.ghost.renderOrder = 39;
+      this.ghost.position.z = 39;
+      this.scene.add(this.ghost);
+    }
+    const n = Math.min(1500, pts.length);
+    for (let i = 0; i < n; i++) {
+      this.ghostPos[i * 3] = Math.round(pts[i].x);
+      this.ghostPos[i * 3 + 1] = 360 - Math.round(pts[i].y);
+    }
+    const geo = this.ghost.geometry;
+    geo.setDrawRange(0, n);
+    (geo.attributes.position as THREE.BufferAttribute).needsUpdate = true;
+  }
+
   /** Aiming guide: dotted predicted trajectory (room px). */
   setGuide(pts: { x: number; y: number; a: number }[]): void {
     const n = Math.min(64, pts.length);
