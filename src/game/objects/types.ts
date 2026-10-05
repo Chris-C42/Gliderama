@@ -61,7 +61,17 @@ export interface GameObject {
   /** Extra moving colliders. */
   colliders?(): Collider[];
   lights?(): ActiveLight[];
+  /** Ambient sound source (room px) for the mixer, or null when silent. */
+  sound?(): AmbientSound | null;
   dispose?(): void;
+}
+
+export interface AmbientSound {
+  loop: 'vent' | 'fan' | 'fire';
+  x: number;
+  y: number;
+  /** Loudness at the source, 0..1. */
+  vol: number;
 }
 
 export type ObjFactory = (def: ItemDef, id: string, gfx: Gfx | null, room: { dark: boolean; night: boolean }) => GameObject;

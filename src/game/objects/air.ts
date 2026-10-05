@@ -38,6 +38,9 @@ export const floorVent: ObjFactory = (def, id) => {
       out.y += power * k * decay;
     },
     on: true,
+    sound() {
+      return this.on ? { loop: 'vent', x: def.x + w / 2, y: baseY, vol: Math.min(1, 0.45 + power / 8) } : null;
+    },
     update(ctx) {
       if (group) this.on = ctx.api.switchOn(group);
       if (!this.on) return;
@@ -80,6 +83,9 @@ export const ceilingVent: ObjFactory = (def, id) => {
       if (k <= 0) return;
       const decay = Math.max(0.25, 1 - (0.6 * h) / Math.max(40, bottom - y0));
       out.y -= power * k * decay;
+    },
+    sound() {
+      return { loop: 'vent', x: def.x + w / 2, y: y0, vol: 0.5 };
     },
     update(ctx) {
       acc += ctx.dt * (5 + w * 0.1);
@@ -156,6 +162,9 @@ export const deskFan: ObjFactory = (def, id, gfx) => {
       const k = (1 - dx / reach) * (1 - (dy / half) ** 2);
       out.x += dir * power * k;
     },
+    sound() {
+      return on ? { loop: 'fan', x: cx, y: cy, vol: Math.min(1, 0.5 + power / 8) } : null;
+    },
     update(ctx) {
       if (group) on = ctx.api.switchOn(group);
       if (on) angle += ctx.dt * 30;
@@ -207,6 +216,9 @@ export const radiator: ObjFactory = (def, id) => {
       const k = bump(x, def.x - 4 - h * 0.08, def.x + w + 4 + h * 0.08);
       if (k <= 0) return;
       out.y += power * k * Math.max(0.3, 1 - h / 280);
+    },
+    sound() {
+      return { loop: 'vent', x: def.x + w / 2, y: baseY, vol: 0.22 };
     },
     update(ctx) {
       acc += ctx.dt * 5;

@@ -86,6 +86,16 @@ export interface HudState {
   idealPower: number;
 }
 
+/** What the ambient mixer needs each frame (all 0..1 except speed). */
+export interface Ambience {
+  flying: boolean;
+  /** Airspeed in m/s while flying, else 0. */
+  speed: number;
+  vent: number;
+  fan: number;
+  fire: number;
+}
+
 export interface LevelResult {
   levelId: string;
   time: number;
@@ -676,6 +686,22 @@ export class Session {
 
   // ------------------------------------------------------------------------------------------
   // HUD & render
+
+  /** Loudness of the room's ambient loops as heard from the plane (falls off with distance). */
+  ambience(): Ambience {
+    const q = planePx(this.plane);
+    const mix = { vent: 0, fan: 0, fire: 0 };
+    for (const o of this.room.objects) {
+      const snd = o.sound?.();
+      if (!snd) continue;
+      const g = Math.max(0, 1 - Math.hypot(snd.x - q.x, snd.y - q.y) / 340);
+      const v = snd.vol * (0.16 + 0.84 * g * g);
+      mix[snd.loop] = 1 - (1 - mix[snd.loop]) * (1 - v);
+    }
+    if (this.plane.damage.burning > 0) mix.fire = Math.max(mix.fire, 0.85);
+    const flying = this.phase === 'fly';
+    return { flying, speed: flying ? this.plane.V : 0, ...mix };
+  }
 
   hud(): HudState {
     const p = this.plane;

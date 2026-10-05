@@ -66,6 +66,9 @@ export const candle: ObjFactory = (def, id, gfx) => {
     onTouch(ctx) {
       ctx.api.ignite();
     },
+    sound() {
+      return { loop: 'fire', x: fx, y: fy - 6, vol: 0.4 };
+    },
     lights() {
       return [light];
     },
