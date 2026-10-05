@@ -1,15 +1,17 @@
 /**
  * Procedural houses for the endless roguelike ("Paper Trail") and the Daily Flight.
  *
- *   generateFloor({ seed, floor, theme, twist?, rooms?, workbenchRoom? })  ->  LevelDef
+ *   generateFloor({ seed, floor, theme, twist?, rooms?, workbenchRoom?, stairsChance? })  ->  LevelDef
  *
  * Deterministic: the same options give a deep-equal level (all randomness is forked from `createRng(seed)`).
  * Every room is validated by flying two reference paper planes (glider, dart) through it with a small autopilot in the
  * headless simulator.
  *
  * How a room is made (`room.ts` drives it):
- *   layout.ts      the route of rooms on the grid and the openings between them
- *   air.ts         the lift the altitude budget needs: vents, stairwell holes, fans
+ *   layout.ts      the route of rooms on the grid and how they connect: side doorways, openings in the floor and ceiling, or
+ *                  (about half the changes of storey) a flight of stairs, flown into at the top or dropped down into
+ *   stairsPlan.ts  where the stairs of such a link go in a room, and the floor and wall they take up
+ *   air.ts         the lift the altitude budget needs: vents (also the one in front of a flight of stairs), holes, fans
  *   pilot.ts       the autopilot; fly.ts: entry points and pass criteria; fleet.ts: the reference planes
  *   dress.ts       furniture, decor and hazards, placed through scene.ts around the corridor the flights measured
  *                  (templates and looks in themes.ts, sizes and placement rules in catalog.ts)
@@ -58,6 +60,16 @@ export function dailyOptions(dateKey: string): FloorOptions & { twist: TwistId }
   };
 }
 
+/** A flight of stairs keeps its look (wood and runner) at both ends: one colourway per stairs link, from the theme's. */
+function stairsLooks(theme: ThemeDef, route: RoomIO[], rng: Rng): void {
+  for (const io of route) {
+    if (io.link !== 'stairs' || (io.exit !== 'up' && io.exit !== 'down')) continue;
+    const v = rng.fork(`link-${io.index}`).weighted(theme.stairs.map((s) => ({ item: s.v, w: s.w })));
+    io.stairsV = v;
+    route[io.index + 1].stairsV = v;
+  }
+}
+
 function pickTemplates(theme: ThemeDef, route: RoomIO[], workbench: boolean, rng: Rng): RoomTemplate[] {
   const out: RoomTemplate[] = [];
   const byId = (id: string) => theme.templates.find((t) => t.id === id)!;
@@ -92,7 +104,8 @@ export function generateFloorWithReport(opts: FloorOptions): GeneratedFloor {
   const workbench = !!opts.workbenchRoom;
   const count = Math.max(workbench ? 3 : 2, opts.rooms ?? 6 + root.fork('count').int(0, 2) + (workbench ? 1 : 0));
 
-  const route = planRoute(root.fork('layout'), { count, floor });
+  const route = planRoute(root.fork('layout'), { count, floor, stairsChance: opts.stairsChance });
+  stairsLooks(theme, route, root.fork('stairs'));
   const templates = pickTemplates(theme, route, workbench, root.fork('templates'));
   const levelId = `${opts.theme}-s${opts.seed}-f${floor}`;
 

@@ -10,10 +10,11 @@ import { simulateRoom, type SimOutcome, type SimRoom } from '../../game/sim';
 import { PX_PER_M, ROOM_H } from '../../physics/config';
 import { damagePct } from '../../physics/damage';
 import type { Plane } from '../../physics/flight';
-import type { Rect } from '../types';
+import { stairsDownGeom, stairsUpGeom } from '../stairs';
+import type { ItemDef, Rect } from '../types';
 import type { RefPlane } from './fleet';
 import { makePilot, type PilotSpec } from './pilot';
-import type { FlightRun, RoomIO } from './types';
+import { entersByStairs, leavesByStairs, type FlightRun, type RoomIO } from './types';
 
 /** Entry heights (px) used for validation: a high and a low arrival at a side doorway. */
 export const ENTRY_HIGH = 130;
@@ -36,6 +37,11 @@ export interface Entry {
   dirX: 1 | -1;
   /** Arriving already in flight instead of thrown: velocity in m/s (y up). */
   v?: { x: number; y: number };
+  /**
+   * Arriving by stairs: reset level (no pitch, no turn) at the design's best-glide speed, as the session does. The speed
+   * depends on the plane, so it cannot be a fixed `v`.
+   */
+  reset?: boolean;
 }
 
 const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b : v);
@@ -45,6 +51,8 @@ export interface EntryExtras {
   start?: { x: number; y: number };
   /** Where the plane is re-thrown after refolding at the workbench. */
   bench?: { x: number; y: number };
+  /** Where the stairs bring the plane out (a room entered by stairs): see `stairsArrival`. */
+  arrive?: { x: number; y: number; facing: 1 | -1 };
 }
 
 /** The entry points a room must be flyable from. */
@@ -61,6 +69,10 @@ export function entriesFor(io: RoomIO, extras: EntryExtras = {}): Entry[] {
     const to = span?.to ?? 335;
     out.push({ id: 'door-hi', x, y: clamp(ENTRY_HIGH, from + 28, to - 40), elev: 0, dirX });
     out.push({ id: 'door-lo', x, y: clamp(ENTRY_LOW, from + 28, to - 40), elev: 0, dirX });
+  } else if (entersByStairs(io)) {
+    // coming out of the stairs: 'above' = down from the room above (at its doorway), 'below' = up from the room below (over its well)
+    const a = extras.arrive ?? { x: 320, y: 180, facing: dirX };
+    out.push({ id: io.entry === 'up' ? 'above' : 'below', x: a.x, y: a.y, elev: 0, dirX: a.facing, reset: true });
   } else {
     const cx = span ? (span.from + span.to) / 2 : 320;
     // 'up': dropping in through the ceiling opening; 'down': rising through the floor opening
@@ -73,9 +85,22 @@ export function entriesFor(io: RoomIO, extras: EntryExtras = {}): Entry[] {
   return out;
 }
 
-/** The pilot's brief for a room (which exit, which vents it may use). */
-export function pilotSpec(io: RoomIO, vents: PilotSpec['vents'], extras: { land?: PilotSpec['land'] } = {}): PilotSpec {
+/** The pilot has to reach the stairs doorway at least this far above its sill, so the doorway is hit rather than grazed. */
+const DOOR_SILL = 12;
+
+/** The pilot's brief for a room (which exit, which vents it may use). `stairs`: the room's stairs item, for a room left by stairs. */
+export function pilotSpec(io: RoomIO, vents: PilotSpec['vents'], extras: { land?: PilotSpec['land']; stairs?: ItemDef } = {}): PilotSpec {
   const sideExit = io.exit === 'left' || io.exit === 'right';
+  if (leavesByStairs(io) && extras.stairs) {
+    const base = { dirX: io.dirX, vents, yc: EXIT_CONTRACT - 5, final: false, land: extras.land };
+    if (io.exit === 'up') {
+      // a doorway on a landing: its sill is the lowest the plane may arrive, its lintel the highest
+      const door = stairsUpGeom(extras.stairs).door;
+      return { ...base, exit: 'stairsUp', yc: door.y + door.h - DOOR_SILL, doorTop: door.y, holeCx: door.x + door.w / 2 };
+    }
+    const well = stairsDownGeom(extras.stairs).well;
+    return { ...base, exit: 'stairsDown', doorTop: 0, holeCx: well.x + well.w / 2 };
+  }
   return {
     dirX: io.dirX,
     exit: io.exit,
@@ -126,7 +151,8 @@ function run(
     return pilot(p, t);
   };
   const angle = entry.dirX > 0 ? elev : Math.PI - elev;
-  const start = entry.v ? { x: entry.x, y: entry.y, vx: entry.v.x, vy: entry.v.y, facing: entry.dirX } : { x: entry.x, y: entry.y, angle, power: plane.power };
+  const v = entry.reset ? { x: entry.dirX * plane.aero.perf.vBest, y: 0 } : entry.v;
+  const start = v ? { x: entry.x, y: entry.y, vx: v.x, vy: v.y, facing: entry.dirX } : { x: entry.x, y: entry.y, angle, power: plane.power };
   const res = simulateRoom(sim, plane.aero, plane.mesh, start, ctl, {
     maxT: opts.maxT,
     record: opts.record,
@@ -148,7 +174,7 @@ function aimCandidates(entry: Entry, target: Rect): number[] {
 /** Fly one plane from one entry and judge it. */
 export function flyRoom(sim: SimRoom, plane: RefPlane, spec: PilotSpec, entry: Entry, opts: FlyOptions = {}): FlightRun {
   let elev = entry.elev;
-  if (opts.touch && !entry.v) {
+  if (opts.touch && !entry.v && !entry.reset) {
     // a pilot who has to flip the switch aims the throw at it
     for (const a of aimCandidates(entry, opts.touch)) {
       const probe = run(sim, plane, spec, entry, a, { touch: opts.touch, maxT: 1.6, record: 12 });

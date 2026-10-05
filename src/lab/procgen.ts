@@ -1,6 +1,7 @@
 /**
  * Procgen lab: generate a floor and look at every room (painted with the real room painter), laid out on the grid by
- * room key. Query: seed, floor, theme, twist, rooms, workbench=1, scale, debug, cols (contact sheet), only (one room).
+ * room key. Query: seed, floor, theme, twist, rooms, workbench=1, stairs (0..1: how often a change of storey is a flight of
+ * stairs), scale, debug, cols (contact sheet), only (one room).
  * `?debug` overlays the bot's validation flights (green = passed, red = failed) and the colliders.
  */
 
@@ -17,6 +18,7 @@ const theme = ((q.get('theme') || themeForFloor(floor)) as ThemeId) ?? 'home';
 const twist = (q.get('twist') || 'none') as TwistId;
 const rooms = q.get('rooms') ? Number(q.get('rooms')) : undefined;
 const workbench = q.get('workbench') === '1';
+const stairsChance = q.get('stairs') ? Number(q.get('stairs')) : undefined;
 const scale = Number(q.get('scale') ?? 1);
 const debug = q.has('debug') && q.get('debug') !== '0';
 const onlyParam = q.get('only'); // render a single room: a key like 2,0 or `start`
@@ -32,7 +34,7 @@ for (const [k, v] of Object.entries({ seed, floor, theme, twist, rooms: rooms ??
 (form.elements.namedItem('debug') as HTMLInputElement).checked = debug;
 
 const t0 = performance.now();
-const { level, report } = generateFloorWithReport({ seed, floor, theme, twist, rooms, workbenchRoom: workbench });
+const { level, report } = generateFloorWithReport({ seed, floor, theme, twist, rooms, workbenchRoom: workbench, stairsChance });
 const genMs = performance.now() - t0;
 const only = onlyParam === 'start' ? level.start.room : onlyParam;
 const structural = validateLevel(level);
@@ -197,7 +199,8 @@ function drawRun(ctx: CanvasRenderingContext2D, run: FlightRun, nominal: boolean
 }
 
 function sideLabel(room: RoomDef): string {
-  return (['left', 'right', 'up', 'down'] as const).filter((s) => room.exits[s]).join('/');
+  const stairs = room.items.filter((i) => i.t === 'stairsUp' || i.t === 'stairsDown').map((i) => (i.t === 'stairsUp' ? 'stairs-up' : 'stairs-down'));
+  return [...(['left', 'right', 'up', 'down'] as const).filter((s) => room.exits[s]), ...stairs].join('/');
 }
 
 const problems: string[] = [];

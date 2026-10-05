@@ -1,7 +1,8 @@
 /**
  * Structural checks of a generated level (no flight simulation: see `flightCheck.ts` for that): openings line up,
- * ids are unique, items are in bounds, floor furniture does not overlap, surface items sit on something, wall decor
- * has room to breathe, dark rooms have their switch, the workbench stands on a desk.
+ * stairs come in matching pairs, ids are unique, items are in bounds, floor furniture does not overlap (nor stand on
+ * the stairs), surface items sit on something, wall decor has room to breathe, dark rooms have their switch, the
+ * workbench stands on a desk.
  */
 
 import { neighbour, parseKey, type LevelDef } from '../../game/level';
@@ -10,6 +11,7 @@ import { LAYOUT, type ExitSpan, type ItemDef } from '../types';
 import { CANDLE, CATALOG, boxOf, sizeOf, surfaceOf, wallAboveOf } from './catalog';
 import { overlaps, unionX } from './geom';
 import { routeIO, traceRoute } from './route';
+import { stairsArrive, stairsFloorSpan, stairsWallBoxes } from './stairsPlan';
 import { KINDS } from '../kinds';
 import { OPPOSITE, type Side } from './types';
 
@@ -65,6 +67,20 @@ export function validateLevel(level: LevelDef): Validation {
     }
   }
   if (exits !== 1) bad(`expected exactly one level exit, found ${exits}`);
+
+  // ---- stairs: the room above a stairsUp has the stairsDown (and the other way round), and no opening joins the same two rooms
+  for (const k of keys) {
+    const room = level.rooms[k];
+    for (const [t, way, other] of [['stairsUp', 'up', 'stairsDown'], ['stairsDown', 'down', 'stairsUp']] as const) {
+      const mine = room.items.filter((i) => i.t === t);
+      if (mine.length === 0) continue;
+      if (mine.length > 1) bad(`${k}: ${mine.length} ${t} items in one room`);
+      const n = neighbour(level, k, way);
+      if (!n) bad(`${k}: ${t} leads to a room that does not exist`);
+      else if (!level.rooms[n].items.some((i) => i.t === other)) bad(`${k}: ${t} has no matching ${other} in ${n}`);
+      if (room.exits[way] || (n && level.rooms[n].exits[OPPOSITE[way]])) bad(`${k}: stairs and an opening both join ${k} and ${n ?? '(nothing)'}`);
+    }
+  }
 
   // ---- the route
   const steps = traceRoute(level);
@@ -146,10 +162,29 @@ function validateRoom(level: LevelDef, key: string): string[] {
     return { it, ...unionX(boxes.length ? boxes : [boxOf(it)]) };
   });
   const vents = items.filter((i) => i.t === 'floorVent').map((it) => ({ it, x0: it.x, x1: it.x + (it.w ?? 48) }));
+  const stairs = items.filter((i) => i.t === 'stairsUp' || i.t === 'stairsDown');
   for (let i = 0; i < spans.length; i++) {
     for (let j = i + 1; j < spans.length; j++)
       if (spans[i].x0 < spans[j].x1 && spans[j].x0 < spans[i].x1) bad(`${spans[i].it.t} and ${spans[j].it.t} overlap on the floor`);
     for (const v of vents) if (spans[i].x0 < v.x1 && v.x0 < spans[i].x1) bad(`${spans[i].it.t} stands on a floor vent`);
+  }
+
+  // ---- stairs: standing on the floor line, inside the room, and nothing on the floor under them
+  for (const st of stairs) {
+    if (st.t === 'stairsUp' && (st.y !== LAYOUT.floor || (st.dir !== 1 && st.dir !== -1)))
+      bad(`stairsUp at x=${st.x} must stand on the floor and have dir 1 or -1`);
+    if (st.t === 'stairsDown' && st.y !== LAYOUT.wallBase) bad(`stairsDown at x=${st.x} must sit in the floor at y=${LAYOUT.wallBase}`);
+    const f = stairsFloorSpan(st);
+    for (const sp of spans) if (sp.x0 < f.x1 && f.x0 < sp.x1) bad(`${sp.it.t} stands on the ${st.t}`);
+    for (const v of vents) if (v.x0 < f.x1 && f.x0 < v.x1) bad(`a floor vent is inside the ${st.t}`);
+    for (const r of items.filter((i) => i.t === 'rug')) {
+      const b = boxOf(r);
+      if (b.x < f.x1 && f.x0 < b.x + b.w) bad(`a rug runs under the ${st.t}`);
+    }
+    // where the plane comes out must be free
+    const a = stairsArrive(st);
+    for (const c of roomColliders(room))
+      if (a.x > c.x - 8 && a.x < c.x + c.w + 8 && a.y > c.y - 8 && a.y < c.y + c.h + 8) bad(`the ${st.t} brings the plane out inside furniture or a wall`);
   }
 
   // ---- surface items
@@ -165,8 +200,9 @@ function validateRoom(level: LevelDef, key: string): string[] {
     if (!host) bad(`${it.t} at (${it.x}, ${it.y}) does not stand on a table top`);
   }
 
-  // ---- wall decor
+  // ---- wall decor (and ceiling lamps)
   const wall = items.filter((i) => CATALOG[i.t]?.placement === 'wall');
+  const hung = items.filter((i) => CATALOG[i.t]?.placement === 'ceiling');
   // the real solid parts of the furniture (a bed's tall headboard is not a tall bed)
   const tops = spans.flatMap((s) => {
     const cols = KINDS[s.it.t]?.colliders?.(s.it, room) ?? [];
@@ -181,7 +217,10 @@ function validateRoom(level: LevelDef, key: string): string[] {
       const breast = wallAboveOf(it);
       if (breast && overlaps(a, breast, 2)) bad(`${wall[i].t} is hidden by the chimney breast of the ${it.t}`);
     }
+    for (const st of stairs) if (stairsWallBoxes(st).some((b) => overlaps(a, b, 0))) bad(`${wall[i].t} at (${wall[i].x}, ${wall[i].y}) hangs over the ${st.t}`);
   }
+  for (const it of hung)
+    for (const st of stairs) if (stairsWallBoxes(st).some((b) => overlaps(boxOf(it), b, 0))) bad(`${it.t} at (${it.x}, ${it.y}) hangs in front of the ${st.t}`);
 
   // ---- dark rooms and their switch
   const sw = items.filter((i) => i.t === 'switch');

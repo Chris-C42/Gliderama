@@ -9,6 +9,7 @@ import { variantIndex, surfaceOf } from './catalog';
 import type { AirPlan } from './air';
 import type { Band } from './geom';
 import { Scene, type Placed } from './scene';
+import { stairsWallBoxes, type StairsPlan } from './stairsPlan';
 import type { FloorSlot, Perch, RoomLook, RoomTemplate } from './themes';
 import type { RoomIO } from './types';
 
@@ -40,6 +41,8 @@ export interface DressInput {
   stub: RoomDef;
   rng: Rng;
   start?: StartPlan;
+  /** The stairs of a stairs link: placed as they are, with the floor and wall around them kept free. */
+  stairs?: StairsPlan;
   workbench: boolean;
   hazards: HazardPlan;
   /** Light switch position (dark rooms): plate and runtime object share it. */
@@ -71,7 +74,16 @@ export function dress(inp: DressInput): Scene {
   for (const v of air.vents) {
     scene.reservedFloor.push({ x0: v.x - 2, x1: v.x + v.w + 2 });
   }
-  const floorHole = io.entry === 'down' ? io.entrySpan : io.exit === 'down' ? io.exitSpan : undefined;
+  // ... and so are stairs: the flight takes the floor from its foot to its far end and the wall up to its doorway
+  if (inp.stairs) {
+    scene.addFixed(inp.stairs.item, 'stairs');
+    scene.reservedFloor.push({ ...inp.stairs.floor });
+    const boxes = stairsWallBoxes(inp.stairs.item);
+    scene.reservedWall.push(...boxes);
+    // nothing solid (a lamp, a window sill) hangs in front of the doorway either
+    if (boxes.length) scene.landing.push(boxes[0]);
+  }
+  const floorHole = io.link === 'stairs' ? undefined : io.entry === 'down' ? io.entrySpan : io.exit === 'down' ? io.exitSpan : undefined;
   if (floorHole) scene.reservedFloor.push({ x0: floorHole.from - 12, x1: floorHole.to + 12 });
   for (const f of air.fans) {
     const host = scene.placeFloor({ kind: f.host.kind, tag: 'fanHost', w: f.host.kind === 'nightstand' ? undefined : f.host.w, at: f.host.x, v: woodV(f.host.kind), removable: false, margin: 10 });
@@ -149,7 +161,7 @@ export function dress(inp: DressInput): Scene {
   for (let i = 0; i < inp.hazards.candles; i++) placeCandle(scene, inp.hazards.flameMargin, rng, i);
 
   // ---- drips from the ceiling (water)
-  for (let i = 0; i < inp.hazards.drips; i++) placeDrip(scene, air, io, rng, i);
+  for (let i = 0; i < inp.hazards.drips; i++) placeDrip(scene, air, io, rng, i, inp.stairs);
 
   // ---- rug
   if (rng.chance(template.rug) && !inp.workbench) {
@@ -265,9 +277,10 @@ function placeCandle(scene: Scene, flameMargin: number, rng: Rng, index: number)
   }
 }
 
-function placeDrip(scene: Scene, air: AirPlan, io: RoomIO, rng: Rng, index: number): void {
-  // where the plane crosses once, at speed: after the last thermal, never over a thermal column
+function placeDrip(scene: Scene, air: AirPlan, io: RoomIO, rng: Rng, index: number, stairs?: StairsPlan): void {
+  // where the plane crosses once, at speed: after the last thermal, never over a thermal column (nor over a flight of stairs)
   const cols = air.vents.map((v) => ({ x0: v.x - 70, x1: v.x + v.w + 70 }));
+  if (stairs) cols.push({ x0: stairs.floor.x0 - 20, x1: stairs.floor.x1 + 20 });
   const lo = io.dirX > 0 ? 330 : 80;
   const hi = io.dirX > 0 ? 580 : 330;
   const xs: number[] = [];

@@ -6,14 +6,15 @@
 import type { Rng } from '../../core/rng';
 import { buildSimRoom } from '../../game/sim';
 import { LAYOUT, type ItemDef, type RoomDef } from '../types';
-import { airItems, pilotVents, planAir, toX, type AirPlan } from './air';
+import { airItems, pilotVents, planAir, type AirPlan } from './air';
 import { dress, type HazardPlan, type StartPlan } from './dress';
 import { entriesFor, flyRoom, pilotSpec, ENTRY_HIGH, ENTRY_LOW } from './fly';
 import { referencePlanes } from './fleet';
-import { Band } from './geom';
+import { Band, toX } from './geom';
 import type { Scene, Placed } from './scene';
+import { planStairs, type StairsPlan } from './stairsPlan';
 import type { Perch, RoomLook, RoomTemplate } from './themes';
-import type { Difficulty, FlightRun, RoomIO, RoomReport, Side } from './types';
+import { entersByStairs, leavesByStairs, type Difficulty, type FlightRun, type RoomIO, type RoomReport, type Side } from './types';
 
 export interface RoomContext {
   difficulty: Difficulty;
@@ -96,8 +97,9 @@ function startPlan(io: RoomIO, template: RoomTemplate, rng: Rng): StartPlan {
 
 function shellExits(io: RoomIO): RoomDef['exits'] {
   const ex: RoomDef['exits'] = {};
-  if (io.entry !== 'start' && io.entrySpan) ex[io.entry as Side] = { from: io.entrySpan.from, to: io.entrySpan.to };
-  ex[io.exit] = { ...io.exitSpan };
+  // (a flight of stairs cuts no opening into the shell)
+  if (io.entry !== 'start' && io.entrySpan && !entersByStairs(io)) ex[io.entry as Side] = { from: io.entrySpan.from, to: io.entrySpan.to };
+  if (!leavesByStairs(io)) ex[io.exit] = { ...io.exitSpan };
   return ex;
 }
 
@@ -105,6 +107,8 @@ interface Plan {
   look: RoomLook;
   flags: RoomFlags;
   air: AirPlan;
+  /** The stairs of a stairs link (a flight to fly into, a stairwell to drop into, or the way the plane comes out). */
+  stairs?: StairsPlan;
   hazards: HazardPlan;
   counts: { candles: number; drips: number; tallShelf: boolean };
   start?: StartPlan;
@@ -118,6 +122,7 @@ function planRoom(ctx: RoomContext, io: RoomIO, template: RoomTemplate, rng: Rng
   const hz = safe ? { candles: 0, drips: 0, fans: 0, ceilVents: 0, tallShelf: false, dark: d.twist === 'lights-out', night: d.twist === 'night' } : hazardCounts(d, io, calm, rng.fork('hazards'), vertical);
   const look = rng.fork('look').pick(template.looks);
   const start = io.index === 0 ? startPlan(io, template, rng.fork('start')) : undefined;
+  const stairs = planStairs(io, rng.fork('stairs')) ?? undefined;
   const air = planAir(io, rng.fork('air'), {
     difficulty: d,
     attempt,
@@ -126,6 +131,7 @@ function planRoom(ctx: RoomContext, io: RoomIO, template: RoomTemplate, rng: Rng
     startU: start ? (io.dirX > 0 ? start.x : 640 - start.x) : undefined,
     fans: hz.fans,
     ceilVents: hz.ceilVents,
+    stairs,
   });
   const flameMargin = d.floor === 0 ? 46 : Math.max(20, 38 - 3 * d.floor);
   const margin = attempt >= 2 ? 22 : 16;
@@ -133,6 +139,7 @@ function planRoom(ctx: RoomContext, io: RoomIO, template: RoomTemplate, rng: Rng
     look,
     flags: { dark: hz.dark, night: hz.night, calm },
     air,
+    stairs,
     hazards: { candles: hz.candles, drips: hz.drips, tallShelf: hz.tallShelf, flameMargin, margin },
     counts: { candles: hz.candles, drips: hz.drips, tallShelf: hz.tallShelf },
     start,
@@ -163,6 +170,7 @@ interface FlyInput {
   rooms?: Record<string, RoomDef>;
   io: RoomIO;
   air: AirPlan;
+  stairs?: StairsPlan;
   start?: { x: number; y: number };
   /** Light switch trigger every ordinary entry has to touch. */
   touch?: { x: number; y: number; w: number; h: number };
@@ -174,8 +182,8 @@ interface FlyInput {
 function flyAll(inp: FlyInput): FlightSet {
   const planes = referencePlanes();
   const sim = buildSimRoom(inp.def, inp.rooms ? { level: { rooms: { ...inp.rooms, [inp.io.key]: inp.def } }, key: inp.io.key } : undefined);
-  const spec = pilotSpec(inp.io, pilotVents(inp.air));
-  const entries = entriesFor(inp.io, { start: inp.start, bench: benchRestart(inp.air, inp.io) });
+  const spec = pilotSpec(inp.io, pilotVents(inp.air), { stairs: inp.stairs?.item });
+  const entries = entriesFor(inp.io, { start: inp.start, bench: benchRestart(inp.air, inp.io), arrive: inp.stairs?.arrive });
   const runs: FlightRun[] = [];
   const planeOk: Record<string, boolean> = {};
   for (const plane of planes) {
@@ -193,7 +201,7 @@ function flyAll(inp: FlyInput): FlightSet {
       // reachable workbench: from the low door entry, climb if needed, then hover down onto the desk
       const lowEntry = entries.find((e) => e.id === 'door-lo');
       if (lowEntry) {
-        const landSpec = pilotSpec(inp.io, pilotVents(inp.air), { land: inp.bench });
+        const landSpec = pilotSpec(inp.io, pilotVents(inp.air), { land: inp.bench, stairs: inp.stairs?.item });
         const r = flyRoom(sim, plane, landSpec, { ...lowEntry, id: 'land' });
         runs.push(r);
         if (!r.ok) ok = false;
@@ -204,6 +212,11 @@ function flyAll(inp: FlyInput): FlightSet {
   const both = planes.every((p) => planeOk[p.id]);
   const some = planes.some((p) => planeOk[p.id]);
   return { runs, planeOk, ok: inp.needBoth ? both : some, both };
+}
+
+/** The bare shell's runtime items: the air movers and the stairs. */
+function shellItems(plan: Plan): ItemDef[] {
+  return [...airItems(plan.air), ...(plan.stairs ? [plan.stairs.item] : [])];
 }
 
 function nominalPath(runs: FlightRun[], plane?: string): { x: number; y: number }[] {
@@ -218,7 +231,7 @@ function nominalPath(runs: FlightRun[], plane?: string): { x: number; y: number 
 // ---------------------------------------------------------------------------------------------
 // The flight band
 
-function buildBand(runs: FlightRun[], planeOk: Record<string, boolean>, io: RoomIO, air: AirPlan): Band {
+function buildBand(runs: FlightRun[], planeOk: Record<string, boolean>, io: RoomIO, air: AirPlan, stairs?: StairsPlan): Band {
   const band = new Band();
   // (the restart from the workbench starts on the desk itself, so its first moments say nothing about free air)
   for (const r of runs) if (r.ok && planeOk[r.plane] && r.entry !== 'bench' && r.entry !== 'land') band.addPath(r.path, 13, 13);
@@ -227,10 +240,13 @@ function buildBand(runs: FlightRun[], planeOk: Record<string, boolean>, io: Room
     if (v.role === 'hole') band.addBox(v.x - 40, v.x + v.w + 40, 0, 340);
     else band.addBox(v.x - 12, v.x + v.w + 12, 24, 340);
   }
-  if (io.exit === 'up' || io.exit === 'down' || io.entry === 'up' || io.entry === 'down') {
+  // (a flight of stairs has no shaft to keep clear: the floor and wall it takes up are reserved when the room is dressed)
+  if (io.link !== 'stairs' && (io.exit === 'up' || io.exit === 'down' || io.entry === 'up' || io.entry === 'down')) {
     const span = io.exit === 'up' || io.exit === 'down' ? io.exitSpan : io.entrySpan!;
     band.addBox(span.from - 14, span.to + 14, io.entry === 'up' || io.exit === 'up' ? 0 : 200, io.entry === 'up' || io.exit === 'up' ? 150 : 340);
   }
+  // where the stairs would bring a plane out (also when the route does not come that way): nothing solid there
+  if (stairs) band.addBox(stairs.arrive.x - 26, stairs.arrive.x + 26, stairs.arrive.y - 22, stairs.arrive.y + 22);
   // the doorway the plane comes through
   if (io.entry === 'left' || io.entry === 'right') {
     const x0 = io.entry === 'left' ? 0 : 560;
@@ -407,9 +423,9 @@ interface Dressed {
 /** Furnish the room around the corridor the skeleton flights measured, fly it again and repair what the plane hits. */
 function dressAndFly(a: Attempt, sk: FlightSet, rng: Rng, minimal: boolean): Dressed | null {
   const { io, plan, baseDef } = a;
-  const band = buildBand(sk.runs, sk.planeOk, io, plan.air);
+  const band = buildBand(sk.runs, sk.planeOk, io, plan.air, plan.stairs);
   let switchAt: { x: number; y: number } | undefined;
-  if (plan.flags.dark) switchAt = switchSpot(nominalPath(sk.runs), io, a.start);
+  if (plan.flags.dark) switchAt = switchSpot(nominalPath(sk.runs), io, a.start ?? (entersByStairs(io) ? plan.stairs?.arrive : undefined));
   const template: RoomTemplate = minimal ? { ...a.template, floorPlan: [], wallPlan: [], pendant: 0, rug: 0 } : a.template;
   const scene = dress({
     io,
@@ -420,6 +436,7 @@ function dressAndFly(a: Attempt, sk: FlightSet, rng: Rng, minimal: boolean): Dre
     stub: { ...baseDef },
     rng: rng.fork('dress'),
     start: minimal ? undefined : plan.start,
+    stairs: plan.stairs,
     workbench: plan.flags.calm,
     hazards: minimal ? { candles: 0, drips: 0, tallShelf: false, flameMargin: 40, margin: 24 } : plan.hazards,
     switchAt,
@@ -427,7 +444,18 @@ function dressAndFly(a: Attempt, sk: FlightSet, rng: Rng, minimal: boolean): Dre
     minimal,
   });
   const touch = switchAt ? { x: switchAt.x - 4, y: switchAt.y - 4, w: 18, h: 24 } : undefined;
-  const fly = () => flyAll({ def: compose(baseDef, scene, plan.air, []), rooms: a.rooms, io, air: plan.air, start: a.start, touch, bench: a.bench, needBoth: a.needBoth });
+  const fly = () =>
+    flyAll({
+      def: compose(baseDef, scene, plan.air, []),
+      rooms: a.rooms,
+      io,
+      air: plan.air,
+      stairs: plan.stairs,
+      start: a.start,
+      touch,
+      bench: a.bench,
+      needBoth: a.needBoth,
+    });
   let flights = fly();
   for (let fix = 0; fix < 4 && !flights.ok; fix++) {
     const victim = blame(scene, flights.runs);
@@ -480,7 +508,15 @@ export function buildRoom(ctx: RoomContext, io: RoomIO, template: RoomTemplate, 
     };
 
     // 1) fly the bare shell
-    const sk = flyAll({ def: { ...baseDef, items: airItems(plan.air) }, rooms: a.rooms, io, air: plan.air, start: a.start, needBoth: a.needBoth });
+    const sk = flyAll({
+      def: { ...baseDef, items: shellItems(plan) },
+      rooms: a.rooms,
+      io,
+      air: plan.air,
+      stairs: plan.stairs,
+      start: a.start,
+      needBoth: a.needBoth,
+    });
     lastAttempt = { a, sk };
     if (!sk.ok) continue;
     passing = { a, sk, r };
@@ -496,7 +532,7 @@ export function buildRoom(ctx: RoomContext, io: RoomIO, template: RoomTemplate, 
     if (dressed) return finish(passing.a, dressed, passing.r, MAX_ATTEMPTS, true);
   }
   const bare = lastAttempt!;
-  const def: RoomDef = { ...bare.a.baseDef, items: airItems(bare.a.plan.air) };
+  const def: RoomDef = { ...bare.a.baseDef, items: shellItems(bare.a.plan) };
   const start = bare.a.plan.start ? { x: bare.a.plan.start.x, y: bare.a.plan.start.y, facing: io.dirX } : undefined;
   return { def, report: summarize(io, template, MAX_ATTEMPTS, true, bare.sk), start };
 }

@@ -8,10 +8,13 @@
  */
 
 import type { Rng } from '../../core/rng';
+import { stairsDownGeom, stairsUpGeom } from '../stairs';
 import type { ItemDef } from '../types';
 import { EXIT_CONTRACT } from './fly';
+import { toX } from './geom';
 import { HOLE_HALF } from './layout';
-import type { Difficulty, RoomIO } from './types';
+import type { StairsPlan } from './stairsPlan';
+import { entersByStairs, leavesByStairs, type Difficulty, type RoomIO } from './types';
 
 export interface VentPlan {
   /** Left edge (px). */
@@ -21,7 +24,8 @@ export interface VentPlan {
   power: number;
   /** y (px) the updraft tops out at; negative = continues through a ceiling opening. */
   top: number;
-  role: 'thermal' | 'hole' | 'stair';
+  /** `stair`: just beyond a floor opening or a stairwell; `landing`: in front of a flight of stairs, lifting the plane to its doorway. */
+  role: 'thermal' | 'hole' | 'stair' | 'landing';
 }
 
 export interface CeilVentPlan {
@@ -55,9 +59,6 @@ export interface AirPlan {
   bench?: BenchPlan;
 }
 
-/** px from the entry wall -> x. */
-export const toX = (dirX: 1 | -1, u: number) => (dirX > 0 ? u : 640 - u);
-
 export const VENT_W = [48, 56, 64] as const;
 
 function ventPower(rng: Rng, floor: number): number {
@@ -87,6 +88,21 @@ export function topWindow(doorTop: number, centreU: number): { lo: number; hi: n
   return { lo, hi: Math.max(hi, lo) };
 }
 
+/** Farthest (px) a landing vent may be from the doorway it lifts the plane to: beyond that the glide loses too much height. */
+export const STAIRS_REACH = 323;
+
+/**
+ * The window a landing vent's `top` has to fall in, for a doorway whose middle is `doorMid` (y) and `D` px from the vent's
+ * centre (the pilot glides to the doorway's middle after leaving the updraft). Measured on the pilot's flights, like
+ * `topWindow`: the dart has to arrive above the doorway's sill (`hi`: a weaker updraft leaves it too low), the glider must
+ * not overshoot the lintel (`lo`). The lower the doorway, the more room between the two (a doorway at head height needs
+ * the vent within about 25 px; one on a low landing about 45).
+ */
+export function stairsTopWindow(doorMid: number, D: number): { lo: number; hi: number } {
+  const lo = Math.round(45 + 0.3 * (STAIRS_REACH - D));
+  return { lo, hi: lo + Math.max(10, Math.round(0.9 * (doorMid - 94))) };
+}
+
 /** `frac` picks a point in the vent's allowed `top` window (see `topWindow`). */
 export function mkVent(dirX: 1 | -1, centreU: number, w: number, power: number, frac: number, role: VentPlan['role'], doorTop: number): VentPlan {
   const { lo, hi } = topWindow(doorTop, centreU);
@@ -108,6 +124,8 @@ export interface AirOptions {
   /** Hazard counts decided by the room planner. */
   fans: number;
   ceilVents: number;
+  /** The stairs of a stairs link in this room. */
+  stairs?: StairsPlan;
 }
 
 export function planAir(io: RoomIO, rng: Rng, o: AirOptions): AirPlan {
@@ -115,6 +133,14 @@ export function planAir(io: RoomIO, rng: Rng, o: AirOptions): AirPlan {
   const floor = o.difficulty.floor;
   const safe = o.attempt >= 2;
   const plan: AirPlan = { vents: [], ceilVents: [], fans: [] };
+
+  // ---- up the stairs: a vent in front of the flight lifts the plane to the doorway on its landing
+  const st = o.stairs;
+  if (st && leavesByStairs(io)) {
+    if (io.exit === 'up') plan.vents.push(landingVent(io, rng, o, st));
+    // (down the stairs there is nothing to climb: the plane drops into the well)
+    return finish(plan, io, rng, o);
+  }
 
   // ---- rooms with a stairwell
   if (io.exit === 'up') {
@@ -139,6 +165,18 @@ export function planAir(io: RoomIO, rng: Rng, o: AirOptions): AirPlan {
     const deskX = dirX > 0 ? deskU0 + 4 : 640 - (deskU0 + 4) - deskW;
     plan.bench = { x: Math.round(deskX), w: deskW };
     return plan;
+  }
+
+  // ---- coming out of the stairs: from the stairwell below, a stair draught just beyond the well; from the doorway above (a
+  // flight rising to the entry wall) there is plenty of height already
+  if (st && entersByStairs(io)) {
+    if (io.entry === 'down') {
+      const well = stairsDownGeom(st.item).well;
+      const cu = toX(dirX, well.x + well.w / 2);
+      const u = cu + well.w / 2 + 24 + 32 + rng.int(0, 40);
+      plan.vents.push(mkVent(dirX, u, 64, rng.float(4.4, 4.9), 0.35, 'stair', io.exitSpan.from));
+    }
+    return finish(plan, io, rng, o);
   }
 
   // ---- rising through a floor opening: a stair draught just beyond it
@@ -169,14 +207,41 @@ export function planAir(io: RoomIO, rng: Rng, o: AirOptions): AirPlan {
   return finish(plan, io, rng, o);
 }
 
+/**
+ * The vent in front of a flight of stairs the plane leaves by: clear of the foot, near enough to the doorway that the glide
+ * reaches it, and after the start throw if this is the first room.
+ */
+function landingVent(io: RoomIO, rng: Rng, o: AirOptions, st: StairsPlan): VentPlan {
+  const { dirX } = io;
+  const safe = o.attempt >= 2;
+  const floor = o.difficulty.floor;
+  const door = stairsUpGeom(st.item).door;
+  const doorU = toX(dirX, door.x + door.w / 2);
+  const footU = dirX > 0 ? st.floor.x0 : 640 - st.floor.x1;
+  const w = safe ? 64 : ventWidth(rng, floor);
+  const hi = footU - 16 - w / 2;
+  const lo = Math.min(hi, Math.max(doorU - STAIRS_REACH, 190, (o.startU ?? 0) + 130));
+  const u = safe ? Math.round((lo + hi) / 2) : rng.int(Math.round(lo), Math.round(hi));
+  const { lo: tLo, hi: tHi } = stairsTopWindow(door.y + door.h / 2, doorU - u);
+  // weaker lift on later floors, but within the window (the dart gives out towards the top of it, the glider is happy anywhere)
+  const frac = safe ? 0.5 : Math.min(0.7, Math.max(0.1, ventFrac(rng, floor)));
+  return {
+    x: Math.round(toX(dirX, u) - w / 2),
+    w,
+    power: Math.round(rng.float(4.2, 4.7) * 10) / 10,
+    top: tLo + Math.round((tHi - tLo) * frac),
+    role: 'landing',
+  };
+}
+
 /** Ceiling vents and fans, which only ever go where the plane is already high (after the last thermal). */
 function finish(plan: AirPlan, io: RoomIO, rng: Rng, o: AirOptions): AirPlan {
   const { dirX } = io;
   const thermals = plan.vents.filter((v) => v.role !== 'hole');
   const lastU = thermals.length
     ? Math.max(...thermals.map((v) => (dirX > 0 ? ventCentre(v) : 640 - ventCentre(v))))
-    : io.entry === 'up'
-      ? ((dirX > 0 ? (io.entrySpan!.from + io.entrySpan!.to) / 2 : 640 - (io.entrySpan!.from + io.entrySpan!.to) / 2))
+    : io.entry === 'up' && io.entrySpan
+      ? ((dirX > 0 ? (io.entrySpan.from + io.entrySpan.to) / 2 : 640 - (io.entrySpan.from + io.entrySpan.to) / 2))
       : 200;
   const safe = o.attempt >= 3;
   if (!safe && !o.calm) {

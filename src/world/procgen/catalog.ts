@@ -6,6 +6,7 @@
  */
 
 import { LAYOUT, type ItemDef } from '../types';
+import { stairsUpGeom } from '../stairs';
 import type { Box } from './types';
 
 /**
@@ -15,8 +16,10 @@ import type { Box } from './types';
  * - `ceiling`: hangs from the ceiling.
  * - `rug`: floor decor with no collider, may overlap furniture.
  * - `vent`: floor grille (air mover), occupies a floor x-range.
+ * - `stairs`: a flight of stairs or a stairwell between floors. Planned together with the air (`stairsPlan.ts`), never
+ *   placed by a template: it takes the floor from its foot to its far end and the wall up to its doorway.
  */
-export type Placement = 'floor' | 'wall' | 'surface' | 'ceiling' | 'rug' | 'vent';
+export type Placement = 'floor' | 'wall' | 'surface' | 'ceiling' | 'rug' | 'vent' | 'stairs';
 
 export interface SurfaceDef {
   /** x of the walkable top relative to the host's x. */
@@ -164,6 +167,10 @@ export const CATALOG: Record<string, CatalogEntry> = {
 
   floorVent: { kind: 'floorVent', placement: 'vent', w: 56, h: 9, wRange: [48, 64], tags: ['air', 'lift'] },
 
+  // ---- stairs between floors: `x` = foot of the flight (its far end is `x + w`), or the left edge of the well
+  stairsUp: { kind: 'stairsUp', placement: 'stairs', w: 190, h: 180, wRange: [190, 222], variants: ['walnut', 'oak', 'pine'], tags: ['stairs', 'furniture'] },
+  stairsDown: { kind: 'stairsDown', placement: 'stairs', w: 150, h: 58, wRange: [140, 160], variants: ['walnut', 'oak', 'pine'], tags: ['stairs'] },
+
   // ---- decor on the floor
   rug: {
     kind: 'rug',
@@ -309,6 +316,14 @@ export function boxOf(it: ItemDef): Box {
       const stand = typeof it.stand === 'number' ? it.stand : 30;
       return { x: it.x, y: it.y, w: 32, h: stand + 32 };
     }
+    case 'stairsUp': {
+      // from the doorway's casing down to the floor, foot to far end
+      const top = stairsUpGeom(it).door.y - 8;
+      return { x: it.x, y: top, w, h: LAYOUT.floor - top };
+    }
+    case 'stairsDown':
+      // the well, and the gallery rail with its newel posts standing above it
+      return { x: it.x - 4, y: LAYOUT.wallBase - 36, w: w + 8, h: 360 - (LAYOUT.wallBase - 36) };
     case 'deskLamp':
       return { x: it.x, y: it.y, w: 40, h: 48 };
     default: {
