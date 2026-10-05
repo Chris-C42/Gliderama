@@ -688,3 +688,105 @@ export const shredder: ObjFactory = (def, id) => {
     },
   };
 };
+
+// ---------------------------------------------------------------------------------------------
+// Grease can (Glider PRO 32 × 27): clip it and it tips over, spilling a slick along the shelf the way it faces.
+
+function paintCan(px: Px, dir: 1 | -1, tipped: boolean) {
+  const c = Px.create(40, 40);
+  // drawn upright, spout to the right, on a 40 × 40 canvas with its foot at the bottom
+  c.rect(10, 18, 18, 22, R.steel[2]);
+  c.rect(11, 19, 16, 20, R.steel[4]);
+  c.vline(12, 19, 20, R.steel[5]);
+  c.rect(11, 25, 16, 8, R.red[3]);
+  c.hline(11, 25, 16, R.red[4]);
+  c.poly([[10, 18], [28, 18], [22, 12], [16, 12]], R.steel[3]);
+  c.rect(17, 9, 4, 4, R.steel[2]);
+  c.line(21, 11, 36, 3, R.steel[3]);
+  c.line(21, 12, 36, 4, R.steel[2]);
+  c.rect(5, 21, 5, 2, R.steel[2]);
+  c.rect(5, 21, 2, 12, R.steel[2]);
+  c.rect(5, 31, 5, 2, R.steel[2]);
+  const ctx = px.ctx;
+  ctx.save();
+  ctx.translate(24, 24);
+  if (dir < 0) ctx.scale(-1, 1);
+  // tipped: lying on its side, spout to the floor ahead
+  if (tipped) ctx.rotate(Math.PI / 2);
+  ctx.drawImage(c.canvas, tipped ? -24 : -20, tipped ? -20 : -24);
+  ctx.restore();
+}
+
+export const grease: ObjFactory = (def, id, gfx) => {
+  const dir: 1 | -1 = num(def.dir, 1) >= 0 ? 1 : -1;
+  const reach = num(def.reach, 70);
+  // the can is 40 wide and stands on the surface at its box's bottom
+  const foot = def.y + num(def.h, 29);
+  const can = spriteOf(gfx, 48, 48, 0, 7);
+  const slick = spriteOf(gfx, Math.max(8, Math.round(reach)), 4, 0, 6);
+  let tipped = false;
+  let spread = 0;
+  const show = () => {
+    can.show(tipped ? 'tipped' : 'up', (px) => paintCan(px, dir, tipped), def.x - 4, foot - 48 + (tipped ? 4 : 0));
+    if (spread > 0) {
+      const w = Math.round(spread);
+      slick.show(`s${w}`, (px) => {
+        px.rect(dir > 0 ? 0 : reach - w, 1, w, 3, R.ink[1]);
+        px.hline(dir > 0 ? 1 : reach - w + 1, 1, Math.max(0, w - 2), R.steel[3]);
+      }, dir > 0 ? def.x + 20 : def.x + 20 - reach, foot - 4);
+    }
+  };
+  return {
+    id,
+    def,
+    update(ctx) {
+      if (tipped && spread < reach) spread = Math.min(reach, spread + ctx.dt * 120);
+      show();
+    },
+    trigger() {
+      return tipped ? null : { x: def.x + 6, y: foot - 30, w: 28, h: 30 };
+    },
+    onTouch(ctx) {
+      tipped = true;
+      ctx.api.sfx('bump', { vol: 0.3, pitch: 6 });
+      ctx.api.sfx('splash', { vol: 0.25, pitch: -9 });
+    },
+    dispose() {
+      can.dispose();
+      slick.dispose();
+    },
+  };
+};
+
+// ---------------------------------------------------------------------------------------------
+// A guitar (the `guitar` kind) strums as the plane brushes its strings; wind chimes ring.
+
+function ringer(sound: string, area: (def: ItemDef) => Rect): ObjFactory {
+  return (def, id) => {
+    let over = false;
+    let wasOver = false;
+    return {
+      id,
+      def,
+      update() {
+        // ring once each time the plane comes through
+        wasOver = over;
+        over = false;
+      },
+      trigger() {
+        return area(def);
+      },
+      onTouch(ctx) {
+        over = true;
+        if (!wasOver) ctx.api.sfx(sound);
+      },
+    };
+  };
+}
+
+export const guitar = ringer('strum', (def) => {
+  const w = num(def.w, 80);
+  return { x: def.x + w * 0.4, y: def.y + 24, w: w * 0.2, h: num(def.h, 183) - 24 };
+});
+
+export const chimes = ringer('chime', (def) => ({ x: def.x, y: def.y + 12, w: num(def.w, 35), h: num(def.h, 79) - 12 }));

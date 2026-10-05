@@ -34,8 +34,7 @@ const PARTS_TOTAL = 2.4;
 
 /** Structural integrity lost, 0..1 (1 = destroyed). */
 export function structural(d: Damage): number {
-  let parts = 0;
-  for (const p of PART_NAMES) parts += d[p] * WEIGHT[p];
+  const parts = d.nose * WEIGHT.nose + d.wingL * WEIGHT.wingL + d.wingR * WEIGHT.wingR + d.tail * WEIGHT.tail + d.body * WEIGHT.body;
   return Math.min(1, parts / PARTS_TOTAL + d.scorch * 0.55 + Math.max(0, d.soak - 0.7) * 0.6);
 }
 

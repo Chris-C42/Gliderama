@@ -191,6 +191,38 @@ describe('enemies', () => {
   });
 });
 
+describe('clutter', () => {
+  it('a grease can tips over once, and does the plane no harm', () => {
+    const { calls, ctx } = harness();
+    const g = make({ t: 'grease', x: 300, y: 243, dir: -1 });
+    run(g, ctx, 0.1);
+    expect(g.trigger!()).not.toBeNull();
+    g.onTouch!(ctx);
+    run(g, ctx, 1);
+    expect(g.trigger!()).toBeNull();
+    expect(calls.strike).toHaveLength(0);
+  });
+
+  it('a guitar strums and chimes ring once each time the plane comes through', () => {
+    for (const [t, sound] of [
+      ['guitar', 'strum'],
+      ['chimes', 'chime'],
+    ] as const) {
+      const { calls, ctx } = harness();
+      const o = make({ t, x: 400, y: 100 });
+      for (let k = 0; k < 10; k++) {
+        o.update!(ctx);
+        o.onTouch!(ctx);
+      }
+      expect(calls.sfx.filter((n) => n === sound)).toHaveLength(1);
+      o.update!(ctx);
+      o.update!(ctx);
+      o.onTouch!(ctx);
+      expect(calls.sfx.filter((n) => n === sound)).toHaveLength(2);
+    }
+  });
+});
+
 describe('crumpling', () => {
   it('a blow takes its amount off the structure, and a full one destroys the plane', () => {
     for (const part of ['nose', 'wingL', 'tail', 'body'] as const) {

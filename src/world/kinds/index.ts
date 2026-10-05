@@ -4,6 +4,7 @@ import * as hangar from './hangar';
 import * as cottage from './cottage';
 import * as stairs from './stairs';
 import * as gliderpro from './gliderpro';
+import * as appliances from './appliances';
 
 export const KINDS: Record<string, KindDef> = {
   window: home.windowKind,
@@ -67,6 +68,24 @@ export const KINDS: Record<string, KindDef> = {
   cobweb: gliderpro.cobwebKind,
   outlet: gliderpro.outletKind,
   shredder: gliderpro.shredderKind,
+  cloud: gliderpro.cloudKind,
+  mirror: gliderpro.mirrorKind,
+  milkCrate: gliderpro.milkCrateKind,
+  mousehole: gliderpro.mouseholeKind,
+  bear: gliderpro.bearKind,
+  cabinet: gliderpro.cabinetKind,
+  counter: gliderpro.counterKind,
+  guitar: gliderpro.guitarKind,
+  chimes: gliderpro.chimesKind,
+  faucet: gliderpro.faucetKind,
+  floorLamp: gliderpro.floorLampKind,
+  tv: appliances.tvKind,
+  computer: appliances.computerKind,
+  microwave: appliances.microwaveKind,
+  vcr: appliances.vcrKind,
+  stereo: appliances.stereoKind,
+  coffee: appliances.coffeeKind,
+  cds: appliances.cdsKind,
 };
 
 export function registerKinds(extra: Record<string, KindDef>): void {

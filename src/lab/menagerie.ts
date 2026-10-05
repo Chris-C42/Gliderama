@@ -20,6 +20,7 @@ const AIRBORNE: RoomDef = {
     { t: 'dart', x: 550, y: 70, dir: -1, delay: 1.5 },
     { t: 'ball', x: 480, y: 340, height: 140, v: 0 },
     { t: 'bands', x: 150, y: 150 },
+    { t: 'stereo', x: 230, y: 284 },
   ],
 };
 
@@ -28,9 +29,11 @@ const INDOORS: RoomDef = {
   name: 'Household Hazards',
   wall: { pattern: 'damask', base: 'mustard', accent: 'oak', wainscot: 'walnut', trim: 'cream' },
   floor: { kind: 'planks', ramp: 'walnut' },
-  exits: { left: { from: 70, to: 340 }, right: { from: 96, to: 330, exit: true } },
+  exits: { left: { from: 70, to: 340 }, right: { from: 70, to: 340 } },
   seed: 9,
   items: [
+    { t: 'floorLamp', x: 26, y: 114, v: 0 },
+    { t: 'computer', x: 500, y: 180 },
     { t: 'cobweb', x: 12, y: 14, w: 76, h: 54 },
     { t: 'outlet', x: 300, y: 250, delay: 2 },
     { t: 'sideTable', x: 120, y: 256, v: 0 },
@@ -42,11 +45,39 @@ const INDOORS: RoomDef = {
   ],
 };
 
+const KITCHEN: RoomDef = {
+  id: 'lab-kitchen',
+  name: 'Kitchen Clutter',
+  wall: { pattern: 'tile', base: 'teal', accent: 'stone', wainscot: null, trim: 'cream' },
+  floor: { kind: 'checker', ramp: 'stone', accent: 'navy' },
+  exits: { left: { from: 70, to: 340 }, right: { from: 96, to: 330, exit: true } },
+  seed: 13,
+  items: [
+    { t: 'cloud', x: 420, y: 150 },
+    { t: 'cabinet', x: 24, y: 96, w: 180, h: 70 },
+    { t: 'faucet', x: 96, y: 222 },
+    { t: 'counter', x: 20, y: 272, w: 200 },
+    { t: 'microwave', x: 28, y: 209 },
+    { t: 'coffee', x: 160, y: 204 },
+    { t: 'counter', x: 250, y: 272, w: 190, v: 1 },
+    { t: 'tv', x: 256, y: 190 },
+    { t: 'vcr', x: 256, y: 166 },
+    { t: 'cds', x: 380, y: 240 },
+    { t: 'grease', x: 400, y: 243, dir: -1 },
+    { t: 'chimes', x: 300, y: 14 },
+    { t: 'mirror', x: 470, y: 40 },
+    { t: 'guitar', x: 462, y: 157 },
+    { t: 'milkCrate', x: 556, y: 278 },
+    { t: 'bear', x: 560, y: 216 },
+    { t: 'mousehole', x: 440, y: 327, v: 1 },
+  ],
+};
+
 export const MENAGERIE: LevelDef = {
   id: 'lab-menagerie',
   name: 'Menagerie',
   place: 'home',
-  rooms: { '0,0': AIRBORNE, '1,0': INDOORS },
+  rooms: { '0,0': AIRBORNE, '1,0': INDOORS, '2,0': KITCHEN },
   start: { room: '0,0', x: 60, y: 120, facing: 1 },
   sheets: 9,
   par: 60,

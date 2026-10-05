@@ -2,7 +2,7 @@ import type { ObjFactory } from './types';
 import { ceilingVent, deskFan, draft, floorVent, radiator } from './air';
 import { cat, cuckooClock, fireplace, grandfatherClock, kettle, stove } from './cottage';
 import { stairsDown, stairsUp } from './stairs';
-import { ball, balloon, cobweb, copter, dart, fish, outlet, shredder } from './enemies';
+import { ball, balloon, chimes, cobweb, copter, dart, fish, grease, guitar, outlet, shredder } from './enemies';
 import { batteryPickup, bandsPickup, candle, drip, exitPortal, hoop, lightSwitch, sheetPickup, star, tapePickup, target, workbench } from './things';
 
 /** Item kinds that have runtime behaviour (art may come from world/kinds as well). */
@@ -40,6 +40,9 @@ export const OBJECTS: Record<string, ObjFactory> = {
   cobweb,
   outlet,
   shredder,
+  grease,
+  guitar,
+  chimes,
 };
 
 export function registerObjects(extra: Record<string, ObjFactory>): void {

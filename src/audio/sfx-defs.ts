@@ -208,6 +208,25 @@ export const SFX_DEFS = {
     arp: { steps: [0, 7, 12, 19], interval: 0.045, mode: 'once', retrigger: true },
     cooldown: 0.2, maxVoices: 2,
   },
+  /** A guitar strummed by a passing wing: a quick downstroke of a G chord. */
+  strum: {
+    gain: 1,
+    wave: 'pulse25', freq: 98, duration: 0.9, vol: 0.3,
+    env: { a: 0.002, d: 0.7, s: 0, r: 0.1 },
+    filter: { type: 'lowpass', freq: 2200, endFreq: 900, time: 0.8 },
+    arp: { steps: [0, 4, 7, 12, 16, 24], interval: 0.022, mode: 'once' },
+    layers: [{ wave: 'triangle', freq: 196, duration: 0.8, vol: 0.18, env: { a: 0.002, d: 0.6, s: 0, r: 0.1 }, arp: { steps: [0, 4, 7, 12, 16, 19], interval: 0.022, mode: 'once' } }],
+    cooldown: 0.4, maxVoices: 2,
+  },
+  /** Wind chimes: a few bright, slowly dying bell tones. */
+  chime: {
+    gain: 0.8,
+    wave: 'sine', freq: 1047, duration: 1.2, vol: 0.22,
+    env: { a: 0.002, d: 1.1, s: 0, r: 0.2 },
+    arp: { steps: [0, 7, 4, 12, 9], interval: 0.13, mode: 'once', retrigger: true },
+    layers: [{ wave: 'sine', freq: 2890, duration: 1, vol: 0.06, env: { a: 0.002, d: 0.6, s: 0, r: 0.2 }, arp: { steps: [0, 7, 4, 12, 9], interval: 0.13, mode: 'once', retrigger: true } }],
+    cooldown: 0.8, maxVoices: 2,
+  },
   /** Toaster pop: a springy "boing" with a clunk. */
   toast: {
     wave: 'triangle', freq: 180, path: [[0.05, 330], [0.1, 250], [0.15, 380], [0.22, 260], [0.3, 300], [0.4, 240]],
