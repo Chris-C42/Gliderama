@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>procgen lab</title>
+    <style>
+      body { margin: 0; background: #120f18; color: #ddd; font: 12px/1.35 ui-monospace, monospace; }
+      #bar { padding: 8px 12px; position: sticky; top: 0; background: #1d1828; z-index: 2; border-bottom: 1px solid #3b3350; }
+      #bar b { color: #ffd98a; }
+      #bar form { display: inline-flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-left: 12px; }
+      #bar input, #bar select { background: #120f18; color: #ddd; border: 1px solid #3b3350; padding: 2px 4px; font: inherit; width: 70px; }
+      #bar select { width: auto; }
+      #grid { position: relative; margin: 12px; }
+      .room { position: absolute; }
+      .room canvas { image-rendering: pixelated; display: block; border: 1px solid #000; }
+      .room .cap { height: 16px; white-space: nowrap; overflow: hidden; color: #b9b0cc; }
+      .room .cap .bad { color: #ff8a8a; }
+      .room .cap .good { color: #9fe0a8; }
+      #problems { margin: 6px 12px; color: #ff8a8a; white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
+    <div id="bar">
+      <b>procgen lab</b>
+      <form id="f" method="get">
+        seed <input name="seed" />
+        floor <input name="floor" />
+        theme <select name="theme"><option value="">auto</option><option>home</option><option>cottage</option></select>
+        twist
+        <select name="twist">
+          <option>none</option><option>tissue</option><option>cardstock</option><option>lights-out</option><option>windy</option>
+          <option>heavy-nose</option><option>fold-budget</option><option>night</option><option>gusty</option><option>one-sheet</option>
+        </select>
+        rooms <input name="rooms" />
+        wb <input name="workbench" type="checkbox" value="1" />
+        scale <input name="scale" />
+        <label><input name="debug" type="checkbox" value="1" /> debug</label>
+        <button>go</button>
+      </form>
+      <span id="stats"></span>
+    </div>
+    <div id="problems"></div>
+    <div id="grid"></div>
+    <script type="module" src="/src/lab/procgen.ts"></script>
+  </body>
+</html>
