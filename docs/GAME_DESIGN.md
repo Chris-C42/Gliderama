@@ -240,8 +240,9 @@ Built and playable:
 - **Flight** from the folded geometry (stall, vortex lift, flaps, damage), the slider controls, throws, turnarounds.
 - **Campaign**: Home (3 levels) and Grandma's Cottage (3 levels: fireplace thermals, the swatting cat, kettle steam,
   the cuckoo clock, the conservatory fan and its switch). Every level is checked passable by a beam-search pilot test.
-- **Paper Trail**: procedural, flight-validated floors (home and cottage themes), 19 draft offers, workbench rooms on
-  every other floor that follow the run's rules.
+- **Paper Trail**: procedural, flight-validated floors (home and cottage themes; storeys joined by openings in the
+  floor and ceiling or, about half the time, by flights of stairs), 19 draft offers, workbench rooms on every other
+  floor that follow the run's rules.
 - **Daily Flight**: seeded house + twist, official first flight, practice, share card.
 - **Challenges**: ten Paper Lab puzzles (exit, target, hoops, distance, time aloft; fold, paper and size limits),
   three stars each, unlocking in turn.

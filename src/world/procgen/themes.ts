@@ -81,6 +81,11 @@ export interface ThemeDef {
   /** `LevelDef.place`. */
   place: string;
   templates: readonly RoomTemplate[];
+  /**
+   * The colourways (`v` of the stairs kinds: 0 walnut with a red runner, 1 oak with moss, 2 pine with navy) a flight of stairs
+   * may have in this theme, with their relative weights. One is picked per flight and kept at both its ends.
+   */
+  stairs: readonly { v: number; w: number }[];
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -387,6 +392,12 @@ const HOME: ThemeDef = {
   name: 'Home',
   place: 'home',
   templates: [homeBedroom, homeHall, homeStudy, homeKids, homeLanding],
+  // dark polished stairs with the classic red runner most often
+  stairs: [
+    { v: 0, w: 3 },
+    { v: 1, w: 2 },
+    { v: 2, w: 2 },
+  ],
 };
 
 const cottageGuest: RoomTemplate = {
@@ -486,6 +497,12 @@ const COTTAGE: ThemeDef = {
     cottageParlour,
     cottageKitchen,
     cottage(homeLanding, ['Stairs', 'Landing', 'Staircase'], [cottagePosies, cottageBoards, cottageBlue]),
+  ],
+  // plain scrubbed pine and oak, a moss or navy runner
+  stairs: [
+    { v: 0, w: 2 },
+    { v: 1, w: 3 },
+    { v: 2, w: 3 },
   ],
 };
 

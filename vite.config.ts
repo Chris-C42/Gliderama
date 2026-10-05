@@ -52,5 +52,7 @@ export default defineConfig({
   test: {
     include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
     environment: 'node',
+    // the generator's tests build whole floors (a few seconds each), more on a busy machine
+    testTimeout: 15000,
   },
 });

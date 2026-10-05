@@ -41,6 +41,8 @@ export interface FloorOptions {
   twist?: TwistId;
   /** Roguelike: the last room is a calm workbench room before the exit. */
   workbenchRoom?: boolean;
+  /** Chance (0..1) that a change of storey is a flight of stairs instead of an opening in the floor and ceiling. Default 0.5. */
+  stairsChance?: number;
 }
 
 export type Side = 'left' | 'right' | 'up' | 'down';
@@ -54,10 +56,13 @@ export type EntrySide =
   /** Through a side opening (`left` = arrives through the left wall). */
   | 'left'
   | 'right'
-  /** Dropping in through the ceiling opening (`exits.up`), e.g. after a floor hole above. */
+  /** Dropping in through the ceiling opening (`exits.up`), e.g. after a floor hole above; by stairs: coming down from the room above. */
   | 'up'
-  /** Rising through the floor opening (`exits.down`), e.g. after a ceiling opening below. */
+  /** Rising through the floor opening (`exits.down`), e.g. after a ceiling opening below; by stairs: coming up from the room below. */
   | 'down';
+
+/** How a change of storey is made: an opening in the ceiling / floor, or a flight of stairs. */
+export type VerticalLink = 'hole' | 'stairs';
 
 /** Where a room sits on the route and how its openings connect (derived from the layout). */
 export interface RoomIO {
@@ -69,10 +74,39 @@ export interface RoomIO {
   /** Horizontal direction of progress on this floor (+1 = towards the right). */
   dirX: 1 | -1;
   entry: EntrySide;
-  /** Span of the entry opening (undefined for the start room). */
+  /**
+   * Span of the entry opening (undefined for the start room). For a stairs link (see `link`) this is only where the
+   * opening would have been: nothing is cut into the room's shell.
+   */
   entrySpan?: ExitSpan;
   exit: Side;
+  /** Span of the exit opening (for a stairs link, like `entrySpan`: where the opening would have been). */
   exitSpan: ExitSpan;
+  /**
+   * How the room's change of storey is made, when its `entry` or `exit` is 'up' / 'down' (a room has at most one such
+   * link, and none when both its ends are side doorways). `entry` / `exit` keep saying which way the plane goes.
+   */
+  link?: VerticalLink;
+  /** Colourway (`v`) of the flight of stairs of a stairs link: the same at both ends. */
+  stairsV?: number;
+}
+
+/** The plane comes into this room by a flight of stairs: it appears at the matching stairs, gliding level. */
+export function entersByStairs(io: RoomIO): boolean {
+  return io.link === 'stairs' && (io.entry === 'up' || io.entry === 'down');
+}
+
+/** The plane leaves this room by a flight of stairs (a stairs doorway to fly into, or a stairwell to drop down). */
+export function leavesByStairs(io: RoomIO): boolean {
+  return io.link === 'stairs' && (io.exit === 'up' || io.exit === 'down');
+}
+
+/** Which stairs item a room with a stairs link holds: the way up, or the way down. */
+export function stairsKindOf(io: RoomIO): 'stairsUp' | 'stairsDown' | null {
+  if (leavesByStairs(io)) return io.exit === 'up' ? 'stairsUp' : 'stairsDown';
+  // arriving after going up the stairs below: we stand at the top of them, and the way back is down
+  if (entersByStairs(io)) return io.entry === 'down' ? 'stairsDown' : 'stairsUp';
+  return null;
 }
 
 /** Plane identifiers used by the reference pilots. */

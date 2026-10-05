@@ -708,33 +708,60 @@ export const dripKind: KindDef = {
 export const floorVentKind: KindDef = {
   z: 1,
   paint(px, it) {
-    const w = W(it, 48);
-    const { x } = it;
-    const y = LAYOUT.floor - 6;
-    // grille in perspective: back edge narrower than the front
-    px.poly(
-      [
-        [x + 3, y],
-        [x + w - 3, y],
-        [x + w + 1, y + 9],
-        [x - 1, y + 9],
-      ],
-      R.steel[3],
-    );
-    px.poly(
-      [
-        [x + 5, y + 2],
-        [x + w - 5, y + 2],
-        [x + w - 2, y + 7],
-        [x + 2, y + 7],
-      ],
-      R.ink[0],
-    );
-    for (let k = 4; k < w - 3; k += 4) px.line(x + k + 1, y + 2, x + k, y + 7, R.steel[4]);
-    px.hline(x + 3, y, w - 6, R.steel[5]);
-    px.hline(x - 1, y + 9, w + 2, R.steel[1]);
+    paintVentGrille(px, it.x, LAYOUT.floor - 6, W(it, 48), typeof it.look === 'string' ? it.look : 'vent');
   },
 };
+
+/**
+ * A vent's grille in the floor (or on a table top), its top edge at y, seen a little from above. `look`: 'vent' a
+ * register, 'grate' an iron drain grate, 'blower' a blower unit standing on it, 'greco' an ornate brass register.
+ */
+export function paintVentGrille(px: Px, x: number, y: number, w: number, look: string) {
+  if (look === 'grate') {
+    px.poly([[x + 2, y + 1], [x + w - 2, y + 1], [x + w + 1, y + 9], [x - 1, y + 9]], R.ink[1]);
+    for (let k = 3; k < w - 2; k += 5) px.line(x + k + 1, y + 2, x + k, y + 8, R.ink[3]);
+    px.hline(x + 1, y + 4, w - 2, R.ink[3]);
+    px.hline(x, y + 7, w, R.ink[3]);
+    px.hline(x + 2, y + 1, w - 4, R.stone[3]);
+    return;
+  }
+  if (look === 'blower') {
+    // a squat steel blower: a round grille on top, louvres down its front
+    px.rect(x, y - 8, w, 17, R.steel[1]);
+    px.rect(x + 1, y - 7, w - 2, 15, R.steel[3]);
+    px.ellipse(x + w / 2, y - 8, w / 2 - 2, 3, R.steel[2]);
+    px.ellipse(x + w / 2, y - 8, w / 2 - 4, 2, R.ink[1]);
+    for (let k = 5; k < w / 2 - 4; k += 4) px.hline(x + w / 2 - k, y - 8, 2 * k, R.steel[4]);
+    for (let j = y - 3; j < y + 7; j += 3) px.hline(x + 4, j, w - 8, R.steel[2]);
+    px.vline(x + 1, y - 7, 15, R.steel[5]);
+    return;
+  }
+  const brass = look === 'greco';
+  const frame = brass ? R.brass : R.steel;
+  // grille in perspective: back edge narrower than the front
+  px.poly(
+    [
+      [x + 3, y],
+      [x + w - 3, y],
+      [x + w + 1, y + 9],
+      [x - 1, y + 9],
+    ],
+    frame[3],
+  );
+  px.poly(
+    [
+      [x + 5, y + 2],
+      [x + w - 5, y + 2],
+      [x + w - 2, y + 7],
+      [x + 2, y + 7],
+    ],
+    R.ink[0],
+  );
+  for (let k = 4; k < w - 3; k += 4) px.line(x + k + 1, y + 2, x + k, y + 7, frame[4]);
+  if (brass) for (let k = 6; k < w - 5; k += 8) px.px(x + k, y + 1, frame[5]);
+  px.hline(x + 3, y, w - 6, frame[5]);
+  px.hline(x - 1, y + 9, w + 2, frame[1]);
+}
 
 // ---------------------------------------------------------------------------------------------
 // Tables, candles, fans

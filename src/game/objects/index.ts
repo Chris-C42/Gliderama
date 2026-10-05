@@ -3,6 +3,7 @@ import { ceilingVent, current, deskFan, draft, floorVent, radiator } from './air
 import { transport } from './classic';
 import { cat, cuckooClock, fireplace, grandfatherClock, kettle, stove } from './cottage';
 import { stairsDown, stairsUp } from './stairs';
+import { ball, balloon, chimes, cobweb, copter, dart, fish, grease, guitar, outlet, shredder, sparkle } from './enemies';
 import { batteryPickup, bandsPickup, candle, drip, exitPortal, hoop, lightSwitch, sheetPickup, star, tapePickup, target, workbench } from './things';
 
 /** Item kinds that have runtime behaviour (art may come from world/kinds as well). */
@@ -34,6 +35,21 @@ export const OBJECTS: Record<string, ObjFactory> = {
   stairsDown,
   current,
   transport,
+  balloon,
+  copter,
+  dart,
+  ball,
+  fish,
+  cobweb,
+  outlet,
+  shredder,
+  grease,
+  guitar,
+  chimes,
+  sparkle,
+  // a tiki torch and a barbecue burn like candles
+  tiki: candle,
+  bbq: candle,
 };
 
 export function registerObjects(extra: Record<string, ObjFactory>): void {

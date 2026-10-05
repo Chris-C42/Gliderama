@@ -23,9 +23,14 @@ export interface SimRoom {
   objects: GameObject[];
   /** Areas the plane must not touch (flames etc.). */
   hazards: Rect[];
+  /** Objects whose trigger hurts wherever it is at the moment (enemies, cobwebs). */
+  movers?: GameObject[];
   /** Air from the rooms above and below, through the floor and ceiling openings. */
   spills: Spill[];
 }
+
+/** Things that set the plane alight. */
+const FLAMES = ['candle', 'fireplace', 'tiki', 'bbq'];
 
 /** A room ready to fly headless. Pass the level and the room's key so air from the rooms above and below counts. */
 export function buildSimRoom(def: RoomDef, where?: { level: Pick<LevelDef, 'rooms'>; key: string }): SimRoom {
@@ -36,13 +41,14 @@ export function buildSimRoom(def: RoomDef, where?: { level: Pick<LevelDef, 'room
     if (f) objects.push(f(it, `${def.id}:${it.t}:${i++}`, null, { dark: !!def.dark, night: !!def.night }));
   }
   const hazards: Rect[] = [];
-  for (const o of objects) if ((o.def.t === 'candle' || o.def.t === 'fireplace') && o.trigger) {
+  for (const o of objects) if (FLAMES.includes(o.def.t) && o.trigger) {
     const r = o.trigger();
     if (r) hazards.push(r);
   }
   const colliders = roomColliders(def);
   for (const o of objects) if (o.colliders) colliders.push(...o.colliders());
-  return { def, colliders, objects, hazards, spills: where ? spillsFor(where.level, where.key) : [] };
+  const movers = objects.filter((o) => o.hazard && o.trigger);
+  return { def, colliders, objects, hazards, movers, spills: where ? spillsFor(where.level, where.key) : [] };
 }
 
 export type SimOutcome = 'left' | 'right' | 'up' | 'down' | 'grounded' | 'crashed' | 'hazard' | 'timeout' | 'stairsUp' | 'stairsDown';
@@ -80,6 +86,8 @@ const noopApi = (plane: () => Plane, switches = new Map<string, boolean>()): Ses
   ignite() {},
   burnDamage() {},
   tear() {},
+  strike() {},
+  snag() {},
   completeLevel() {},
   openWorkbench() {},
   teleport() {},
@@ -163,10 +171,12 @@ export function simulateRoom(
       const hw = planeHull(st);
       if (polyVsBox(hw, { ...tr })) o.onTouch?.(ctx);
     }
-    if (room.hazards.length) {
+    const movers = room.movers ?? [];
+    if (room.hazards.length || movers.length) {
       const hw = planeHull(st);
       const bb = bounds(hw);
-      for (const h of room.hazards) {
+      // (moving hazards, an enemy or a cobweb, are where they are this tick)
+      for (const h of movers.length ? [...room.hazards, ...movers.map((o) => o.trigger!()).filter((r): r is Rect => !!r)] : room.hazards) {
         if (bb.x1 < h.x || bb.x0 > h.x + h.w || bb.y1 < h.y || bb.y0 > h.y + h.h) continue;
         if (polyVsBox(hw, { ...h })) return done('hazard');
       }

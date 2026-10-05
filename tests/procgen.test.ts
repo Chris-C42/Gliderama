@@ -265,10 +265,11 @@ describe('generated levels are structurally valid', () => {
       expect(door).toBeDefined();
       expect(door!.y).toBe(room.exits[last.to!]!.from + 8);
       expect(door!.y + (door!.h ?? 0)).toBe(room.exits[last.to!]!.to);
-      // closed walls elsewhere: only the side(s) the route uses have openings
+      // closed walls elsewhere: only the side(s) the route uses have openings (a flight of stairs is a way in or out too)
       for (const k of Object.keys(level.rooms)) {
         const sides = (['left', 'right', 'up', 'down'] as const).filter((s) => level.rooms[k].exits[s]);
-        expect(sides.length).toBeGreaterThanOrEqual(1);
+        const stairs = level.rooms[k].items.filter((i) => i.t === 'stairsUp' || i.t === 'stairsDown');
+        expect(sides.length + stairs.length).toBeGreaterThanOrEqual(1);
         expect(sides.length).toBeLessThanOrEqual(2);
       }
     }
@@ -288,10 +289,13 @@ describe('generated levels are structurally valid', () => {
     }
   });
 
+  // (floors whose storeys are all joined by openings: the stairs have no opening, see tests/procgen.stairs.test.ts)
+  const holes = (seed: number) => gen(opts(seed, 5, { stairsChance: 0 }));
+
   it('up openings sit above a strong floor vent whose updraft goes through the ceiling', () => {
     let seen = 0;
     for (let seed = 1; seed <= 12; seed++) {
-      const level = gen(opts(seed, 5));
+      const level = holes(seed);
       const route = traceRoute(level);
       for (const step of route) {
         if (step.to !== 'up') continue;
@@ -313,7 +317,7 @@ describe('generated levels are structurally valid', () => {
   it('floor openings have a ceiling opening in the room below', () => {
     let seen = 0;
     for (let seed = 1; seed <= 12; seed++) {
-      const level = gen(opts(seed, 5));
+      const level = holes(seed);
       for (const step of traceRoute(level)) {
         if (step.to !== 'down') continue;
         seen++;

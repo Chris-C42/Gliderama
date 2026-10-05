@@ -1,0 +1,134 @@
+/** A two-room level for looking at Glider PRO's enemies and hazards in the play lab (`/play.html?menagerie`). */
+
+import type { LevelDef } from '../game/level';
+import type { RoomDef } from '../world/types';
+
+const AIRBORNE: RoomDef = {
+  id: 'lab-airborne',
+  name: 'Things in the Air',
+  wall: { pattern: 'pinstripe', base: 'cream', accent: 'stone', wainscot: 'walnut', trim: 'cream' },
+  floor: { kind: 'planks', ramp: 'oak' },
+  exits: { right: { from: 70, to: 340 } },
+  seed: 5,
+  items: [
+    { t: 'window', x: 262, y: 56, v: 0 },
+    { t: 'floorVent', x: 100, y: 330, w: 56 },
+    { t: 'balloon', x: 210, y: 340, delay: 0.5, v: 0 },
+    { t: 'balloon', x: 300, y: 340, delay: 1.6, v: 1 },
+    { t: 'balloon', x: 390, y: 340, delay: 2.7, v: 2 },
+    { t: 'copter', x: 560, y: 16, dir: -1, delay: 1 },
+    { t: 'dart', x: 550, y: 70, dir: -1, delay: 1.5 },
+    { t: 'ball', x: 480, y: 340, height: 140, v: 0 },
+    { t: 'bands', x: 150, y: 150 },
+    { t: 'stereo', x: 230, y: 284 },
+  ],
+};
+
+const INDOORS: RoomDef = {
+  id: 'lab-indoors',
+  name: 'Household Hazards',
+  wall: { pattern: 'damask', base: 'mustard', accent: 'oak', wainscot: 'walnut', trim: 'cream' },
+  floor: { kind: 'planks', ramp: 'walnut' },
+  exits: { left: { from: 70, to: 340 }, right: { from: 70, to: 340 } },
+  seed: 9,
+  items: [
+    { t: 'floorLamp', x: 26, y: 114, v: 0 },
+    { t: 'computer', x: 500, y: 180 },
+    { t: 'cobweb', x: 12, y: 14, w: 76, h: 54 },
+    { t: 'outlet', x: 300, y: 250, delay: 2 },
+    { t: 'sideTable', x: 120, y: 256, v: 0 },
+    { t: 'fish', x: 146, y: 220, height: 130, delay: 2 },
+    { t: 'desk', x: 400, y: 242 },
+    { t: 'shredder', x: 420, y: 218 },
+    { t: 'floorVent', x: 260, y: 330, w: 56 },
+    { t: 'star', x: 330, y: 120 },
+  ],
+};
+
+const KITCHEN: RoomDef = {
+  id: 'lab-kitchen',
+  name: 'Kitchen Clutter',
+  wall: { pattern: 'tile', base: 'teal', accent: 'stone', wainscot: null, trim: 'cream' },
+  floor: { kind: 'checker', ramp: 'stone', accent: 'navy' },
+  exits: { left: { from: 70, to: 340 }, right: { from: 70, to: 340 } },
+  seed: 13,
+  items: [
+    { t: 'cloud', x: 420, y: 150 },
+    { t: 'cabinet', x: 24, y: 96, w: 180, h: 70 },
+    { t: 'faucet', x: 96, y: 222 },
+    { t: 'counter', x: 20, y: 272, w: 200 },
+    { t: 'microwave', x: 28, y: 209 },
+    { t: 'coffee', x: 160, y: 204 },
+    { t: 'counter', x: 250, y: 272, w: 190, v: 1 },
+    { t: 'tv', x: 256, y: 190 },
+    { t: 'vcr', x: 256, y: 166 },
+    { t: 'cds', x: 380, y: 240 },
+    { t: 'grease', x: 400, y: 243, dir: -1 },
+    { t: 'chimes', x: 300, y: 14 },
+    { t: 'mirror', x: 470, y: 40 },
+    { t: 'guitar', x: 462, y: 157 },
+    { t: 'milkCrate', x: 556, y: 278 },
+    { t: 'bear', x: 560, y: 216 },
+    { t: 'mousehole', x: 440, y: 327, v: 1 },
+  ],
+};
+
+const GARDEN: RoomDef = {
+  id: 'lab-garden',
+  name: 'Garden Path',
+  wall: { pattern: 'brick', base: 'red', accent: 'red', wainscot: null, trim: 'stone' },
+  floor: { kind: 'stone', ramp: 'stone' },
+  exits: { left: { from: 70, to: 340 }, right: { from: 70, to: 340 } },
+  seed: 17,
+  items: [
+    { t: 'tiki', x: 60, y: 196, wax: 136 },
+    { t: 'bbq', x: 170, y: 270, wax: 62 },
+    { t: 'mailbox', x: 230, y: 255, dir: -1 },
+    { t: 'flowerBox', x: 380, y: 140 },
+    { t: 'cinderBlock', x: 380, y: 274 },
+    { t: 'cinderBlock', x: 380, y: 208, v: 1 },
+    { t: 'floorVent', x: 460, y: 336, w: 60, look: 'grate' },
+    { t: 'floorVent', x: 540, y: 336, w: 56, look: 'blower' },
+    { t: 'star', x: 300, y: 100, look: 'clock', v: 0 },
+    { t: 'star', x: 340, y: 100, look: 'clock', v: 1 },
+    { t: 'star', x: 380, y: 100, look: 'clock', v: 2 },
+    { t: 'star', x: 430, y: 90, look: 'cuckoo' },
+    { t: 'sparkle', x: 520, y: 120 },
+    { t: 'sparkle', x: 140, y: 60 },
+  ],
+};
+
+const OFFICE: RoomDef = {
+  id: 'lab-office',
+  name: 'Back Office',
+  wall: { pattern: 'pinstripe', base: 'cream', accent: 'teal', wainscot: 'walnut', trim: 'cream' },
+  floor: { kind: 'carpet', ramp: 'plum' },
+  exits: { left: { from: 70, to: 340 }, right: { from: 96, to: 330, exit: true } },
+  seed: 19,
+  items: [
+    { t: 'tubeLight', x: 100, y: 14, w: 100 },
+    { t: 'trackLight', x: 400, y: 14, w: 120 },
+    { t: 'bulletin', x: 140, y: 80 },
+    { t: 'calendar', x: 300, y: 60 },
+    { t: 'filingCabinet', x: 20, y: 226 },
+    { t: 'wasteBasket', x: 120, y: 275 },
+    { t: 'table', x: 220, y: 260 },
+    { t: 'grille', x: 246, y: 251, w: 48, look: 'greco' },
+    { t: 'stool', x: 340, y: 300 },
+    { t: 'trunk', x: 420, y: 255 },
+    { t: 'switch', x: 440, y: 180, look: 'thermostat' },
+    { t: 'switch', x: 470, y: 180, look: 'knife' },
+    { t: 'switch', x: 500, y: 180, look: 'power' },
+    { t: 'switch', x: 530, y: 180, look: 'machine' },
+  ],
+};
+
+export const MENAGERIE: LevelDef = {
+  id: 'lab-menagerie',
+  name: 'Menagerie',
+  place: 'home',
+  rooms: { '0,0': AIRBORNE, '1,0': INDOORS, '2,0': KITCHEN, '3,0': GARDEN, '4,0': OFFICE },
+  start: { room: '0,0', x: 60, y: 120, facing: 1 },
+  sheets: 9,
+  par: 60,
+};

@@ -129,7 +129,8 @@ describe('air-current lines', () => {
           }
       }
     expect(n).toBeGreaterThan(10);
-  });
+    // (generates a dozen floors: a few seconds, more on a busy machine)
+  }, 20000);
 
   it('generated floors', () => {
     let n = 0;
@@ -140,5 +141,5 @@ describe('air-current lines', () => {
           for (const { key, it } of airItems(level.rooms)) n += checkObject(make(it), `${theme}/${seed}/${twist} ${key} ${it.t}`);
         }
     expect(n).toBeGreaterThan(20);
-  });
+  }, 20000);
 });

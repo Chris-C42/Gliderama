@@ -214,6 +214,8 @@ describe('built-in sound effects', () => {
   const expected = [
     'throw', 'fold', 'unfold', 'crumple', 'bump', 'burn', 'splash', 'star', 'sheet', 'tape', 'switch', 'click', 'back', 'hover',
     'stall', 'turn', 'duct', 'win', 'lose', 'unlock', 'select', 'error', 'pop', 'toast', 'meow', 'boost',
+    // Glider PRO's enemies and hazards (Classic Houses)
+    'twang', 'zap', 'boing', 'shred', 'sparkle', 'strum', 'chime',
   ];
 
   it('provides every requested placeholder', () => {

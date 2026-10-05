@@ -154,6 +154,79 @@ export const SFX_DEFS = {
     ],
     cooldown: 0.05,
   },
+  /** A plucked rubber band (shooting one, or a cobweb snagging the plane): a short twanging glide. */
+  twang: {
+    gain: 1.2,
+    wave: 'pulse25', freq: 220, endFreq: 150, slideTime: 0.25, duration: 0.28, vol: 0.32,
+    env: { a: 0.001, d: 0.27, s: 0, r: 0.01 },
+    vibrato: { depth: 0.6, rate: 22 },
+    layers: [{ wave: 'triangle', freq: 440, endFreq: 300, duration: 0.2, vol: 0.18, env: { a: 0.001, d: 0.2, s: 0, r: 0.01 } }],
+    cooldown: 0.12, maxVoices: 2,
+  },
+  /** Electric outlet sparking: a buzzy crackle. */
+  zap: {
+    gain: 1.1,
+    wave: 'saw', freq: 120, duration: 0.18, vol: 0.28, jitter: 2,
+    env: { a: 0.001, d: 0.06, s: 0.5, r: 0.03 },
+    vibrato: { depth: 3, rate: 38 },
+    layers: [{
+      wave: 'noise', freq: 30000, duration: 0.02, vol: 0.3, jitter: 5,
+      env: { a: 0.001, d: 0.02, s: 0, r: 0 },
+      filter: { type: 'highpass', freq: 3000 },
+      repeat: { count: 5, interval: 0.035, volDecay: 0.85 },
+    }],
+    cooldown: 0.15, maxVoices: 2,
+  },
+  /** Rubber ball bouncing: a hollow "bonk" that rises a little. */
+  boing: {
+    gain: 1,
+    wave: 'sine', freq: 140, path: [[0.04, 260], [0.16, 200]],
+    duration: 0.18, vol: 0.4,
+    env: { a: 0.001, d: 0.17, s: 0, r: 0.01 },
+    layers: [{ wave: 'triangle', freq: 280, endFreq: 420, duration: 0.06, vol: 0.12, env: { a: 0.001, d: 0.06, s: 0, r: 0 } }],
+    cooldown: 0.08, maxVoices: 3,
+  },
+  /** Paper shredder chewing up the plane: a grinding motor and tearing paper. */
+  shred: {
+    gain: 1.3,
+    wave: 'saw', freq: 70, duration: 0.9, vol: 0.3,
+    env: { a: 0.01, d: 0.2, s: 0.7, r: 0.1 },
+    vibrato: { depth: 0.8, rate: 18 },
+    layers: [{
+      wave: 'noise', freq: 16000, duration: 0.05, vol: 0.35, jitter: 3,
+      env: { a: 0.001, d: 0.05, s: 0, r: 0 },
+      filter: { type: 'bandpass', freq: 2400, q: 0.8 },
+      repeat: { count: 14, interval: 0.06, volDecay: 0.95 },
+    }],
+    cooldown: 0.5, maxVoices: 1,
+  },
+  /** Something appearing or vanishing in a twinkle (enemies coming and going, as in Glider PRO). */
+  sparkle: {
+    gain: 0.8,
+    wave: 'triangle', freq: 1568, duration: 0.24, vol: 0.12,
+    env: { a: 0.002, d: 0.05, s: 0.3, r: 0.05 },
+    arp: { steps: [0, 7, 12, 19], interval: 0.045, mode: 'once', retrigger: true },
+    cooldown: 0.2, maxVoices: 2,
+  },
+  /** A guitar strummed by a passing wing: a quick downstroke of a G chord. */
+  strum: {
+    gain: 1,
+    wave: 'pulse25', freq: 98, duration: 0.9, vol: 0.3,
+    env: { a: 0.002, d: 0.7, s: 0, r: 0.1 },
+    filter: { type: 'lowpass', freq: 2200, endFreq: 900, time: 0.8 },
+    arp: { steps: [0, 4, 7, 12, 16, 24], interval: 0.022, mode: 'once' },
+    layers: [{ wave: 'triangle', freq: 196, duration: 0.8, vol: 0.18, env: { a: 0.002, d: 0.6, s: 0, r: 0.1 }, arp: { steps: [0, 4, 7, 12, 16, 19], interval: 0.022, mode: 'once' } }],
+    cooldown: 0.4, maxVoices: 2,
+  },
+  /** Wind chimes: a few bright, slowly dying bell tones. */
+  chime: {
+    gain: 0.8,
+    wave: 'sine', freq: 1047, duration: 1.2, vol: 0.22,
+    env: { a: 0.002, d: 1.1, s: 0, r: 0.2 },
+    arp: { steps: [0, 7, 4, 12, 9], interval: 0.13, mode: 'once', retrigger: true },
+    layers: [{ wave: 'sine', freq: 2890, duration: 1, vol: 0.06, env: { a: 0.002, d: 0.6, s: 0, r: 0.2 }, arp: { steps: [0, 7, 4, 12, 9], interval: 0.13, mode: 'once', retrigger: true } }],
+    cooldown: 0.8, maxVoices: 2,
+  },
   /** Toaster pop: a springy "boing" with a clunk. */
   toast: {
     wave: 'triangle', freq: 180, path: [[0.05, 330], [0.1, 250], [0.15, 380], [0.22, 260], [0.3, 300], [0.4, 240]],

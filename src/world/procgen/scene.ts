@@ -218,6 +218,9 @@ export class Scene {
       if (!this.floorFree(left, left + width, spec.near ? 2 : FLOOR_GAP)) return;
       const dx = left - u0.x0;
       for (const b of boxes0) if (!this.band.clear(translate(b, dx), margin, NEVER) || this.hitsKeepClear(translate(b, dx))) return;
+      // a chimney breast would hide a switch plate on the wall above
+      const breast = wallAboveOf({ ...item, x: dx });
+      if (breast && this.keepClear.some((k) => overlaps(breast, k, 6))) return;
       cands.push({ x: left, w: this.scoreFloor(left, width, spec) });
     };
     if (spec.at !== undefined) tryX(spec.at);

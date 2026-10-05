@@ -4,6 +4,11 @@ import * as hangar from './hangar';
 import * as cottage from './cottage';
 import * as stairs from './stairs';
 import * as classic from './classic';
+import * as gliderpro from './gliderpro';
+import * as appliances from './appliances';
+import * as outdoor from './outdoor';
+import * as furnishings from './furnishings';
+import * as fixtures from './fixtures';
 
 export const KINDS: Record<string, KindDef> = {
   window: home.windowKind,
@@ -65,6 +70,43 @@ export const KINDS: Record<string, KindDef> = {
   herbs: cottage.herbsKind,
   solid: classic.solidKind,
   transport: classic.transportKind,
+  fish: gliderpro.fishBowlKind,
+  cobweb: gliderpro.cobwebKind,
+  outlet: gliderpro.outletKind,
+  shredder: gliderpro.shredderKind,
+  cloud: gliderpro.cloudKind,
+  mirror: gliderpro.mirrorKind,
+  milkCrate: gliderpro.milkCrateKind,
+  mousehole: gliderpro.mouseholeKind,
+  bear: gliderpro.bearKind,
+  cabinet: gliderpro.cabinetKind,
+  counter: gliderpro.counterKind,
+  guitar: gliderpro.guitarKind,
+  chimes: gliderpro.chimesKind,
+  faucet: gliderpro.faucetKind,
+  floorLamp: gliderpro.floorLampKind,
+  tv: appliances.tvKind,
+  computer: appliances.computerKind,
+  microwave: appliances.microwaveKind,
+  vcr: appliances.vcrKind,
+  stereo: appliances.stereoKind,
+  coffee: appliances.coffeeKind,
+  cds: appliances.cdsKind,
+  tiki: outdoor.tikiKind,
+  bbq: outdoor.bbqKind,
+  mailbox: outdoor.mailboxKind,
+  flowerBox: outdoor.flowerBoxKind,
+  cinderBlock: outdoor.cinderBlockKind,
+  filingCabinet: furnishings.filingCabinetKind,
+  wasteBasket: furnishings.wasteBasketKind,
+  trunk: furnishings.trunkKind,
+  stool: furnishings.stoolKind,
+  table: furnishings.tableKind,
+  bulletin: furnishings.bulletinKind,
+  calendar: furnishings.calendarKind,
+  tubeLight: fixtures.tubeLightKind,
+  trackLight: fixtures.trackLightKind,
+  grille: fixtures.grilleKind,
 };
 
 export function registerKinds(extra: Record<string, KindDef>): void {
