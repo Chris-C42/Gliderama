@@ -15,7 +15,7 @@ const H = (it: ItemDef, d: number) => it.h ?? d;
 const pickRamp = (it: ItemDef, options: readonly Ramp[]) => options[(it.v ?? 0) % options.length];
 
 /** Contact shadow on the floor in front of / under a piece of furniture. */
-function floorShadow(px: Px, x: number, w: number, y = LAYOUT.floor) {
+export function floorShadow(px: Px, x: number, w: number, y = LAYOUT.floor) {
   px.dither(x - 2, y - 1, w + 4, 2, R.ink[1], 0.55);
   px.dither(x - 4, y + 1, w + 8, 2, R.ink[1], 0.25);
 }
@@ -23,7 +23,7 @@ function floorShadow(px: Px, x: number, w: number, y = LAYOUT.floor) {
 // ---------------------------------------------------------------------------------------------
 // Window with curtains and an outdoor view
 
-function paintOutdoor(px: Px, x: number, y: number, w: number, h: number, night: boolean, seed: number) {
+export function paintOutdoor(px: Px, x: number, y: number, w: number, h: number, night: boolean, seed: number) {
   if (night) {
     px.vgrad(x, y, w, h, [R.night[0], R.night[1], R.night[2], R.night[3]]);
     for (let i = 0; i < Math.floor((w * h) / 90); i++) {

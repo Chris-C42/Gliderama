@@ -1,6 +1,7 @@
 import type { KindDef } from './types';
 import * as home from './home';
 import * as hangar from './hangar';
+import * as cottage from './cottage';
 
 export const KINDS: Record<string, KindDef> = {
   window: home.windowKind,
@@ -43,6 +44,20 @@ export const KINDS: Record<string, KindDef> = {
   block: hangar.blockKind,
   targetMat: hangar.targetMatKind,
   hoop: hangar.hoopKind,
+  fireplace: cottage.fireplaceKind,
+  grandfatherClock: cottage.grandfatherClockKind,
+  armchair: cottage.armchairKind,
+  stove: cottage.stoveKind,
+  kettle: cottage.kettleKind,
+  dresserHutch: cottage.dresserHutchKind,
+  rockingChair: cottage.rockingChairKind,
+  cuckooClock: cottage.cuckooClockKind,
+  teaTable: cottage.teaTableKind,
+  knittingBasket: cottage.knittingBasketKind,
+  cottageWindow: cottage.cottageWindowKind,
+  oilLamp: cottage.oilLampKind,
+  beam: cottage.beamKind,
+  herbs: cottage.herbsKind,
 };
 
 export function registerKinds(extra: Record<string, KindDef>): void {

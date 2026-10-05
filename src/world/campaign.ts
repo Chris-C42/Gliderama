@@ -2,6 +2,7 @@
 
 import type { LevelDef } from '../game/level';
 import { HOME_LEVELS } from './levels/home';
+import { COTTAGE_LEVELS } from './levels/cottage';
 
 export type UnlockKind = 'recipes' | 'folds' | 'papers' | 'gadgets' | 'cosmetics';
 
@@ -44,8 +45,7 @@ export const PLACES: PlaceDef[] = [
     blurb: 'Candles, kettles, knitting — and a very curious cat.',
     color: '#f6c9cc',
     icon: 'flame',
-    levels: [],
-    comingSoon: true,
+    levels: COTTAGE_LEVELS,
   },
   { id: 'school', name: 'School', blurb: 'Hallways, classrooms and a gymnasium of drafts.', color: '#f0d470', icon: 'sheet', levels: [], comingSoon: true },
   { id: 'office', name: 'Office Tower', blurb: 'Shredders, desk fans and lift shafts.', color: '#c8e8d0', icon: 'chart', levels: [], comingSoon: true },

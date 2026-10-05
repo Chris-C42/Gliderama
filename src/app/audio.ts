@@ -72,6 +72,19 @@ export function initAudio(): void {
   setSfxImpl((name, opts) => {
     audio.playSfx(name as SfxKey, opts);
   });
+  // The cottage's cuckoo clock: a falling third on a soft, flute-like voice.
+  audio.sfx.register('cuckoo', {
+    gain: 1.3,
+    wave: 'triangle',
+    freq: 784,
+    duration: 0.46,
+    vol: 0.45,
+    env: { a: 0.012, d: 0.08, s: 0.55, r: 0.08 },
+    arp: { steps: [0, -4], interval: 0.23, mode: 'once', retrigger: true },
+    layers: [{ wave: 'sine', freq: 1568, duration: 0.46, vol: 0.08, env: { a: 0.012, d: 0.08, s: 0.4, r: 0.08 }, arp: { steps: [0, -4], interval: 0.23, mode: 'once', retrigger: true } }],
+    cooldown: 0.8,
+    maxVoices: 1,
+  });
   effect(() => {
     const s = settings.value;
     audio.setMusicVolume(s.musicVolume);
