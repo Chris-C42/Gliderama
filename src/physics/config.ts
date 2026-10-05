@@ -48,4 +48,16 @@ export const PHYS = {
   /** Helium sticker lift (N) and duration (sim s). */
   heliumLift: 0.05,
   heliumTime: 1.6,
+  /**
+   * Leaving an updraft after climbing in it: a gentle shove along the heading so the plane doesn't come
+   * out at stall speed. It counts once the plane has spent `exitLiftTime` sim s in air rising faster
+   * than `exitLiftMin` m/s, fires when the rising air drops under `exitLiftOut`, and accelerates the
+   * plane (at most `exitAccel` m/s²) towards `exitTarget` × its best-glide speed for `exitTime` sim s.
+   */
+  exitLiftMin: 0.8,
+  exitLiftOut: 0.3,
+  exitLiftTime: 0.8,
+  exitTarget: 0.92,
+  exitAccel: 2.2,
+  exitTime: 0.35,
 };

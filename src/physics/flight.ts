@@ -65,6 +65,10 @@ export interface Plane {
   boostLeft: number;
   boosting: boolean;
   heliumLeft: number;
+  /** Sim s spent climbing in rising air, and the shove waiting / under way for when it is left (see PHYS.exit*). */
+  liftT: number;
+  exitPending: boolean;
+  exitBoost: number;
   /** Sim time since launch. */
   time: number;
 }
@@ -113,6 +117,9 @@ export function createPlane(aero: AeroModel, opts: { autoTrim?: boolean } = {}):
     boostLeft: 0,
     boosting: false,
     heliumLeft: 0,
+    liftT: 0,
+    exitPending: false,
+    exitBoost: 0,
     time: 0,
   };
 }
@@ -151,6 +158,9 @@ export function launch(p: Plane, xPx: number, yPx: number, angle: number, power:
   p.ctrl = 0;
   p.roll = 0;
   p.rollRate = 0;
+  p.liftT = 0;
+  p.exitPending = false;
+  p.exitBoost = 0;
 }
 
 export function planePx(p: Plane): { x: number; y: number } {
@@ -191,6 +201,7 @@ function substep(p: Plane, input: FlightInput, wind: WindFn, dt: number): void {
   const a = p.aero;
   const mass = a.mass * p.mods.massMul;
   const w = wind(p.x, p.y);
+  updraftExit(p, w.y, dt);
 
   // Elevator servo with a gentle expo curve on the command.
   const cmd = Math.sign(input.pitch) * Math.pow(Math.abs(input.pitch), 1.35);
@@ -268,6 +279,16 @@ function substep(p: Plane, input: FlightInput, wind: WindFn, dt: number): void {
     p.yaw = 0;
     p.bank = 0;
   }
+  // Coming out of an updraft slow: a gentle shove along the heading, back towards best-glide speed.
+  if (p.exitBoost > 0 && !p.turn) {
+    const target = a.perf.vBest * PHYS.exitTarget;
+    if (p.V < target) {
+      const dv = Math.min(PHYS.exitAccel * dt, target - p.V);
+      p.vx += p.facing * Math.cos(p.theta) * dv;
+      p.vy += Math.sin(p.theta) * dv;
+    }
+    p.exitBoost = Math.max(0, p.exitBoost - dt);
+  }
   p.x += p.vx * dt;
   p.y += p.vy * dt;
 
@@ -302,6 +323,24 @@ function substep(p: Plane, input: FlightInput, wind: WindFn, dt: number): void {
   p.CD = c.CD;
   p.stall = c.stall;
   p.time += dt;
+}
+
+/**
+ * Track time spent climbing in rising air; when the plane leaves it (the air under it stops rising),
+ * queue the exit shove, which starts as soon as the plane isn't mid-turnaround.
+ */
+function updraftExit(p: Plane, rise: number, dt: number): void {
+  if (rise > PHYS.exitLiftMin) {
+    p.liftT = Math.min(5, p.liftT + dt);
+    p.exitPending = false;
+  } else if (rise < PHYS.exitLiftOut) {
+    if (p.liftT >= PHYS.exitLiftTime) p.exitPending = true;
+    p.liftT = 0;
+  }
+  if (p.exitPending && !p.turn) {
+    p.exitPending = false;
+    p.exitBoost = PHYS.exitTime;
+  }
 }
 
 /** Glide ratio right now (horizontal distance per height lost), for the flight-data HUD. */
