@@ -43,8 +43,11 @@ Pages. Landscape for flying; menus/workshop adapt to portrait.
   lets go under 22 %, so it doesn't flicker), up / down pitches (small dead zone, rescaled to full range)
   independently of the direction. One gadget button sits in the opposite bottom corner. The zone steps
   aside while the plane waits to be thrown, so the slingshot drag still works anywhere.
+- **Hover** (assist): a toggle (button, H, gamepad Y) that circles the plane over the strongest rising
+  air within reach, re-centring as it climbs and turning round just past the centre each way; in still
+  air it holds position. Pitch still works; any direction input takes over. Off in endurance challenges.
 - Options: invert pitch, slider sensitivity (the joystick's reach), touch layout, left-handed layout,
-  auto-trim assist, slow-mo assist.
+  auto-trim assist, slow-mo assist, hover, air-current lines.
 
 ## 3. Flight model (semi-realistic)
 
@@ -62,6 +65,9 @@ Pages. Landscape for flying; menus/workshop adapt to portrait.
   (640 × 360 px). Tuning knobs live in one config file.
 - Throw: drag to aim; power maps to a launch speed; the design's ideal throw speed is shown as a
   sweet spot on the power meter.
+- Leaving an updraft slowly after climbing in it (typically after circling nose-up) gives a gentle
+  shove back towards best-glide speed (≤ ~0.75 m/s), so the plane doesn't fall out of a vent at the
+  stall (`PHYS.exit*`).
 
 ## 4. Fold workshop & design analysis
 
@@ -118,8 +124,10 @@ Parts: nose, left wing, right wing, tail/elevator, body. Each tracks 0–100 %.
 ## 6. World
 
 Single-screen rooms (640 × 360) like the original. Exits: left/right openings (doorways), ceiling
-openings (stairwells, ducts up), floor openings (stairs down), ducts (teleport pairs), exit portals
-(open window, mail slot, cat flap).
+openings and floor openings (air rising out of a room carries on through the opening into the room
+above), **stairs** (fly into the doorway at the top of a flight, or down into a stairwell, and come out
+at the matching stairs on the next floor gliding level: a Glider-style reset), ducts (teleport pairs),
+exit portals (open window, mail slot, cat flap).
 
 **Objects (first build)**
 - Air: floor vent ↑, ceiling vent ↓, desk fan (switchable), ceiling fan, radiator (wide weak

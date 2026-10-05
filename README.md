@@ -14,13 +14,21 @@ It is a PWA: it runs in the browser and installs on Android and iOS, and it work
 | Fly left / right | Hold the left / right pad | ← → |
 | Pitch | Slide the held pad up (nose up) or down (nose down) | ↑ ↓ |
 | Gadget | Small button above a pad | Space |
+| Hover (circle in rising air) | ↻ button by the right pad | H (gamepad Y) |
 | Pause | ⏸ | Esc |
 
 Pressing the way you are facing just lets you pitch; pressing the other way turns the plane round.
 Let go of everything and the plane glides at its trim, so a badly folded plane dives or porpoises.
 
 Blue squiggly lines show the air currents, as in the Glider games: where each vent, fan, radiator, candle or fire
-blows, and exactly where its air stops (*Settings → Air currents* hides them).
+blows, and exactly where its air stops (*Settings → Air currents* hides them). Air rising out of the top of a room
+carries on through the opening into the room above.
+
+Hover saves flopping back and forth over a vent: the plane circles by itself in the strongest rising air nearby (or
+holds its place in still air) until you steer again. *Settings → Hover* hides the button.
+
+Stairs work as in the original games: fly into the doorway at the top of a flight of stairs (or down into a
+stairwell) and you come out at the stairs on the next floor, gliding level again.
 
 Prefer one thumb? *Settings → Touch controls → One thumb* swaps the two pads for a floating joystick: press anywhere
 on the left side of the screen (the right side when left-handed) and slide. Sideways turns, up and down pitch, and the
