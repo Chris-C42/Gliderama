@@ -43,7 +43,7 @@ export const HALL: RoomDef = {
     { t: 'pendant', x: 300, y: 0, len: 50, v: 2 },
     { t: 'sideTable', x: 120, y: 256, v: 0 },
     { t: 'candle', x: 150, y: 232, wax: 18 },
-    { t: 'floorVent', x: 250, y: 330, w: 56, power: 3.0 },
+    { t: 'floorVent', x: 250, y: 330, w: 56 },
     { t: 'fan', x: 470, y: 214, dir: -1, stand: 30, power: 2.2 },
     { t: 'sideTable', x: 440, y: 276, w: 80, h: 64, v: 1 },
     { t: 'frontDoor', x: 548, y: 104, w: 80, h: 226 },

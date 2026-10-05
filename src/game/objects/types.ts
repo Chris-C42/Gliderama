@@ -1,5 +1,5 @@
-import type { ActiveLight, GameRenderer } from '../../render/GameRenderer';
-import type { Particles } from '../../render/particles';
+import type { ActiveLight, SpriteHandle } from '../../render/GameRenderer';
+import type { Particle } from '../../render/particles';
 import type { Collider, ItemDef, Rect } from '../../world/types';
 
 export interface WindOut {
@@ -30,11 +30,20 @@ export interface SessionApi {
   lightsOn(): boolean;
 }
 
+/** Where objects can emit particles (a no-op sink when simulating headless). */
+export interface ParticleSink {
+  spawn(p: Partial<Particle> & { x: number; y: number }): void;
+}
+
+/** Graphics services for objects; null when simulating headless (validation, tests). */
+export interface Gfx {
+  createSprite(w: number, h: number, emissive?: number, z?: number): SpriteHandle;
+}
+
 export interface ObjCtx {
   dt: number;
   time: number;
-  renderer: GameRenderer;
-  particles: Particles;
+  particles: ParticleSink;
   api: SessionApi;
 }
 
@@ -53,4 +62,4 @@ export interface GameObject {
   dispose?(): void;
 }
 
-export type ObjFactory = (def: ItemDef, id: string, renderer: GameRenderer, room: { dark: boolean; night: boolean }) => GameObject;
+export type ObjFactory = (def: ItemDef, id: string, gfx: Gfx | null, room: { dark: boolean; night: boolean }) => GameObject;

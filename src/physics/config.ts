@@ -19,7 +19,7 @@ export const PHYS = {
   /** Elevator servo rate (rad of deflection per sim second). */
   servoRate: 1.4,
   /** Turnaround duration multiplier on the design's turn time. */
-  turnMul: 0.5,
+  turnMul: 0.45,
   /** Fraction of airspeed kept through a turnaround (before drag). */
   turnSpeedKeep: 0.92,
   /** Pitch beyond which a plane that isn't actively looping rolls upright (rad). */
@@ -29,7 +29,7 @@ export const PHYS = {
   /** Duration (sim s) of the auto-righting half roll. */
   rightingTime: 0.3,
   /** Peak bank angle during a turnaround (rad). */
-  turnBank: 1.05,
+  turnBank: 0.8,
   /** Contact restitution & friction. */
   restitution: 0.18,
   friction: 0.8,

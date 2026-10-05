@@ -9,14 +9,15 @@ import { analyzeDesign, type AeroModel } from '../paper/aero';
 import { buildMesh, type PlaneBuild, type PlaneMesh } from '../paper/build';
 import { PHYS, PX_PER_M, ROOM_H, ROOM_W } from '../physics/config';
 import { createPlane, launch, planePx, stepPlane, idealThrowPower, type Plane } from '../physics/flight';
-import { applyImpact, damagePct, ignite, repair, soakUp, structural, type PartName } from '../physics/damage';
+import { flightTick, planeHull, type TickState } from './flightTick';
+import { damagePct, ignite, repair, soakUp, structural } from '../physics/damage';
 import type { ControlState, ThrowState } from '../core/types';
 import { paintRoom, type RoomArt } from '../render/roomArt';
 import type { ActiveLight, GameRenderer } from '../render/GameRenderer';
 import { rgb } from '../render/particles';
 import { OBJECTS } from './objects';
 import type { GameObject, ObjCtx, SessionApi, WindOut } from './objects/types';
-import { bounds, polyVsBox, profileHull, surfaceBelow, worldHull, type V } from './collide';
+import { bounds, polyVsBox, profileHull, surfaceBelow, type V } from './collide';
 import { countStars, neighbour, type LevelDef } from './level';
 import type { Collider, ItemDef, RoomDef } from '../world/types';
 
@@ -142,6 +143,7 @@ export class Session {
   build!: PlaneBuild;
   mesh!: PlaneMesh;
   hullLocal: V[] = [];
+  tick!: TickState;
   room!: RoomRuntime;
   sheets: number;
   time = 0;
@@ -157,8 +159,6 @@ export class Session {
   message: string | null = null;
   private artCache = new Map<string, RoomArt>();
   private switches = new Map<string, boolean>();
-  private groundT = 0;
-  private stillT = 0;
   private downT = 0;
   private flash = 0;
   private shakeAmt = 0;
@@ -198,6 +198,7 @@ export class Session {
     const damage = !fresh && this.plane ? this.plane.damage : undefined;
     this.plane = createPlane(aero, { autoTrim: this.opts.autoTrim });
     if (damage) this.plane.damage = damage;
+    this.tick = { plane: this.plane, aero, hullLocal: this.hullLocal, halfLen: ((this.mesh.max.x - this.mesh.min.x) * PX_PER_M) / 2, groundT: 0, stillT: 0 };
     this.renderer.plane.setMesh(this.mesh, design.look, { width: build.width, length: build.length });
     if (design.extras.gadget === 'battery') this.charges.boost = Math.max(this.charges.boost, 2);
     if (design.extras.gadget === 'helium') this.charges.helium = Math.max(this.charges.helium, 1);
@@ -344,8 +345,8 @@ export class Session {
     const cp = this.checkpoint;
     launch(this.plane, cp.x, cp.y, angle, power);
     this.phase = 'fly';
-    this.groundT = 0;
-    this.stillT = 0;
+    this.tick.groundT = 0;
+    this.tick.stillT = 0;
     this.message = null;
     this.sfx('throw', { vol: 0.5 + power * 0.5 });
   }
@@ -407,7 +408,7 @@ export class Session {
   update(dt: number, input: ControlState, thr: ThrowState): void {
     this.realTime += dt;
     this.triggeredThisTick.clear();
-    const ctx: ObjCtx = { dt, time: this.realTime, renderer: this.renderer, particles: this.renderer.particles, api: this.api };
+    const ctx: ObjCtx = { dt, time: this.realTime, particles: this.renderer.particles, api: this.api };
     for (const o of this.room.objects) o.update?.(ctx);
 
     if (this.phase === 'aim') {
@@ -460,23 +461,54 @@ export class Session {
         this.sfx('pop', { pitch: 7 });
       }
     }
-    stepPlane(p, { dir: input.dir, pitch: input.pitch, boost }, this.windAt, dt, { slowMo: this.opts.slowMo });
+    const outcome = flightTick(
+      this.tick,
+      { dir: input.dir, pitch: input.pitch, boost },
+      this.windAt,
+      this.room.colliders(),
+      dt,
+      { slowMo: this.opts.slowMo },
+      {
+        impact: (_part, impact, added) => {
+          if (added > 0.02) {
+            this.flash = Math.min(1, added * 3);
+            this.shakeAmt = Math.max(this.shakeAmt, Math.min(1, added * 4));
+            this.sfx('bump', { vol: Math.min(1, 0.3 + added * 2) });
+          } else if (impact > 0.4) this.sfx('bump', { vol: 0.2 });
+        },
+        water: () => this.sfx('splash'),
+        fire: () => this.sfx('burn'),
+      },
+    );
 
-    // burning plane: fire particles & destruction
+    // burning plane: fire particles
     if (p.damage.burning > 0) {
       const q = planePx(p);
       if (Math.random() < 0.7)
         this.renderer.particles.spawn({ x: q.x + (Math.random() - 0.5) * 16, y: q.y + (Math.random() - 0.5) * 6, vy: -40, life: 0.4, max: 0.4, ...rgb(Math.random() < 0.5 ? '#ffb040' : '#ff6020'), a: 1 });
     }
-
-    // collisions
-    this.collide(dt);
-    if (this.phase !== 'fly') return;
+    if (outcome === 'crashed') {
+      this.flightOver('crashed');
+      return;
+    }
+    if (outcome === 'grounded') {
+      // resting on a workbench is not a crash
+      const q = planePx(p);
+      for (const o of this.room.objects) {
+        if (o.def.t !== 'workbench') continue;
+        const r = o.trigger?.();
+        if (r && q.x > r.x && q.x < r.x + r.w && q.y > r.y - 20 && q.y < r.y + r.h + 10) {
+          this.api.openWorkbench(o.id);
+          return;
+        }
+      }
+      this.flightOver('grounded');
+      return;
+    }
 
     // triggers
     const pos = planePx(p);
-    const squash = p.turn ? Math.max(0.35, Math.abs(Math.cos(Math.PI * (p.turn.t / p.turn.dur)))) : 1;
-    const hullW = worldHull(this.hullLocal, pos.x, pos.y, p.theta, p.facing, squash);
+    const hullW = planeHull(this.tick);
     const bb = bounds(hullW);
     for (const o of this.room.objects) {
       const r = o.trigger?.();
@@ -494,104 +526,6 @@ export class Session {
 
     // room transitions
     this.edges(pos);
-  }
-
-  private collide(dt: number): void {
-    const p = this.plane;
-    const pos = planePx(p);
-    const squash = p.turn ? Math.max(0.35, Math.abs(Math.cos(Math.PI * (p.turn.t / p.turn.dur)))) : 1;
-    let hullW = worldHull(this.hullLocal, pos.x, pos.y, p.theta, p.facing, squash);
-    const cols = this.room.colliders();
-    let resting = false;
-    for (let iter = 0; iter < 3; iter++) {
-      let hit = false;
-      const bb = bounds(hullW);
-      for (const c of cols) {
-        if (bb.x1 < c.x || bb.x0 > c.x + c.w || bb.y1 < c.y || bb.y0 > c.y + c.h) continue;
-        const ct = polyVsBox(hullW, c);
-        if (!ct) continue;
-        hit = true;
-        // physics frame normal (y up)
-        const nx = ct.nx;
-        const ny = -ct.ny;
-        const vn = p.vx * nx + p.vy * ny;
-        if (ny > 0.65) resting = true;
-        if (vn < 0) {
-          const impact = -vn;
-          const kind = c.kind ?? 'solid';
-          const sev = (impact - PHYS.safeImpact) * (kind === 'soft' ? 0.35 : kind === 'sharp' ? 2.5 : 1);
-          if (kind === 'fire') this.api.ignite();
-          if (kind === 'water') {
-            soakUp(p.damage, 0.3, this.aero);
-            this.sfx('splash');
-          }
-          if (sev > 0) {
-            const part = this.partAt(ct.px, ct.py, pos, ny);
-            const added = applyImpact(p.damage, part, sev, this.aero.toughness, Math.random);
-            if (added > 0.02) {
-              this.flash = Math.min(1, added * 3);
-              this.shakeAmt = Math.max(this.shakeAmt, Math.min(1, added * 4));
-              this.sfx('bump', { vol: Math.min(1, 0.3 + added * 2) });
-            }
-          } else if (impact > 0.4) this.sfx('bump', { vol: 0.2 });
-          // response: restitution on the normal, friction on the tangent
-          const e = kind === 'soft' ? 0.05 : PHYS.restitution;
-          let vx = p.vx - (1 + e) * vn * nx;
-          let vy = p.vy - (1 + e) * vn * ny;
-          const vn2 = vx * nx + vy * ny;
-          const tx = vx - vn2 * nx;
-          const ty = vy - vn2 * ny;
-          const f = kind === 'sticky' ? 0.2 : kind === 'soft' ? 0.6 : PHYS.friction;
-          vx = vn2 * nx + tx * f;
-          vy = vn2 * ny + ty * f;
-          p.vx = vx;
-          p.vy = vy;
-          // pitch kick: nose hits push the nose away from the surface
-          p.q += -Math.sign(ny || 1) * Math.min(6, impact * 1.5) * 0.3;
-          if (p.turn) {
-            p.turn = null;
-            p.facing = p.vx >= 0 ? 1 : -1;
-          }
-        }
-        // push out
-        p.x += (nx * ct.depth) / PX_PER_M;
-        p.y += (ny * ct.depth) / PX_PER_M;
-        const np = planePx(p);
-        hullW = worldHull(this.hullLocal, np.x, np.y, p.theta, p.facing, squash);
-        break;
-      }
-      if (!hit) break;
-    }
-    // grounding: resting on a surface and slow
-    const speed = Math.hypot(p.vx, p.vy);
-    if (resting && speed < PHYS.groundSpeed) this.groundT += dt * PHYS.timeScale;
-    else this.groundT = Math.max(0, this.groundT - dt);
-    if (speed < 0.12) this.stillT += dt;
-    else this.stillT = 0;
-    if (this.groundT > PHYS.groundTime || this.stillT > 1.5) {
-      // resting on a workbench is not a crash
-      for (const o of this.room.objects) {
-        if (o.def.t !== 'workbench') continue;
-        const r = o.trigger?.();
-        const q = planePx(p);
-        if (r && q.x > r.x && q.x < r.x + r.w && q.y > r.y - 20 && q.y < r.y + r.h + 10) {
-          this.api.openWorkbench(o.id);
-          return;
-        }
-      }
-      this.flightOver('grounded');
-    }
-  }
-
-  private partAt(cx: number, cy: number, pos: { x: number; y: number }, ny: number): PartName {
-    const p = this.plane;
-    const nose = { x: Math.cos(p.theta) * p.facing, y: -Math.sin(p.theta) };
-    const half = (this.mesh.max.x - this.mesh.min.x) * PX_PER_M * 0.5;
-    const s = ((cx - pos.x) * nose.x + (cy - pos.y) * nose.y) / Math.max(4, half);
-    if (s > 0.45) return 'nose';
-    if (s < -0.5) return 'tail';
-    if (ny > 0.6) return 'body';
-    return Math.random() < 0.5 ? 'wingL' : 'wingR';
   }
 
   private edges(pos: { x: number; y: number }): void {

@@ -10,16 +10,16 @@ const num = (v: unknown, d: number) => (typeof v === 'number' ? v : d);
 const wisp = rgb('#eaf2ff');
 const warm = rgb('#ffe2b8');
 
-/** Smooth bump: 1 in the middle of [a, b], 0 at the edges. */
+/** Smooth bump: 1 in the middle of [a, b], easing to 0 at the edges (gentle entry). */
 function bump(x: number, a: number, b: number): number {
   if (x <= a || x >= b) return 0;
   const t = (x - a) / (b - a);
-  return Math.sin(Math.PI * t) ** 0.6;
+  return Math.sin(Math.PI * t) ** 1.5;
 }
 
 export const floorVent: ObjFactory = (def, id) => {
   const w = def.w ?? 48;
-  const power = num(def.power, 2.6); // m/s at the grille
+  const power = num(def.power, 3.2); // m/s at the grille
   const top = num(def.reach, LAYOUT.ceiling);
   const group = typeof def.group === 'string' ? def.group : null;
   const baseY = LAYOUT.floor - 4;
@@ -31,17 +31,17 @@ export const floorVent: ObjFactory = (def, id) => {
       if (group && !this.on) return;
       if (y > baseY + 6 || y < top) return;
       const h = baseY - y;
-      const spread = 6 + h * 0.12;
+      const spread = 30 + h * 0.24;
       const k = bump(x, def.x - spread, def.x + w + spread);
       if (k <= 0) return;
-      const decay = Math.max(0.25, 1 - (0.6 * h) / Math.max(40, baseY - top));
+      const decay = Math.max(0.35, 1 - (0.45 * h) / Math.max(40, baseY - top));
       out.y += power * k * decay;
     },
     on: true,
     update(ctx) {
       if (group) this.on = ctx.api.switchOn(group);
       if (!this.on) return;
-      acc += ctx.dt * (6 + w * 0.12) * Math.min(1.6, power / 2.6);
+      acc += ctx.dt * (6 + w * 0.12) * Math.min(1.6, power / 3.6);
       while (acc > 1) {
         acc -= 1;
         const x = def.x + 4 + Math.random() * (w - 8);
@@ -50,7 +50,7 @@ export const floorVent: ObjFactory = (def, id) => {
           x,
           y: baseY,
           vx: (Math.random() - 0.5) * 8,
-          vy: -(60 + Math.random() * 50) * (power / 2.6),
+          vy: -(60 + Math.random() * 50) * (power / 3.2),
           life,
           max: life,
           size: Math.random() < 0.25 ? 2 : 1,
@@ -103,7 +103,7 @@ export const ceilingVent: ObjFactory = (def, id) => {
 };
 
 /** Desk fan: animated blades; blows horizontally in direction `dir` (default +1). */
-export const deskFan: ObjFactory = (def, id, renderer) => {
+export const deskFan: ObjFactory = (def, id, gfx) => {
   const dir = num(def.dir, 1) >= 0 ? 1 : -1;
   const power = num(def.power, 3.2);
   const reach = num(def.reach, 280);
@@ -111,13 +111,14 @@ export const deskFan: ObjFactory = (def, id, renderer) => {
   // fan head centre
   const cx = def.x + 16;
   const cy = def.y + 16;
-  const sprite = renderer.createSprite(36, 36, 0, 8);
-  const px = new Px(sprite.canvas, 3);
+  const sprite = gfx?.createSprite(36, 36, 0, 8) ?? null;
+  const px = sprite ? new Px(sprite.canvas, 3) : null;
   let angle = 0;
   let frame = -1;
   let on = true;
   let acc = 0;
   const draw = (f: number) => {
+    if (!px || !sprite) return;
     px.ctx.clearRect(0, 0, 36, 36);
     const c = 18;
     // blades
@@ -141,7 +142,7 @@ export const deskFan: ObjFactory = (def, id, renderer) => {
     sprite.refresh();
   };
   draw(0);
-  sprite.set(cx - 18, cy - 18);
+  sprite?.set(cx - 18, cy - 18);
   return {
     id,
     def,
@@ -186,7 +187,7 @@ export const deskFan: ObjFactory = (def, id, renderer) => {
       return [{ x: cx - 14, y: cy - 14, w: 28, h: 28 }];
     },
     dispose() {
-      sprite.dispose();
+      sprite?.dispose();
     },
   };
 };

@@ -12,17 +12,18 @@ const str = (v: unknown, d: string) => (typeof v === 'string' ? v : d);
 // ---------------------------------------------------------------------------------------------
 // Candle: flickering flame (emissive sprite + light), thermal updraft, fire hazard.
 
-export const candle: ObjFactory = (def, id, renderer) => {
+export const candle: ObjFactory = (def, id, gfx) => {
   // def.x, def.y = top-left of the wick area; flame sits above (x+2, y)
   const fx = def.x + 3;
   const fy = def.y;
-  const sprite = renderer.createSprite(8, 14, 1, 9);
-  const px = new Px(sprite.canvas, 5);
+  const sprite = gfx?.createSprite(8, 14, 1, 9) ?? null;
+  const px = sprite ? new Px(sprite.canvas, 5) : null;
   let t = Math.random() * 10;
   let frame = -1;
   const col = new THREE.Color('#ffb860');
   const light = { x: fx, y: fy - 4, r: 70, color: col, intensity: 0.85 };
   const draw = (f: number) => {
+    if (!px || !sprite) return;
     px.ctx.clearRect(0, 0, 8, 14);
     const lean = [0, 1, 0, -1][f % 4];
     px.ellipse(4 + lean * 0.5, 9, 2.5, 4, R.flame[3]);
@@ -32,7 +33,7 @@ export const candle: ObjFactory = (def, id, renderer) => {
     px.px(4, 12, R.navy[4]);
     sprite.refresh();
   };
-  sprite.set(fx - 4, fy - 13);
+  sprite?.set(fx - 4, fy - 13);
   let embers = 0;
   return {
     id,
@@ -69,7 +70,7 @@ export const candle: ObjFactory = (def, id, renderer) => {
       return [light];
     },
     dispose() {
-      sprite.dispose();
+      sprite?.dispose();
     },
   };
 };
@@ -77,13 +78,14 @@ export const candle: ObjFactory = (def, id, renderer) => {
 // ---------------------------------------------------------------------------------------------
 // Light switch: fly into it to flip the room lights (or a named group, e.g. a fan).
 
-export const lightSwitch: ObjFactory = (def, id, renderer) => {
+export const lightSwitch: ObjFactory = (def, id, gfx) => {
   const group = str(def.group, 'lights');
-  const sprite = renderer.createSprite(10, 16, 0, 6);
-  const px = new Px(sprite.canvas, 2);
+  const sprite = gfx?.createSprite(10, 16, 0, 6) ?? null;
+  const px = sprite ? new Px(sprite.canvas, 2) : null;
   let state: boolean | null = null;
   let cooldown = 0;
   const draw = (on: boolean) => {
+    if (!px || !sprite) return;
     px.ctx.clearRect(0, 0, 10, 16);
     px.rect(0, 0, 10, 16, R.cream[5]);
     px.frame(0, 0, 10, 16, R.cream[2]);
@@ -97,7 +99,7 @@ export const lightSwitch: ObjFactory = (def, id, renderer) => {
     }
     sprite.refresh();
   };
-  sprite.set(def.x, def.y);
+  sprite?.set(def.x, def.y);
   return {
     id,
     def,
@@ -120,7 +122,7 @@ export const lightSwitch: ObjFactory = (def, id, renderer) => {
       ctx.api.sfx('switch');
     },
     dispose() {
-      sprite.dispose();
+      sprite?.dispose();
     },
   };
 };
@@ -141,13 +143,14 @@ function starPixels(px: Px, cx: number, cy: number, sx: number, col: string, edg
   px.poly(inner, col);
 }
 
-export const star: ObjFactory = (def, id, renderer) => {
-  const sprite = renderer.createSprite(16, 16, 1, 7);
-  const px = new Px(sprite.canvas, 4);
+export const star: ObjFactory = (def, id, gfx) => {
+  const sprite = gfx?.createSprite(16, 16, 1, 7) ?? null;
+  const px = sprite ? new Px(sprite.canvas, 4) : null;
   let t = Math.random() * 6;
   let frame = -1;
   let gone = false;
   const draw = (f: number) => {
+    if (!px || !sprite) return;
     px.ctx.clearRect(0, 0, 16, 16);
     const sx = [1, 0.8, 0.45, 0.8][f];
     starPixels(px, 8, 8.5, sx, R.mustard[5], R.brass[2]);
@@ -161,7 +164,7 @@ export const star: ObjFactory = (def, id, renderer) => {
       if (gone) return;
       if (ctx.api.isCollected(id)) {
         gone = true;
-        sprite.set(0, 0, false);
+        sprite?.set(0, 0, false);
         return;
       }
       t += ctx.dt;
@@ -170,7 +173,7 @@ export const star: ObjFactory = (def, id, renderer) => {
         frame = f;
         draw(f);
       }
-      sprite.set(def.x - 8, def.y - 8 + Math.round(Math.sin(t * 2.5) * 2));
+      sprite?.set(def.x - 8, def.y - 8 + Math.round(Math.sin(t * 2.5) * 2));
       if (Math.random() < ctx.dt * 2) {
         ctx.particles.spawn({ x: def.x + (Math.random() - 0.5) * 14, y: def.y + (Math.random() - 0.5) * 14, vy: -6, life: 0.5, max: 0.5, ...rgb('#fff6c0'), a: 1 });
       }
@@ -181,7 +184,7 @@ export const star: ObjFactory = (def, id, renderer) => {
     onTouch(ctx) {
       if (gone) return;
       gone = true;
-      sprite.set(0, 0, false);
+      sprite?.set(0, 0, false);
       ctx.api.collectStar(id);
       ctx.api.sfx('star');
       for (let k = 0; k < 14; k++) {
@@ -190,7 +193,7 @@ export const star: ObjFactory = (def, id, renderer) => {
       }
     },
     dispose() {
-      sprite.dispose();
+      sprite?.dispose();
     },
   };
 };
@@ -198,13 +201,15 @@ export const star: ObjFactory = (def, id, renderer) => {
 type PickupKind = 'sheet' | 'tape' | 'battery' | 'bands';
 
 function pickup(kind: PickupKind): ObjFactory {
-  return (def, id, renderer) => {
-    const sprite = renderer.createSprite(18, 16, 0.4, 7);
-    const px = new Px(sprite.canvas, 6);
+  return (def, id, gfx) => {
+    const sprite = gfx?.createSprite(18, 16, 0.4, 7) ?? null;
+    const px = sprite ? new Px(sprite.canvas, 6) : null;
     let t = Math.random() * 6;
     let gone = false;
-    px.ctx.clearRect(0, 0, 18, 16);
-    if (kind === 'sheet') {
+    if (px) px.ctx.clearRect(0, 0, 18, 16);
+    if (!px) {
+      // headless
+    } else if (kind === 'sheet') {
       px.poly([[2, 4], [14, 2], [16, 12], [4, 14]], '#f8f4ea');
       px.line(2, 4, 14, 2, '#ffffff');
       px.line(4, 14, 16, 12, R.cream[2]);
@@ -231,7 +236,7 @@ function pickup(kind: PickupKind): ObjFactory {
       px.ellipse(9, 8, 4, 2, 'rgba(0,0,0,0)');
       px.ctx.clearRect(6, 7, 6, 2);
     }
-    sprite.refresh();
+    sprite?.refresh();
     return {
       id,
       def,
@@ -239,11 +244,11 @@ function pickup(kind: PickupKind): ObjFactory {
         if (gone) return;
         if (ctx.api.isCollected(id)) {
           gone = true;
-          sprite.set(0, 0, false);
+          sprite?.set(0, 0, false);
           return;
         }
         t += ctx.dt;
-        sprite.set(def.x - 9, def.y - 8 + Math.round(Math.sin(t * 2) * 2));
+        sprite?.set(def.x - 9, def.y - 8 + Math.round(Math.sin(t * 2) * 2));
       },
       trigger() {
         return gone ? null : { x: def.x - 9, y: def.y - 9, w: 18, h: 18 };
@@ -251,7 +256,7 @@ function pickup(kind: PickupKind): ObjFactory {
       onTouch(ctx) {
         if (gone) return;
         gone = true;
-        sprite.set(0, 0, false);
+        sprite?.set(0, 0, false);
         ctx.api.collectStar(id); // marks as collected for this run
         if (kind === 'sheet') ctx.api.addSheet();
         if (kind === 'tape') ctx.api.repair(0.35);
@@ -260,7 +265,7 @@ function pickup(kind: PickupKind): ObjFactory {
         ctx.api.sfx(kind === 'sheet' ? 'sheet' : kind === 'tape' ? 'tape' : 'select');
       },
       dispose() {
-        sprite.dispose();
+        sprite?.dispose();
       },
     };
   };
@@ -274,25 +279,27 @@ export const bandsPickup = pickup('bands');
 // ---------------------------------------------------------------------------------------------
 // Drip: water drops fall from (x, y) every `every` seconds.
 
-export const drip: ObjFactory = (def, id, renderer) => {
+export const drip: ObjFactory = (def, id, gfx) => {
   const every = num(def.every, 1.4);
   const floorY = num(def.floorY, 338);
   interface Drop {
     y: number;
     vy: number;
-    s: ReturnType<typeof renderer.createSprite>;
+    s: { set(x: number, y: number, v?: boolean): void; dispose(): void } | null;
     live: boolean;
   }
   const drops: Drop[] = [];
   for (let k = 0; k < 3; k++) {
-    const s = renderer.createSprite(3, 5, 0.5, 8);
-    const px = new Px(s.canvas, 1);
-    px.rect(1, 0, 1, 1, R.sky[4]);
-    px.rect(0, 1, 3, 3, R.sky[3]);
-    px.px(0, 1, R.sky[5]);
-    px.rect(1, 4, 1, 1, R.navy[4]);
-    s.refresh();
-    s.set(0, 0, false);
+    const s = gfx?.createSprite(3, 5, 0.5, 8) ?? null;
+    if (s) {
+      const px = new Px(s.canvas, 1);
+      px.rect(1, 0, 1, 1, R.sky[4]);
+      px.rect(0, 1, 3, 3, R.sky[3]);
+      px.px(0, 1, R.sky[5]);
+      px.rect(1, 4, 1, 1, R.navy[4]);
+      s.refresh();
+      s.set(0, 0, false);
+    }
     drops.push({ y: 0, vy: 0, s, live: false });
   }
   let timer = Math.random() * every;
@@ -316,16 +323,16 @@ export const drip: ObjFactory = (def, id, renderer) => {
         d.y += d.vy * ctx.dt;
         if (d.y > floorY) {
           d.live = false;
-          d.s.set(0, 0, false);
+          d.s?.set(0, 0, false);
           for (let k = 0; k < 5; k++)
             ctx.particles.spawn({ x: def.x, y: floorY, vx: (Math.random() - 0.5) * 60, vy: -40 - Math.random() * 40, grav: 300, life: 0.4, max: 0.4, ...rgb('#a9d4f0'), a: 0.9 });
           continue;
         }
-        d.s.set(def.x - 1, d.y - 2, true);
+        d.s?.set(def.x - 1, d.y - 2, true);
         const p = ctx.api.plane();
         if (p.alive && Math.abs(p.x - def.x) < 16 && Math.abs(p.y - d.y) < 10) {
           d.live = false;
-          d.s.set(0, 0, false);
+          d.s?.set(0, 0, false);
           ctx.api.soak(0.18);
           ctx.api.sfx('splash');
           for (let k = 0; k < 6; k++)
@@ -334,7 +341,7 @@ export const drip: ObjFactory = (def, id, renderer) => {
       }
     },
     dispose() {
-      for (const d of drops) d.s.dispose();
+      for (const d of drops) d.s?.dispose();
     },
   };
 };
