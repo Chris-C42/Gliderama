@@ -43,7 +43,7 @@
  * (.tc-pad--left/--right, --held, --active), .tc-slider (.tc-slider--left/--right, --active),
  * .tc-slider__track, .tc-slider__knob, .tc-stick-zone (.tc-stick-zone--off), .tc-stick
  * (.tc-stick--ghost), .tc-stick__ring, .tc-stick__chev (.tc-stick__chev--left/--right, --active),
- * .tc-stick__knob, .tc-gadget (.tc-gadget--left/--right, --active), .tc-pause.
+ * .tc-stick__knob, .tc-gadget (.tc-gadget--left/--right, --active), .tc-hover (--on), .tc-pause.
  */
 
 import { useEffect, useRef, useState } from 'preact/hooks';
@@ -76,6 +76,11 @@ export interface TouchControlsProps {
    * let go). Defaults to true. The pads and the buttons are not affected.
    */
   stickEnabled?: boolean;
+  /**
+   * The hover button: null / undefined hides it (not flying, or the assist is off); otherwise whether
+   * hover is on right now (the button lights up). Tapping it toggles hover through the manager.
+   */
+  hover?: boolean | null;
 }
 
 function isCoarsePointer(): boolean {
@@ -418,6 +423,28 @@ export function TouchControls(props: TouchControlsProps) {
           <span class="tc-gadget__icon" aria-hidden="true" />
         </div>
       ))}
+
+      {props.hover != null && (
+        <button
+          type="button"
+          class={cx('tc-hover', props.hover && 'tc-hover--on')}
+          data-ui=""
+          aria-label={props.hover ? 'Stop hovering' : 'Hover: circle in rising air'}
+          aria-pressed={props.hover}
+          tabIndex={-1}
+          onPointerDown={(e: PointerEvent) => {
+            e.preventDefault();
+            live.current.input.pressHover();
+            buzz(live.current.settings);
+          }}
+        >
+          {/* a circling arrow */}
+          <svg class="tc-hover__icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19 12a7 7 0 1 1-2.05-4.95" />
+            <path d="M19.4 3.6v4.1h-4.1" />
+          </svg>
+        </button>
+      )}
 
       <button
         type="button"

@@ -6,6 +6,7 @@
  *   Left stick Y            pitch, inverted so stick up = +, deadzone 0.12, rescaled to a smooth 0..1
  *   D-pad                   digital dir / pitch (wins over the stick when pressed)
  *   Button 0 (A)            gadget
+ *   Button 3 (Y)            hover (toggle)
  *   Button 9 (Start)        pause
  */
 
@@ -13,6 +14,7 @@ import { clamp, sign } from '../core/math';
 
 export const PAD_BUTTON = {
   A: 0,
+  Y: 3,
   START: 9,
   DPAD_UP: 12,
   DPAD_DOWN: 13,
@@ -46,6 +48,8 @@ export interface PadRaw {
   left: boolean;
   right: boolean;
   a: boolean;
+  /** Button 3 (Y): hover. */
+  hover: boolean;
   start: boolean;
 }
 
@@ -57,6 +61,7 @@ export const PAD_RAW_IDLE: PadRaw = Object.freeze({
   left: false,
   right: false,
   a: false,
+  hover: false,
   start: false,
 });
 
@@ -65,10 +70,11 @@ export interface PadInput {
   dir: -1 | 0 | 1;
   pitch: number;
   gadget: boolean;
+  hover: boolean;
   pause: boolean;
 }
 
-export const PAD_IDLE: PadInput = Object.freeze({ dir: 0, pitch: 0, gadget: false, pause: false });
+export const PAD_IDLE: PadInput = Object.freeze({ dir: 0, pitch: 0, gadget: false, hover: false, pause: false });
 
 /**
  * Remove a deadzone and rescale the rest so the output still spans 0..1 smoothly:
@@ -98,6 +104,7 @@ export function readPad(pad: PadLike): PadRaw {
     left: button(PAD_BUTTON.DPAD_LEFT),
     right: button(PAD_BUTTON.DPAD_RIGHT),
     a: button(PAD_BUTTON.A),
+    hover: button(PAD_BUTTON.Y),
     start: button(PAD_BUTTON.START),
   };
 }
@@ -108,7 +115,7 @@ export function combinePadRaw(list: readonly PadRaw[]): PadRaw {
   if (list.length === 1) return list[0];
   let best = list[0];
   let bestMag = -1;
-  const out: PadRaw = { x: 0, y: 0, up: false, down: false, left: false, right: false, a: false, start: false };
+  const out: PadRaw = { x: 0, y: 0, up: false, down: false, left: false, right: false, a: false, hover: false, start: false };
   for (const r of list) {
     const mag = r.x * r.x + r.y * r.y;
     if (mag > bestMag) {
@@ -120,6 +127,7 @@ export function combinePadRaw(list: readonly PadRaw[]): PadRaw {
     out.left ||= r.left;
     out.right ||= r.right;
     out.a ||= r.a;
+    out.hover ||= r.hover;
     out.start ||= r.start;
   }
   out.x = best.x;
@@ -137,7 +145,7 @@ export function mapPadRaw(raw: PadRaw): PadInput {
   const dpadY = (raw.up ? 1 : 0) - (raw.down ? 1 : 0);
   if (dpadY !== 0) pitch = dpadY;
 
-  return { dir, pitch: pitch + 0, gadget: raw.a, pause: raw.start };
+  return { dir, pitch: pitch + 0, gadget: raw.a, hover: raw.hover, pause: raw.start };
 }
 
 /** Convenience: one pad -> game controls. */
@@ -146,8 +154,8 @@ export function mapPad(pad: PadLike): PadInput {
 }
 
 /** Rising edges between two successive polls. */
-export function padEdges(prev: PadInput, next: PadInput): { gadget: boolean; pause: boolean } {
-  return { gadget: !prev.gadget && next.gadget, pause: !prev.pause && next.pause };
+export function padEdges(prev: PadInput, next: PadInput): { gadget: boolean; hover: boolean; pause: boolean } {
+  return { gadget: !prev.gadget && next.gadget, hover: !prev.hover && next.hover, pause: !prev.pause && next.pause };
 }
 
 /**

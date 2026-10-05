@@ -223,3 +223,10 @@
 .hud__goal {
   background: var(--mustard-l);
 }
+
+/* Hover assist on: a teal tag, like the air lines it rides */
+.hud__hover {
+  color: #2f5aa8;
+  border-color: #3567c2;
+  letter-spacing: 0.04em;
+}

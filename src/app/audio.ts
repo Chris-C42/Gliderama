@@ -85,6 +85,29 @@ export function initAudio(): void {
     cooldown: 0.8,
     maxVoices: 1,
   });
+  // Hover assist on / off: a soft rising (falling) pair of notes, like a little wind-up.
+  audio.sfx.register('hoverOn', {
+    gain: 1,
+    wave: 'triangle',
+    freq: 523,
+    duration: 0.22,
+    vol: 0.32,
+    env: { a: 0.005, d: 0.05, s: 0.5, r: 0.06 },
+    arp: { steps: [0, 7], interval: 0.09, mode: 'once', retrigger: true },
+    cooldown: 0.15,
+    maxVoices: 1,
+  });
+  audio.sfx.register('hoverOff', {
+    gain: 1,
+    wave: 'triangle',
+    freq: 784,
+    duration: 0.2,
+    vol: 0.26,
+    env: { a: 0.005, d: 0.05, s: 0.45, r: 0.06 },
+    arp: { steps: [0, -7], interval: 0.08, mode: 'once', retrigger: true },
+    cooldown: 0.15,
+    maxVoices: 1,
+  });
   effect(() => {
     const s = settings.value;
     audio.setMusicVolume(s.musicVolume);

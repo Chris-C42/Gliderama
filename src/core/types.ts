@@ -28,6 +28,8 @@ export interface Settings {
   flightData: boolean;
   /** Draw the air currents (squiggly lines from vents, fans, candles and fires to where their air stops). */
   airCurrents: boolean;
+  /** Offer the hover assist (a button / H key that circles the plane in rising air). */
+  hoverAssist: boolean;
   /** Reduce screen shake / flashing. */
   reducedMotion: boolean;
   /** Haptic feedback on touch devices where supported. */
@@ -47,6 +49,7 @@ export const DEFAULT_SETTINGS: Settings = {
   slowMo: false,
   flightData: false,
   airCurrents: true,
+  hoverAssist: true,
   reducedMotion: false,
   haptics: true,
   engineerView: false,
@@ -67,6 +70,8 @@ export interface ControlState {
   gadgetPressed: boolean;
   /** Pause requested this frame. */
   pausePressed: boolean;
+  /** The hover assist was toggled this frame. */
+  hoverPressed?: boolean;
 }
 
 /** Slingshot-style throw input, active while the game is waiting for a throw. */

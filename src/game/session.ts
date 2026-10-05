@@ -19,6 +19,7 @@ import { OBJECTS } from './objects';
 import type { AirFlow, GameObject, ObjCtx, SessionApi, WindOut } from './objects/types';
 import { bounds, polyVsBox, profileHull, surfaceBelow, type V } from './collide';
 import { countStars, neighbour, type LevelDef } from './level';
+import { HoverPilot } from './hover';
 import { clipFlows, spillFlows, spillsFor, spillWind, updateSpills, type Spill } from './roomAir';
 import type { Collider, ItemDef, RoomDef } from '../world/types';
 
@@ -41,6 +42,8 @@ export interface SessionOptions {
   record?: boolean;
   /** Every throw starts from the level start: rooms passed are not checkpoints (challenges). */
   fixedStart?: boolean;
+  /** The hover assist may be switched on (it circles the plane in rising air). */
+  hover?: boolean;
 }
 
 export interface FlightStats {
@@ -88,6 +91,8 @@ export interface HudState {
   power: number;
   idealPower: number;
   infiniteSheets: boolean;
+  /** The hover assist is circling the plane. */
+  hovering: boolean;
   /** Mode goal progress shown in the HUD (set by the play screen), e.g. "Hoops 1/3". */
   goal?: string;
 }
@@ -224,6 +229,8 @@ export class Session {
   private roomDamage0 = 0;
   private triggeredThisTick = new Set<string>();
   private flight = { x0: 0, y0: 0, t0: 0, maxH: 0, path: [] as { x: number; y: number }[], k: 0 };
+  /** The hover assist, while it is circling the plane. */
+  private hover: HoverPilot | null = null;
 
   constructor(
     readonly renderer: GameRenderer,
@@ -434,6 +441,7 @@ export class Session {
 
   private complete(): void {
     if (this.phase === 'complete') return;
+    this.hover = null;
     if (this.phase === 'fly') this.noteBest(this.flightStats('grounded', null));
     this.logRoom();
     this.phase = 'complete';
@@ -459,6 +467,7 @@ export class Session {
 
   private flightOver(reason: 'grounded' | 'crashed'): void {
     if (this.phase !== 'fly') return;
+    this.hover = null;
     // landed in a target zone?
     let targetId: string | null = null;
     if (reason === 'grounded') {
@@ -567,9 +576,16 @@ export class Session {
         this.sfx('pop', { pitch: 7 });
       }
     }
+    // hover: toggled by its button / key; any direction from the player takes over again
+    if (input.hoverPressed && this.opts.hover) {
+      this.hover = this.hover ? null : new HoverPilot(p, this.windAt);
+      this.sfx(this.hover ? 'hoverOn' : 'hoverOff');
+    }
+    if (this.hover && input.dir !== 0) this.hover = null;
+    const dir = this.hover ? this.hover.step(p, this.windAt, dt) : input.dir;
     const outcome = flightTick(
       this.tick,
-      { dir: input.dir, pitch: input.pitch, boost },
+      { dir, pitch: input.pitch, boost },
       this.windAt,
       this.room.colliders(),
       dt,
@@ -652,6 +668,7 @@ export class Session {
       return;
     }
     this.enterRoom(next);
+    if (side === 'left' || side === 'right') this.hover = null;
     if (side === 'left') p.x += ROOM_W / PX_PER_M;
     if (side === 'right') p.x -= ROOM_W / PX_PER_M;
     if (side === 'up') p.y -= ROOM_H / PX_PER_M;
@@ -762,6 +779,7 @@ export class Session {
       power: this.aim.power,
       idealPower: idealThrowPower(this.aero),
       infiniteSheets: !!this.opts.infiniteSheets,
+      hovering: !!this.hover,
     };
   }
 

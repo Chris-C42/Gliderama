@@ -11,7 +11,7 @@
  *   input.consumeEdges();           // then acknowledge the one-shot edges
  *   flight.step(c, dt);
  *
- * ## Edge semantics (gadgetPressed, pausePressed)
+ * ## Edge semantics (gadgetPressed, pausePressed, hoverPressed)
  *
  * Input events arrive between animation frames, but the simulation runs in fixed steps: a frame can
  * contain zero, one or several steps. So edges are *latched*, not tied to a frame:
@@ -116,6 +116,7 @@ export class InputManager {
 
   private gadgetLatch = false;
   private pauseLatch = false;
+  private hoverLatch = false;
 
   /** Called when the first gamepad appears (true) or the last one goes away (false). */
   onGamepadChange: ((connected: boolean) => void) | null = null;
@@ -170,6 +171,7 @@ export class InputManager {
     this.touch = TOUCH_IDLE;
     this.gadgetLatch = false;
     this.pauseLatch = false;
+    this.hoverLatch = false;
   }
 
   // -------------------------------------------------------------------------------------------
@@ -201,6 +203,7 @@ export class InputManager {
       gadget: keyboardGadget(this.kb) || this.touch.gadget || this.pad.gadget,
       gadgetPressed: this.gadgetLatch,
       pausePressed: this.pauseLatch,
+      hoverPressed: this.hoverLatch,
     };
   }
 
@@ -208,10 +211,11 @@ export class InputManager {
    * Acknowledge the latched edges (`gadgetPressed`, `pausePressed`). Call once per fixed step,
    * after `getControls()`. Returns the edges that were just cleared.
    */
-  consumeEdges(): { gadgetPressed: boolean; pausePressed: boolean } {
-    const out = { gadgetPressed: this.gadgetLatch, pausePressed: this.pauseLatch };
+  consumeEdges(): { gadgetPressed: boolean; pausePressed: boolean; hoverPressed: boolean } {
+    const out = { gadgetPressed: this.gadgetLatch, pausePressed: this.pauseLatch, hoverPressed: this.hoverLatch };
     this.gadgetLatch = false;
     this.pauseLatch = false;
+    this.hoverLatch = false;
     return out;
   }
 
@@ -238,6 +242,11 @@ export class InputManager {
     this.pauseLatch = true;
   }
 
+  /** Latch a hover toggle (the on-screen hover button). */
+  pressHover(): void {
+    this.hoverLatch = true;
+  }
+
   // -------------------------------------------------------------------------------------------
   // Decoded-input entry points (what the DOM listeners call; also what the tests drive)
   // -------------------------------------------------------------------------------------------
@@ -249,6 +258,7 @@ export class InputManager {
     this.kb = res.state;
     if (res.gadgetPressed) this.gadgetLatch = true;
     if (res.pausePressed) this.pauseLatch = true;
+    if (res.hoverPressed) this.hoverLatch = true;
     if (keyboardDir(this.kb) !== before) this.kbStamp = ++this.seq;
   }
 
@@ -267,6 +277,7 @@ export class InputManager {
     const edges = padEdges(this.pad, next);
     if (edges.gadget) this.gadgetLatch = true;
     if (edges.pause) this.pauseLatch = true;
+    if (edges.hover) this.hoverLatch = true;
     if (next.dir !== this.pad.dir) this.padStamp = ++this.seq;
     this.pad = next;
 

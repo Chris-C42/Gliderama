@@ -198,7 +198,13 @@ describe('keyboard gadget and pause', () => {
 
   it('unrelated keys do nothing', () => {
     const r = keyboardKeyDown(KEYBOARD_IDLE, 'KeyQ');
-    expect(r).toEqual({ state: KEYBOARD_IDLE, gadgetPressed: false, pausePressed: false });
+    expect(r).toEqual({ state: KEYBOARD_IDLE, gadgetPressed: false, pausePressed: false, hoverPressed: false });
+  });
+
+  it('H toggles hover (an edge, like pause)', () => {
+    const r = keyboardKeyDown(KEYBOARD_IDLE, 'KeyH');
+    expect(r).toEqual({ state: KEYBOARD_IDLE, gadgetPressed: false, pausePressed: false, hoverPressed: true });
+    expect(isGameKey('KeyH')).toBe(true);
   });
 });
 

@@ -149,11 +149,20 @@ describe('robustness', () => {
     const none = { ...PAD_IDLE };
     const a = { ...PAD_IDLE, gadget: true };
     const start = { ...PAD_IDLE, pause: true };
-    expect(padEdges(none, a)).toEqual({ gadget: true, pause: false });
-    expect(padEdges(a, a)).toEqual({ gadget: false, pause: false });
-    expect(padEdges(a, none)).toEqual({ gadget: false, pause: false });
-    expect(padEdges(none, start)).toEqual({ gadget: false, pause: true });
-    expect(padEdges(none, { ...a, pause: true })).toEqual({ gadget: true, pause: true });
+    expect(padEdges(none, a)).toEqual({ gadget: true, hover: false, pause: false });
+    expect(padEdges(a, a)).toEqual({ gadget: false, hover: false, pause: false });
+    expect(padEdges(a, none)).toEqual({ gadget: false, hover: false, pause: false });
+    expect(padEdges(none, start)).toEqual({ gadget: false, hover: false, pause: true });
+    expect(padEdges(none, { ...a, pause: true })).toEqual({ gadget: true, hover: false, pause: true });
+    const y = { ...PAD_IDLE, hover: true };
+    expect(padEdges(none, y)).toEqual({ gadget: false, hover: true, pause: false });
+    expect(padEdges(y, y)).toEqual({ gadget: false, hover: false, pause: false });
+  });
+
+  it('button 3 (Y) is the hover toggle', () => {
+    const buttons = Array.from({ length: 16 }, (_, i) => ({ pressed: i === 3 }));
+    expect(mapPad({ axes: [0, 0], buttons }).hover).toBe(true);
+    expect(mapPad({ axes: [0, 0], buttons: buttons.map(() => ({ pressed: false })) }).hover).toBe(false);
   });
 });
 

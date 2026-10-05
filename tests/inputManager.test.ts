@@ -261,14 +261,29 @@ describe('gadget (held) and edges (latched)', () => {
     expect(input.getControls().gadget).toBe(false);
   });
 
+  it('the hover toggle latches from H, gamepad Y and the on-screen button', () => {
+    const input = new InputManager(() => DEFAULT_SETTINGS);
+    input.feedKeyDown('KeyH');
+    expect(input.getControls().hoverPressed).toBe(true);
+    expect(input.consumeEdges().hoverPressed).toBe(true);
+    expect(input.getControls().hoverPressed).toBe(false);
+    input.pressHover();
+    expect(input.consumeEdges().hoverPressed).toBe(true);
+    const buttons = Array.from({ length: 16 }, (_, i) => ({ pressed: i === 3 }));
+    input.feedGamepads([{ axes: [0, 0], buttons }]);
+    expect(input.consumeEdges().hoverPressed).toBe(true);
+    input.feedGamepads([{ axes: [0, 0], buttons }]);
+    expect(input.consumeEdges().hoverPressed).toBe(false);
+  });
+
   it('an edge latches and survives any number of reads until consumeEdges()', () => {
     const { input } = setup();
     input.feedKeyDown('Space');
     for (let i = 0; i < 5; i++) expect(input.getControls().gadgetPressed).toBe(true);
-    expect(input.consumeEdges()).toEqual({ gadgetPressed: true, pausePressed: false });
+    expect(input.consumeEdges()).toEqual({ gadgetPressed: true, pausePressed: false, hoverPressed: false });
     expect(input.getControls().gadgetPressed).toBe(false);
     expect(input.getControls().gadget).toBe(true); // still held
-    expect(input.consumeEdges()).toEqual({ gadgetPressed: false, pausePressed: false });
+    expect(input.consumeEdges()).toEqual({ gadgetPressed: false, pausePressed: false, hoverPressed: false });
   });
 
   it('a tap shorter than a step still produces its edge, even though gadget is already false', () => {
@@ -346,7 +361,7 @@ describe('gadget (held) and edges (latched)', () => {
     input.setTouchState(touch(1, 0.5, true));
     input.pressPause();
     input.reset();
-    expect(input.getControls()).toEqual({ dir: 0, pitch: 0, gadget: false, gadgetPressed: false, pausePressed: false });
+    expect(input.getControls()).toEqual({ dir: 0, pitch: 0, gadget: false, gadgetPressed: false, pausePressed: false, hoverPressed: false });
   });
 
   it('reset() does not turn a still-held gamepad button into a new press', () => {

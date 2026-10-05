@@ -38,6 +38,11 @@ export function Hud(props: { hud: HudState; onPause: () => void; flightData: boo
             </span>
           )}
           {h.goal && <span class="hud__pill hud__goal">{h.goal}</span>}
+          {h.hovering && (
+            <span class="hud__pill hud__hover" title={COARSE ? 'Hovering: steer to take over' : 'Hovering: steer (or H) to take over'}>
+              ↻ hover
+            </span>
+          )}
         </div>
         <div class="hud__center">
           <span class="tape hud__room">{h.roomName}</span>

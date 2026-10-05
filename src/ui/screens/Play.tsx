@@ -34,6 +34,7 @@ export function Play(props: { spec: PlaySpec }) {
   const sessionRef = useRef<Session | null>(null);
   const inputRef = useRef<InputManager | null>(null);
   const [epoch, setEpoch] = useState(0);
+  const hoverOk = settings.value.hoverAssist && spec.goal?.kind !== 'aloft';
 
   const setPause = (v: boolean) => {
     pausedRef.current = v;
@@ -70,6 +71,8 @@ export function Play(props: { spec: PlaySpec }) {
         infiniteSheets: spec.infiniteSheets,
         fixedStart: spec.mode === 'challenge',
         record: false,
+        // the hover assist would fly endurance challenges for you
+        hover: s.hoverAssist && spec.goal?.kind !== 'aloft',
       },
       {
         hud: (h) => {
@@ -204,6 +207,7 @@ export function Play(props: { spec: PlaySpec }) {
           settings={() => settings.peek()}
           onPause={() => setPause(true)}
           stickEnabled={hud?.phase === 'fly'}
+          hover={hoverOk && hud?.phase === 'fly' ? !!hud?.hovering : null}
         />
       )}
       {paused && !end && (

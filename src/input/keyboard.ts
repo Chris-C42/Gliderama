@@ -6,6 +6,7 @@
  *   Fly left / right   ArrowLeft, KeyA   /  ArrowRight, KeyD
  *   Pitch up / down    ArrowUp,   KeyW   /  ArrowDown,  KeyS
  *   Gadget             Space, KeyJ
+ *   Hover (circle)     KeyH
  *   Pause              Escape, KeyP
  *
  * Keys are physical key codes (`KeyboardEvent.code`), so the layout is the same on AZERTY etc.
@@ -19,6 +20,7 @@ export const UP_KEYS = ['ArrowUp', 'KeyW'] as const;
 export const DOWN_KEYS = ['ArrowDown', 'KeyS'] as const;
 export const GADGET_KEYS = ['Space', 'KeyJ'] as const;
 export const PAUSE_KEYS = ['Escape', 'KeyP'] as const;
+export const HOVER_KEYS = ['KeyH'] as const;
 
 /** Pitch ramps towards +-1 at this rate (units per second) while a pitch key is held... */
 export const PITCH_RAMP_RATE = 4;
@@ -35,6 +37,7 @@ const PITCH_OF = new Map<string, -1 | 1>([
 ]);
 const GADGET_SET: ReadonlySet<string> = new Set(GADGET_KEYS);
 const PAUSE_SET: ReadonlySet<string> = new Set(PAUSE_KEYS);
+const HOVER_SET: ReadonlySet<string> = new Set(HOVER_KEYS);
 /** Keys whose default action (page scroll) must be suppressed while the game has focus. */
 const SCROLL_KEYS: ReadonlySet<string> = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space']);
 
@@ -58,7 +61,7 @@ export const KEYBOARD_IDLE: KeyboardState = Object.freeze({
 
 /** Is this one of the keys the game listens to? */
 export function isGameKey(code: string): boolean {
-  return DIR_OF.has(code) || PITCH_OF.has(code) || GADGET_SET.has(code) || PAUSE_SET.has(code);
+  return DIR_OF.has(code) || PITCH_OF.has(code) || GADGET_SET.has(code) || PAUSE_SET.has(code) || HOVER_SET.has(code);
 }
 
 /** Should the browser's default action for this key be prevented (arrows / space would scroll)? */
@@ -72,6 +75,8 @@ export interface KeyDownResult {
   gadgetPressed: boolean;
   /** A pause key went down. */
   pausePressed: boolean;
+  /** The hover key went down (toggles the hover assist). */
+  hoverPressed: boolean;
 }
 
 /**
@@ -81,22 +86,24 @@ export interface KeyDownResult {
 export function keyboardKeyDown(s: KeyboardState, code: string): KeyDownResult {
   if (DIR_OF.has(code)) {
     const state = s.dirKeys.includes(code) ? s : { ...s, dirKeys: [...s.dirKeys, code] };
-    return { state, gadgetPressed: false, pausePressed: false };
+    return { state, gadgetPressed: false, pausePressed: false, hoverPressed: false };
   }
   if (PITCH_OF.has(code)) {
     const state = s.pitchKeys.includes(code) ? s : { ...s, pitchKeys: [...s.pitchKeys, code] };
-    return { state, gadgetPressed: false, pausePressed: false };
+    return { state, gadgetPressed: false, pausePressed: false, hoverPressed: false };
   }
   if (GADGET_SET.has(code)) {
-    if (s.gadgetKeys.includes(code)) return { state: s, gadgetPressed: false, pausePressed: false };
+    if (s.gadgetKeys.includes(code)) return { state: s, gadgetPressed: false, pausePressed: false, hoverPressed: false };
     return {
       state: { ...s, gadgetKeys: [...s.gadgetKeys, code] },
       gadgetPressed: s.gadgetKeys.length === 0,
       pausePressed: false,
+      hoverPressed: false,
     };
   }
-  if (PAUSE_SET.has(code)) return { state: s, gadgetPressed: false, pausePressed: true };
-  return { state: s, gadgetPressed: false, pausePressed: false };
+  if (PAUSE_SET.has(code)) return { state: s, gadgetPressed: false, pausePressed: true, hoverPressed: false };
+  if (HOVER_SET.has(code)) return { state: s, gadgetPressed: false, pausePressed: false, hoverPressed: true };
+  return { state: s, gadgetPressed: false, pausePressed: false, hoverPressed: false };
 }
 
 /** A key went up. Releasing the newest direction key falls back to an older one that is still held. */

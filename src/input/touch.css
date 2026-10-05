@@ -44,6 +44,7 @@
 
 .tc-pad,
 .tc-gadget,
+.tc-hover,
 .tc-pause {
   position: absolute;
   box-sizing: border-box;
@@ -309,6 +310,45 @@
   border: 2px solid var(--tc-line);
   border-radius: 50%;
   pointer-events: none;
+}
+
+/* ---- Hover (toggle) ------------------------------------------------------------------------- */
+
+/* Just inside the right pad (or the one-thumb layout's gadget button), out of the stick zone. */
+.tc-hover {
+  width: var(--tc-gadget-size);
+  height: var(--tc-gadget-size);
+  bottom: calc(var(--tc-inset-bottom) + (var(--tc-pad-size) - var(--tc-gadget-size)) / 2);
+  right: calc(var(--tc-inset-right) + var(--tc-pad-size) + var(--tc-gap) * 2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tc-root--left-handed .tc-hover {
+  right: auto;
+  left: calc(var(--tc-inset-left) + var(--tc-pad-size) + var(--tc-gap) * 2);
+}
+
+.tc-hover--on {
+  background: var(--tc-fill-held);
+  border-color: var(--tc-line-strong);
+}
+
+.tc-hover__icon {
+  width: 58%;
+  height: 58%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.tc-hover:not(.tc-hover--on) .tc-hover__icon {
+  opacity: 0.75;
 }
 
 /* ---- Pause --------------------------------------------------------------------------------- */

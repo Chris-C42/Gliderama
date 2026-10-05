@@ -126,7 +126,7 @@ export function Hangar(props: { design?: Design }) {
       renderer,
       hangarLevel(extras.current),
       design,
-      { autoTrim: s.autoTrim, slowMo: s.slowMo, infiniteSheets: true, record: true },
+      { autoTrim: s.autoTrim, slowMo: s.slowMo, infiniteSheets: true, record: true, hover: s.hoverAssist },
       {
         hud: (h) => setHud(h),
         sfx: (n, o) => sfx(n, o),
@@ -343,7 +343,12 @@ export function Hangar(props: { design?: Design }) {
       )}
       {panel === 'tests' && <HangarTests design={design} onClose={() => setPanel('none')} />}
       {inputRef.current && panel !== 'build' && (
-        <TouchControls input={inputRef.current} settings={() => settings.peek()} stickEnabled={h?.phase === 'fly'} />
+        <TouchControls
+          input={inputRef.current}
+          settings={() => settings.peek()}
+          stickEnabled={h?.phase === 'fly'}
+          hover={settings.value.hoverAssist && h?.phase === 'fly' ? !!h?.hovering : null}
+        />
       )}
     </div>
   );
