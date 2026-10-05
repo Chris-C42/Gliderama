@@ -1,0 +1,210 @@
+/*
+ * Default look of the on-screen touch controls: minimal, neutral, semi-transparent white outlines.
+ * Restyle freely; the class names are the contract (see TouchControls.tsx).
+ *
+ * Layout (landscape): direction pads bottom-left / bottom-right, a gadget button above each pad,
+ * pause top-right (top-left when .tc-root--left-handed). Safe-area insets are respected.
+ */
+
+.tc-root {
+  --tc-pad-size: 22vmin;
+  --tc-gadget-size: 11vmin;
+  --tc-knob-size: 9vmin;
+  --tc-gap: 2vmin;
+  --tc-edge: 3vmin;
+  --tc-line: rgba(255, 255, 255, 0.5);
+  --tc-line-strong: rgba(255, 255, 255, 0.9);
+  --tc-fill: rgba(255, 255, 255, 0.06);
+  --tc-fill-held: rgba(255, 255, 255, 0.2);
+
+  --tc-inset-left: max(var(--tc-edge), env(safe-area-inset-left, 0px));
+  --tc-inset-right: max(var(--tc-edge), env(safe-area-inset-right, 0px));
+  --tc-inset-bottom: max(var(--tc-edge), env(safe-area-inset-bottom, 0px));
+  --tc-inset-top: max(var(--tc-edge), env(safe-area-inset-top, 0px));
+
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  /* The root itself is transparent to input; only the controls below catch pointers. */
+  pointer-events: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* ---- Interactive elements ------------------------------------------------------------------ */
+
+.tc-pad,
+.tc-gadget,
+.tc-pause {
+  position: absolute;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 2px solid var(--tc-line);
+  background: var(--tc-fill);
+  color: var(--tc-line-strong);
+  pointer-events: auto;
+  touch-action: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---- Direction pads ------------------------------------------------------------------------ */
+
+.tc-pad {
+  width: var(--tc-pad-size);
+  height: var(--tc-pad-size);
+  bottom: var(--tc-inset-bottom);
+  border-radius: 50%;
+}
+
+.tc-pad--left {
+  left: var(--tc-inset-left);
+}
+
+.tc-pad--right {
+  right: var(--tc-inset-right);
+}
+
+.tc-pad--held {
+  background: var(--tc-fill-held);
+}
+
+.tc-pad--active {
+  border-color: var(--tc-line-strong);
+}
+
+/* A chevron drawn from two borders. */
+.tc-pad__icon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 26%;
+  height: 26%;
+  border: solid var(--tc-line);
+  border-width: 0 0 0.9vmin 0.9vmin;
+  pointer-events: none;
+}
+
+.tc-pad--left .tc-pad__icon {
+  transform: translate(-30%, -50%) rotate(45deg);
+}
+
+.tc-pad--right .tc-pad__icon {
+  transform: translate(-70%, -50%) rotate(-135deg);
+}
+
+/* ---- Pitch slider (shown while a pad is held) ---------------------------------------------- */
+
+/* Positioned by the component: left / top = touch-down point, height = 2 * sliderTravel. */
+.tc-slider {
+  position: absolute;
+  width: var(--tc-knob-size);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.tc-slider__track {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  border: 2px solid var(--tc-line);
+  border-radius: 999px;
+  background: var(--tc-fill);
+}
+
+/* Neutral mark at the touch-down point. */
+.tc-slider__track::after {
+  content: '';
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--tc-line);
+}
+
+/* Offset along the track by an inline transform from the component. */
+.tc-slider__knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--tc-knob-size);
+  height: var(--tc-knob-size);
+  box-sizing: border-box;
+  border: 2px solid var(--tc-line);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.tc-slider--active .tc-slider__knob {
+  border-color: var(--tc-line-strong);
+  background: rgba(255, 255, 255, 0.45);
+}
+
+/* ---- Gadget buttons ------------------------------------------------------------------------ */
+
+.tc-gadget {
+  width: var(--tc-gadget-size);
+  height: var(--tc-gadget-size);
+  bottom: calc(var(--tc-inset-bottom) + var(--tc-pad-size) + var(--tc-gap));
+  border-radius: 50%;
+}
+
+.tc-gadget--left {
+  left: calc(var(--tc-inset-left) + (var(--tc-pad-size) - var(--tc-gadget-size)) / 2);
+}
+
+.tc-gadget--right {
+  right: calc(var(--tc-inset-right) + (var(--tc-pad-size) - var(--tc-gadget-size)) / 2);
+}
+
+.tc-gadget--active {
+  background: var(--tc-fill-held);
+  border-color: var(--tc-line-strong);
+}
+
+.tc-gadget__icon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 36%;
+  height: 36%;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--tc-line);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* ---- Pause --------------------------------------------------------------------------------- */
+
+.tc-pause {
+  top: var(--tc-inset-top);
+  right: var(--tc-inset-right);
+  width: 9vmin;
+  height: 9vmin;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2vmin;
+  border-radius: 22%;
+  font: inherit;
+}
+
+.tc-pause__bar {
+  display: block;
+  width: 1.3vmin;
+  height: 3.6vmin;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+/* ---- Left-handed layout: pause moves to the opposite top corner ----------------------------- */
+
+.tc-root--left-handed .tc-pause {
+  right: auto;
+  left: var(--tc-inset-left);
+}
