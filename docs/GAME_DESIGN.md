@@ -208,3 +208,26 @@ src/
   ui/       screens & components (Preact), styles
   modes/    campaign, roguelike, daily, challenges, sandbox
 ```
+
+## 11. Status: first playable (October 2026)
+
+Built and playable:
+
+- **Fold workshop** with real folds, wing, shape, extras and look steps, a 3D pixel preview, friendly and
+  engineer stats, six recipes, share codes and links.
+- **Flight** from the folded geometry (stall, vortex lift, flaps, damage), the slider controls, throws, turnarounds.
+- **Campaign**: Home (3 levels) and Grandma's Cottage (3 levels: fireplace thermals, the swatting cat, kettle steam,
+  the cuckoo clock, the conservatory fan and its switch). Every level is checked passable by a beam-search pilot test.
+- **Paper Trail**: procedural, flight-validated floors (home and cottage themes), 19 draft offers, workbench rooms on
+  every other floor that follow the run's rules.
+- **Daily Flight**: seeded house + twist, official first flight, practice, share card.
+- **Challenges**: ten Paper Lab puzzles (exit, target, hoops, distance, time aloft; fold, paper and size limits),
+  three stars each, unlocking in turn.
+- **Test Hangar**: eight bays with markers, room builder, flight reports, a pinned gold ghost to compare designs,
+  and lab tests (report card, polar, throw sweep, compare).
+- **Audio**: a chiptune soundtrack (title, workshop, home, hangar, trail, daily, puzzle, level clear), sound effects
+  and ambient loops (wind with airspeed, vents, fans, fire). Sounds are level-balanced by measurement; they have
+  not been tuned by ear yet.
+
+Next: places 3 to 6 (School, Office Tower, Museum of Flight, Rooftops & Sky), sound tuning by ear, more recipes and
+gadgets, Daily houses made bit-identical across browsers (the generator's flights use the engine's `Math.sin`/`cos`).
