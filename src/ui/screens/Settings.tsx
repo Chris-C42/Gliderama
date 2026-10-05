@@ -2,7 +2,7 @@ import { useState } from 'preact/hooks';
 import { back } from '../../app/nav';
 import { settings, setSetting } from '../../core/settings';
 import { exportSave, importSave } from '../../core/storage';
-import type { Settings } from '../../core/types';
+import type { Settings, TouchLayout } from '../../core/types';
 import { Icon } from '../icons';
 
 function Toggle(props: { k: keyof Settings; label: string; hint?: string }) {
@@ -18,6 +18,23 @@ function Toggle(props: { k: keyof Settings; label: string; hint?: string }) {
   );
 }
 
+/** A segmented choice between a few named values, in the same paper buttons the Workshop uses. */
+function Choice(props: { k: 'touchLayout'; label: string; options: { value: TouchLayout; label: string }[] }) {
+  const cur = settings.value[props.k];
+  return (
+    <div class="row">
+      <span class="label">{props.label}</span>
+      <div class="ws__seg" role="group" aria-label={props.label}>
+        {props.options.map((o) => (
+          <button class={`btn btn--small ${cur === o.value ? 'is-on' : ''}`} aria-pressed={cur === o.value} onClick={() => setSetting(props.k, o.value)}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Range(props: { k: 'musicVolume' | 'sfxVolume' | 'sliderTravel'; label: string; min: number; max: number; step: number }) {
   const v = settings.value[props.k];
   return (
@@ -29,8 +46,14 @@ function Range(props: { k: 'musicVolume' | 'sfxVolume' | 'sliderTravel'; label: 
   );
 }
 
+const TOUCH_LAYOUT_OPTIONS: { value: TouchLayout; label: string }[] = [
+  { value: 'pads', label: 'Two pads' },
+  { value: 'joystick', label: 'One thumb' },
+];
+
 export function SettingsScreen() {
   const [msg, setMsg] = useState<string | null>(null);
+  const joystick = settings.value.touchLayout === 'joystick';
   return (
     <div class="screen desk safe scroll">
       <div class="row">
@@ -52,7 +75,13 @@ export function SettingsScreen() {
         <section class="card">
           <h3>Controls</h3>
           <div class="col">
-            <Range k="sliderTravel" label="Slider travel" min={30} max={110} step={5} />
+            <Choice k="touchLayout" label="Touch controls" options={TOUCH_LAYOUT_OPTIONS} />
+            <p class="small muted" style={{ margin: 0 }}>
+              {joystick
+                ? `Press anywhere on the ${settings.value.leftHanded ? 'right' : 'left'} side of the screen and slide: sideways turns, up and down pitch.`
+                : 'Hold a pad to fly that way, and slide it up or down to pitch.'}
+            </p>
+            <Range k="sliderTravel" label={joystick ? 'Joystick reach' : 'Slider travel'} min={30} max={110} step={5} />
             <Toggle k="invertPitch" label="Invert pitch" hint="slide down to climb" />
             <Toggle k="leftHanded" label="Left-handed layout" />
             <Toggle k="haptics" label="Haptics" />

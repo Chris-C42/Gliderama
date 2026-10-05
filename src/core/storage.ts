@@ -19,7 +19,7 @@ import { signal } from '@preact/signals';
 import { MAX_CLIPS, MAX_FOLDS, blankDesign, newDesignId } from '../paper/design';
 import type { Design, ElevatorSpec, FoldOp, WingletSpec } from '../paper/design';
 import type { DailyResult, LevelProgress, SaveData } from './save-types';
-import { DEFAULT_SETTINGS } from './types';
+import { DEFAULT_SETTINGS, isTouchLayout } from './types';
 
 /** localStorage key of the save document. The `v1` is the key's own generation, not the schema version. */
 export const SAVE_KEY = 'gliderama.save.v1';
@@ -327,6 +327,8 @@ function normalizeSave(data: Record<string, unknown>): SaveData {
 
   save.settings.musicVolume = clamp01(save.settings.musicVolume);
   save.settings.sfxVolume = clamp01(save.settings.sfxVolume);
+  // Any string passes the type-guided merge above, so an unknown layout (hand edit, newer build) is caught here.
+  if (!isTouchLayout(save.settings.touchLayout)) save.settings.touchLayout = DEFAULT_SETTINGS.touchLayout;
 
   const seenIds = new Set<string>();
   save.designs = (Array.isArray(data.designs) ? data.designs : [])

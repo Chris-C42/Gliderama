@@ -6,7 +6,8 @@
   display: flex;
   gap: 0.5em;
   align-items: center;
-  z-index: 45;
+  /* Above the touch controls (z-index 50): the one-thumb stick zone must never swallow taps on these buttons. */
+  z-index: 55;
   pointer-events: none;
 }
 .hangar__top > * {

@@ -198,7 +198,12 @@ export function Play(props: { spec: PlaySpec }) {
       <canvas ref={canvas} class="play__canvas pixelated" width={640} height={360} />
       {hud && <Hud hud={hud} onPause={() => setPause(true)} flightData={settings.value.flightData} />}
       {inputRef.current && !end && !paused && !bench && (
-        <TouchControls input={inputRef.current} settings={() => settings.peek()} onPause={() => setPause(true)} />
+        <TouchControls
+          input={inputRef.current}
+          settings={() => settings.peek()}
+          onPause={() => setPause(true)}
+          stickEnabled={hud?.phase === 'fly'}
+        />
       )}
       {paused && !end && (
         <Modal onClose={() => setPause(false)}>

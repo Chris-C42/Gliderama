@@ -132,6 +132,89 @@ describe('setSetting', () => {
   });
 });
 
+describe('touchLayout', () => {
+  it('is the two pads by default', async () => {
+    expect(DEFAULT_SETTINGS.touchLayout).toBe('pads');
+    const { mod } = await boot();
+    expect(mod.settings.value.touchLayout).toBe('pads');
+  });
+
+  it('is read from the stored save', async () => {
+    const { mod } = await boot({ version: 1, settings: { touchLayout: 'joystick' } });
+    expect(mod.settings.value.touchLayout).toBe('joystick');
+  });
+
+  it('falls back to the pads when the stored value is not a layout', async () => {
+    for (const bad of ['trackball', '', 'Joystick', 2, null, false]) {
+      const { mod } = await boot({ version: 1, settings: { touchLayout: bad } });
+      expect(mod.settings.value.touchLayout, JSON.stringify(bad)).toBe('pads');
+    }
+  });
+
+  it('switches layouts, persists them, and keeps every other setting', async () => {
+    const { storage, mod, saved } = await boot({ version: 1, settings: { leftHanded: true, sliderTravel: 80 } });
+    mod.setSetting('touchLayout', 'joystick');
+    expect(mod.settings.value).toEqual({ ...DEFAULT_SETTINGS, leftHanded: true, sliderTravel: 80, touchLayout: 'joystick' });
+    expect(storage.getSave().settings.touchLayout).toBe('joystick');
+    vi.advanceTimersByTime(storage.WRITE_DEBOUNCE_MS);
+    expect(saved().settings.touchLayout).toBe('joystick');
+    mod.setSetting('touchLayout', 'pads');
+    expect(mod.settings.value.touchLayout).toBe('pads');
+  });
+
+  it('ignores values that are not a layout, without touching the save', async () => {
+    const { storage, mod, writes } = await boot({ version: 1, settings: { touchLayout: 'joystick' } });
+    const revision = storage.saveRevision.value;
+    mod.setSetting('touchLayout', 'trackball' as never);
+    mod.setSetting('touchLayout', '' as never);
+    mod.setSetting('touchLayout', 1 as never);
+    mod.setSetting('touchLayout', true as never);
+    vi.advanceTimersByTime(10_000);
+    expect(mod.settings.value.touchLayout).toBe('joystick');
+    expect(storage.getSave().settings.touchLayout).toBe('joystick');
+    expect(storage.saveRevision.value).toBe(revision);
+    expect(writes()).toBe(0);
+  });
+
+  it('does nothing when the layout does not change', async () => {
+    const { mod, storage, writes } = await boot();
+    const before = storage.saveRevision.value;
+    mod.setSetting('touchLayout', 'pads');
+    vi.advanceTimersByTime(10_000);
+    expect(storage.saveRevision.value).toBe(before);
+    expect(writes()).toBe(0);
+  });
+
+  it('is typed to the two layouts', async () => {
+    const { mod } = await boot();
+    mod.setSetting('touchLayout', 'joystick');
+    // @ts-expect-error not a layout
+    mod.setSetting('touchLayout', 'trackball');
+    // @ts-expect-error a layout is not a boolean
+    mod.setSetting('touchLayout', true);
+    expect(mod.settings.value.touchLayout).toBe('joystick');
+  });
+
+  it('follows an imported save, and an import with an unknown layout lands on the pads', async () => {
+    const { storage, mod } = await boot();
+    const doc = storage.createDefaultSave();
+    doc.settings.touchLayout = 'joystick';
+    expect(storage.importSave(JSON.stringify(doc))).toBe(true);
+    expect(mod.settings.value.touchLayout).toBe('joystick');
+
+    (doc.settings as unknown as Record<string, unknown>).touchLayout = 'trackball';
+    expect(storage.importSave(JSON.stringify(doc))).toBe(true);
+    expect(mod.settings.value.touchLayout).toBe('pads');
+  });
+
+  it('is cleared back to the pads by resetSave', async () => {
+    const { storage, mod } = await boot();
+    mod.setSetting('touchLayout', 'joystick');
+    storage.resetSave();
+    expect(mod.settings.value.touchLayout).toBe('pads');
+  });
+});
+
 describe('following the save', () => {
   it('picks up an imported save', async () => {
     const { storage, mod } = await boot();
