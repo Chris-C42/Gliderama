@@ -20,6 +20,7 @@ import type { AirFlow, GameObject, ObjCtx, SessionApi, WindOut } from './objects
 import { bounds, polyVsBox, profileHull, surfaceBelow, type V } from './collide';
 import { countStars, neighbour, type LevelDef } from './level';
 import { HoverPilot } from './hover';
+import { stairsArrival } from '../world/stairs';
 import { clipFlows, spillFlows, spillsFor, spillWind, updateSpills, type Spill } from './roomAir';
 import type { Collider, ItemDef, RoomDef } from '../world/types';
 
@@ -351,6 +352,29 @@ export class Session {
       this.checkpoint = { room: this.room.key, x: p.x, y: p.y - 12, facing: this.plane.facing };
       this.cb.workbench?.();
     },
+    takeStairs: (way) => {
+      if (this.phase !== 'fly') return;
+      const next = neighbour(this.level, this.room.key, way);
+      if (!next) return;
+      const arrive = stairsArrival(this.level.rooms[next].items, way);
+      this.enterRoom(next);
+      this.hover = null;
+      // a reset, Glider style: out at the matching stairs, gliding level at a comfortable speed
+      const p = this.plane;
+      p.x = arrive.x / PX_PER_M;
+      p.y = (ROOM_H - arrive.y) / PX_PER_M;
+      p.facing = arrive.facing;
+      p.turn = null;
+      p.theta = 0;
+      p.q = 0;
+      p.vx = arrive.facing * this.aero.perf.vBest;
+      p.vy = 0;
+      p.liftT = 0;
+      p.exitPending = false;
+      p.exitBoost = 0;
+      if (!this.opts.fixedStart) this.checkpoint = { room: next, x: arrive.x, y: arrive.y, facing: arrive.facing };
+      this.sfx(way === 'up' ? 'stairsUp' : 'stairsDown');
+    },
     teleport: (toRoom, x, y, facing) => {
       if (toRoom !== this.room.key) this.enterRoom(toRoom);
       this.plane.x = x / PX_PER_M;
@@ -632,13 +656,15 @@ export class Session {
     const pos = planePx(p);
     const hullW = planeHull(this.tick);
     const bb = bounds(hullW);
-    for (const o of this.room.objects) {
+    const roomNow = this.room;
+    for (const o of roomNow.objects) {
       const r = o.trigger?.();
       if (!r) continue;
       if (bb.x1 < r.x || bb.x0 > r.x + r.w || bb.y1 < r.y || bb.y0 > r.y + r.h) continue;
       if (!polyVsBox(hullW, { ...r })) continue;
       o.onTouch?.(ctx);
-      if (this.phase !== 'fly') return;
+      // landed, crashed, or taken the stairs to another room
+      if (this.phase !== 'fly' || this.room !== roomNow) return;
     }
 
     if (structural(p.damage) >= 1) {

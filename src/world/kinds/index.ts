@@ -2,6 +2,7 @@ import type { KindDef } from './types';
 import * as home from './home';
 import * as hangar from './hangar';
 import * as cottage from './cottage';
+import * as stairs from './stairs';
 
 export const KINDS: Record<string, KindDef> = {
   window: home.windowKind,
@@ -35,6 +36,8 @@ export const KINDS: Record<string, KindDef> = {
   plant: home.plantKind,
   shelf: home.shelfKind,
   banister: home.banisterKind,
+  stairsUp: stairs.stairsUpKind,
+  stairsDown: stairs.stairsDownKind,
   toaster: home.toasterKind,
   girder: hangar.girderKind,
   hangarWindow: hangar.hangarWindowKind,

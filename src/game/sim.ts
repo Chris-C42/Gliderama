@@ -45,7 +45,7 @@ export function buildSimRoom(def: RoomDef, where?: { level: Pick<LevelDef, 'room
   return { def, colliders, objects, hazards, spills: where ? spillsFor(where.level, where.key) : [] };
 }
 
-export type SimOutcome = 'left' | 'right' | 'up' | 'down' | 'grounded' | 'crashed' | 'hazard' | 'timeout';
+export type SimOutcome = 'left' | 'right' | 'up' | 'down' | 'grounded' | 'crashed' | 'hazard' | 'timeout' | 'stairsUp' | 'stairsDown';
 
 export interface SimResult {
   outcome: SimOutcome;
@@ -83,6 +83,7 @@ const noopApi = (plane: () => Plane, switches = new Map<string, boolean>()): Ses
   completeLevel() {},
   openWorkbench() {},
   teleport() {},
+  takeStairs() {},
   sfx() {},
   shake() {},
   plane: () => {
@@ -168,6 +169,12 @@ export function simulateRoom(
         if (bb.x1 < h.x || bb.x0 > h.x + h.w || bb.y1 < h.y || bb.y0 > h.y + h.h) continue;
         if (polyVsBox(hw, { ...h })) return done('hazard');
       }
+    }
+    // stairs: the flight carries on in the room above / below (the caller takes it from there)
+    for (const o of room.objects) {
+      if ((o.def.t !== 'stairsUp' && o.def.t !== 'stairsDown') || !o.trigger) continue;
+      const tr = o.trigger();
+      if (tr && polyVsBox(planeHull(st), { ...tr })) return done(o.def.t);
     }
     if (pos.x < -2) return done('left');
     if (pos.x > ROOM_W + 2) return done('right');

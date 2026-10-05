@@ -71,8 +71,8 @@ export function cottage1(): LevelDef {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Level 2 — Knitting by Lamplight: a dark sitting room, then warm air rising up the stairwell
-// into the sewing attic, and out through the gable window.
+// Level 2 — Knitting by Lamplight: a dark sitting room, then warm air in the stairwell up to the
+// landing, the stairs to the sewing attic, and out through the gable window.
 
 const C2_SITTING: RoomDef = {
   id: 'c2-sitting',
@@ -107,18 +107,20 @@ const C2_STAIRS: RoomDef = {
   wall: { pattern: 'boards', base: 'pine', accent: 'oak', wainscot: null, trim: 'oak' },
   floor: { kind: 'planks', ramp: 'walnut' },
   night: true,
-  exits: { left: { from: 30, to: 340 }, up: { from: 380, to: 540 } },
+  exits: { left: { from: 30, to: 340 } },
   seed: 91,
   items: [
-    { t: 'frame', x: 120, y: 70, v: 1, w: 54, h: 66 },
-    { t: 'frame', x: 210, y: 92, v: 0, w: 40, h: 50 },
-    { t: 'sideTable', x: 200, y: 256, v: 0 },
-    { t: 'oilLamp', x: 230, y: 222 },
-    { t: 'banister', x: 304, y: 272, w: 286, h: 68 },
-    { t: 'draft', x: 380, y: 340, w: 160, top: -40, power: 3.2 },
-    star('c2b', 0, 460, 220),
-    star('c2b', 1, 460, 110),
-    star('c2b', 2, 230, 150),
+    { t: 'frame', x: 70, y: 70, v: 1, w: 54, h: 66 },
+    { t: 'frame', x: 150, y: 92, v: 0, w: 40, h: 50 },
+    { t: 'sideTable', x: 96, y: 256, v: 0 },
+    { t: 'oilLamp', x: 126, y: 222 },
+    // the stairs up to the sewing attic: fly in through the doorway on the landing
+    { t: 'stairsUp', x: 392, y: 340, w: 222, top: 150, v: 0 },
+    // warm air rising in the stairwell carries you up to the landing
+    { t: 'draft', x: 250, y: 340, w: 110, top: 70, power: 3.2 },
+    star('c2b', 0, 305, 210),
+    star('c2b', 1, 305, 110),
+    star('c2b', 2, 470, 150),
   ],
 };
 
@@ -128,19 +130,21 @@ const C2_ATTIC: RoomDef = {
   wall: { pattern: 'boards', base: 'cream', accent: 'pine', wainscot: null, trim: 'pine' },
   floor: { kind: 'planks', ramp: 'pine' },
   night: true,
-  exits: { down: { from: 380, to: 540 }, right: { from: 96, to: 230, exit: true } },
+  exits: { right: { from: 96, to: 230, exit: true } },
   seed: 101,
   items: [
     { t: 'beam', x: 0, y: 14 },
     { t: 'herbs', x: 100, y: 30, w: 90 },
-    { t: 'dresser', x: 30, y: 236, v: 1 },
-    { t: 'oilLamp', x: 70, y: 202 },
-    { t: 'knittingBasket', x: 180, y: 312 },
+    // the top of the stairs you came up
+    { t: 'stairsDown', x: 46, y: 302, w: 150, v: 0 },
+    { t: 'knittingBasket', x: 230, y: 312 },
+    { t: 'floorVent', x: 316, y: 330, w: 64, power: 3.6 },
     { t: 'cuckooClock', x: 270, y: 44, dir: 1, every: 6, phase: 3 },
-    { t: 'draft', x: 380, y: 372, w: 160, top: 120, power: 3.2 },
+    { t: 'dresser', x: 474, y: 236, v: 1 },
+    { t: 'oilLamp', x: 520, y: 202 },
     { t: 'exit', x: 604, y: 96, w: 36, h: 134 },
-    star('c2c', 0, 460, 240),
-    star('c2c', 1, 330, 120),
+    star('c2c', 0, 348, 220),
+    star('c2c', 1, 348, 110),
     star('c2c', 2, 580, 110),
   ],
 };
@@ -154,7 +158,7 @@ export function cottage2(): LevelDef {
     start: { room: '0,0', x: 52, y: 126, facing: 1 },
     sheets: 6,
     par: 38,
-    intro: 'Lights out at Grandma’s. Find the switch, and let the warm air carry you upstairs.',
+    intro: 'Lights out at Grandma’s. Find the switch, then ride the warm air up to the stairs.',
   };
 }
 
@@ -239,7 +243,7 @@ export const COTTAGE_LEVELS: CampaignLevel[] = [
   {
     id: 'cottage-2',
     name: 'Knitting by Lamplight',
-    blurb: 'A dark sitting room and the warm stairwell.',
+    blurb: 'A dark sitting room, the warm stairwell and the stairs to the attic.',
     build: cottage2,
     unlocks: [
       { kind: 'gadgets', id: 'helium', label: 'Helium sticker' },

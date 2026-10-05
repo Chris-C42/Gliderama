@@ -97,6 +97,24 @@ export function initAudio(): void {
     cooldown: 0.15,
     maxVoices: 1,
   });
+  // Taking the stairs: four quick soft footsteps going up (or down) the scale.
+  for (const [name, steps] of [
+    ['stairsUp', [0, 3, 5, 8]],
+    ['stairsDown', [8, 5, 3, 0]],
+  ] as const) {
+    audio.sfx.register(name, {
+      gain: 1,
+      wave: 'pulse25',
+      freq: 330,
+      duration: 0.34,
+      vol: 0.18,
+      env: { a: 0.002, d: 0.04, s: 0.2, r: 0.03 },
+      arp: { steps: [...steps], interval: 0.07, mode: 'once', retrigger: true },
+      layers: [{ wave: 'noise', freq: 900, duration: 0.3, vol: 0.05, env: { a: 0.001, d: 0.03, s: 0, r: 0.02 } }],
+      cooldown: 0.4,
+      maxVoices: 1,
+    });
+  }
   audio.sfx.register('hoverOff', {
     gain: 1,
     wave: 'triangle',

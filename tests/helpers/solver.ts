@@ -16,11 +16,13 @@ import { damagePct } from '../../src/physics/damage';
 import { PX_PER_M, ROOM_H, ROOM_W } from '../../src/physics/config';
 import type { ObjCtx, SessionApi, WindOut } from '../../src/game/objects/types';
 import type { Rect } from '../../src/world/types';
+import { stairsArrival, stairsDownGeom, stairsUpGeom } from '../../src/world/stairs';
+import { spillWind } from '../../src/game/roomAir';
 
 const TICK = 1 / 120;
 
 interface Goal {
-  kind: 'side' | 'up' | 'down' | 'rect';
+  kind: 'side' | 'up' | 'down' | 'rect' | 'stairs';
   side?: 'left' | 'right';
   /** Top of the doorway for side exits (being higher than this at the wall is no use). */
   from?: number;
@@ -85,6 +87,18 @@ function routeOf(level: LevelDef): { key: string; goal: Goal }[] {
         break;
       }
     }
+    // stairs to a room not visited yet
+    if (!moved)
+      for (const it of room.items) {
+        if (it.t !== 'stairsUp' && it.t !== 'stairsDown') continue;
+        const way = it.t === 'stairsUp' ? 'up' : 'down';
+        const next = neighbour(level, key, way);
+        if (!next || seen.has(next)) continue;
+        out.push({ key, goal: { kind: 'stairs', rect: it.t === 'stairsUp' ? stairsUpGeom(it).door : stairsDownGeom(it).trigger } });
+        key = next;
+        moved = true;
+        break;
+      }
     if (!moved) return out;
   }
   return out;
@@ -96,7 +110,7 @@ function progress(goal: Goal, x: number, y: number): number {
   if (goal.kind === 'side') return (goal.side === 'right' ? x : 640 - x) + H * (340 - Math.max(y, (goal.from ?? 16) + 12));
   if (goal.kind === 'up') return 4 * (360 - y) - 0.6 * Math.abs(x - goal.holeCx!);
   if (goal.kind === 'down') return 2 * y + 1200 - 2.5 * Math.abs(x - goal.holeCx!);
-  const r = goal.rect!;
+  const r = goal.rect!; // the exit door, or the stairs to the next floor
   const cx = r.x + r.w / 2;
   const dx = Math.max(0, Math.abs(x - cx) - r.w / 2);
   const below = Math.max(0, y - (r.y + r.h));
@@ -162,6 +176,7 @@ export function solveLevel(
       const x = xm * PX_PER_M;
       const y = ROOM_H - ym * PX_PER_M;
       for (const o of room.objects) o.wind?.(x, y, out);
+      spillWind(room.spills, x, y, out);
       return { x: out.x, y: out.y };
     };
     for (let k = 0; k < stepTicks; k++) {
@@ -203,6 +218,35 @@ export function solveLevel(
           }
         }
       }
+      // stairs: out at the matching stairs on the next floor, gliding level (as the session does)
+      let tookStairs = false;
+      for (const o of room.objects) {
+        if ((o.def.t !== 'stairsUp' && o.def.t !== 'stairsDown') || !o.trigger) continue;
+        const tr = o.trigger();
+        if (!tr || !polyVsBox(hw, { ...tr })) continue;
+        const way = o.def.t === 'stairsUp' ? 'up' : 'down';
+        const next = neighbour(level, n.key, way);
+        if (!next) continue;
+        const a = stairsArrival(level.rooms[next].items, way);
+        const p = n.plane;
+        p.x = a.x / PX_PER_M;
+        p.y = (ROOM_H - a.y) / PX_PER_M;
+        p.facing = a.facing;
+        p.turn = null;
+        p.theta = 0;
+        p.q = 0;
+        p.vx = a.facing * aero.perf.vBest;
+        p.vy = 0;
+        p.liftT = 0;
+        p.exitPending = false;
+        p.exitBoost = 0;
+        n.key = next;
+        room = roomOf(next);
+        n.trace = [...n.trace, `stairs ${way} -> ${next} @${n.t.toFixed(1)}s`];
+        tookStairs = true;
+        break;
+      }
+      if (tookStairs) continue;
       let side: 'left' | 'right' | 'up' | 'down' | null = null;
       if (pos.x < -2) side = 'left';
       else if (pos.x > ROOM_W + 2) side = 'right';

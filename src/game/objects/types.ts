@@ -24,6 +24,8 @@ export interface SessionApi {
   completeLevel(): void;
   openWorkbench(objId: string): void;
   teleport(toRoom: string, x: number, y: number, facing?: 1 | -1): void;
+  /** Take the stairs up or down: on to the matching stairs in the room above / below, gliding level again. */
+  takeStairs(way: 'up' | 'down'): void;
   sfx(name: string, opts?: { vol?: number; pitch?: number }): void;
   shake(amount: number): void;
   plane(): { x: number; y: number; vx: number; vy: number; alive: boolean };
