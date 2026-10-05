@@ -32,6 +32,7 @@ export function Daily() {
         level: info.level,
         design,
         airMul: info.airMul,
+        benchLimits: dailyLimits(info),
         meta: { official },
         onEnd: (r, won) => {
           if (official) {

@@ -14,7 +14,8 @@ type View = 'hub' | 'draft' | 'over';
 let pending: { view: View; run: RunState } | null = null;
 
 function playFloor(run: RunState): void {
-  const level = generateFloorLevel({ seed: run.seed + run.floor * 7919, floor: run.floor, theme: themeFor(run.floor), workbenchRoom: false });
+  // every other floor has a workbench room part-way: land on the desk to patch up or refold
+  const level = generateFloorLevel({ seed: run.seed + run.floor * 7919, floor: run.floor, theme: themeFor(run.floor), workbenchRoom: run.floor % 2 === 1 });
   const bonus = run.sheets - level.sheets + (run.perks.includes('lucky') ? 1 : 0);
   go({
     name: 'play',
@@ -24,6 +25,7 @@ function playFloor(run: RunState): void {
       design: cloneDesign(run.design),
       bonusSheets: bonus,
       airMul: run.airMul,
+      benchLimits: workshopLimits(run),
       onEnd: (r, won) => {
         if (won) {
           run.stars += r.stars;

@@ -22,6 +22,8 @@ export interface PlaySpec {
   goal?: PlayGoal;
   /** Never run out of sheets (challenges). */
   infiniteSheets?: boolean;
+  /** What refolding at an in-level workbench may use (the mode's rules); default: campaign unlocks. */
+  benchLimits?: WorkshopLimits;
   /** Mode-specific lines for the end card (challenge stars, scores). */
   summary?: (r: LevelResult, won: boolean) => EndSummary;
 }
