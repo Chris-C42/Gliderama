@@ -67,6 +67,30 @@ function itemsFor(tool: Tool, x: number, y: number): ItemDef[] {
   }
 }
 
+/** A flight pinned for comparison (global hangar px), kept across visits. */
+interface PinnedGhost {
+  name: string;
+  distance: number;
+  pts: { x: number; y: number }[];
+}
+const PIN_KEY = 'gliderama.hangar.pin.v1';
+function loadPin(): PinnedGhost | null {
+  try {
+    const raw = localStorage.getItem(PIN_KEY);
+    return raw ? (JSON.parse(raw) as PinnedGhost) : null;
+  } catch {
+    return null;
+  }
+}
+function savePin(p: PinnedGhost | null): void {
+  try {
+    if (p) localStorage.setItem(PIN_KEY, JSON.stringify(p));
+    else localStorage.removeItem(PIN_KEY);
+  } catch {
+    /* private mode */
+  }
+}
+
 export function Hangar(props: { design?: Design }) {
   const [design, setDesign] = useState<Design>(() => props.design ?? activeDesign());
   const wrap = useRef<HTMLDivElement>(null);
@@ -81,6 +105,9 @@ export function Hangar(props: { design?: Design }) {
   const inputRef = useRef<InputManager | null>(null);
   const extras = useRef<Record<number, ItemDef[]>>({});
   const ghost = useRef<{ x: number; y: number }[]>([]);
+  const [pin, setPin] = useState<PinnedGhost | null>(loadPin);
+  const pinRef = useRef(pin);
+  pinRef.current = pin;
   const panelRef = useRef(panel);
   panelRef.current = panel;
   const toolRef = useRef(tool);
@@ -182,8 +209,9 @@ export function Hangar(props: { design?: Design }) {
         // ghost of the previous flight, clipped to the visible bay
         const key = session.room.key;
         const [gx] = key.split(',').map(Number);
-        const pts = ghost.current.filter((q) => q.x >= gx * 640 && q.x < (gx + 1) * 640).map((q) => ({ x: q.x - gx * 640, y: q.y }));
-        renderer.setGhost(pts);
+        const inBay = (path: { x: number; y: number }[]) => path.filter((q) => q.x >= gx * 640 && q.x < (gx + 1) * 640).map((q) => ({ x: q.x - gx * 640, y: q.y }));
+        renderer.setGhost(inBay(ghost.current), 0);
+        renderer.setGhost(inBay(pinRef.current?.pts ?? []), 1);
         session.render();
       },
     });
@@ -219,6 +247,18 @@ export function Hangar(props: { design?: Design }) {
           <Icon name="plane" /> {design.name} <Icon name="fold" />
         </button>
         <span class="grow" />
+        {pin && (
+          <button
+            class="chip hangar__pin"
+            title="Stop comparing with this flight"
+            onClick={() => {
+              setPin(null);
+              savePin(null);
+            }}
+          >
+            <Icon name="ghost" /> {pin.name} <Icon name="close" />
+          </button>
+        )}
         <button class={`btn btn--small ${panel === 'build' ? 'is-on' : ''}`} onClick={() => setPanel(panel === 'build' ? 'none' : 'build')}>
           <Icon name="cards" /> Build
         </button>
@@ -266,7 +306,19 @@ export function Hangar(props: { design?: Design }) {
             <span class="label">Ending</span>
             <span>{last.reason === 'target' ? 'Bullseye!' : last.reason === 'crashed' ? 'Crumpled' : 'Landed'}</span>
           </div>
-          <span class="small muted">Best {best.toFixed(2)} m · blue dots show your last flight</span>
+          <div class="row" style={{ marginTop: '0.4em' }}>
+            <span class="small muted grow">Best {best.toFixed(2)} m · blue dots: your last flight{pin ? ` · gold: ${pin.name}` : ''}</span>
+            <button
+              class="btn btn--small"
+              onClick={() => {
+                const p = { name: `${design.name} (${last.distance.toFixed(1)} m)`, distance: last.distance, pts: last.path.filter((_, i) => i % 2 === 0).map((q) => ({ x: Math.round(q.x), y: Math.round(q.y) })) };
+                setPin(p);
+                savePin(p);
+              }}
+            >
+              <Icon name="pin" /> Pin as ghost
+            </button>
+          </div>
         </div>
       )}
       {panel === 'build' && (

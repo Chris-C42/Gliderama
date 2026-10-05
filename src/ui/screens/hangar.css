@@ -114,3 +114,11 @@
   font: inherit;
   max-width: 14em;
 }
+.hangar__pin {
+  cursor: pointer;
+  background: var(--mustard-l);
+  max-width: 16em;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

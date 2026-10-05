@@ -85,35 +85,42 @@ export class GameRenderer {
     this.scene.add(this.guide);
   }
 
-  private ghost: THREE.Points | null = null;
-  private ghostPos = new Float32Array(1500 * 3);
+  private ghosts: (THREE.Points | null)[] = [null, null];
+  private ghostPos = [new Float32Array(1500 * 3), new Float32Array(1500 * 3)];
 
-  /** Ghost trail of a previous flight (room px, already clipped to this room). */
-  setGhost(pts: { x: number; y: number }[]): void {
-    if (!this.ghost) {
+  /**
+   * Ghost trail of an earlier flight (room px, already clipped to this room). Slot 0 is the last flight
+   * (pale blue), slot 1 a pinned flight to compare against (mustard).
+   */
+  setGhost(pts: { x: number; y: number }[], slot: 0 | 1 = 0): void {
+    let ghost = this.ghosts[slot];
+    const pos = this.ghostPos[slot];
+    if (!ghost) {
       const g = new THREE.BufferGeometry();
-      g.setAttribute('position', new THREE.BufferAttribute(this.ghostPos, 3));
-      this.ghost = new THREE.Points(
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const col = slot === 0 ? 'vec4(0.62, 0.8, 1.0, 0.75)' : 'vec4(0.94, 0.78, 0.3, 0.85)';
+      ghost = new THREE.Points(
         g,
         new THREE.ShaderMaterial({
           glslVersion: THREE.GLSL3,
           transparent: true,
           depthWrite: false,
           vertexShader: `void main(){ gl_PointSize = 2.0; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-          fragmentShader: `precision highp float; out vec4 fragColor; void main(){ fragColor = vec4(0.62, 0.8, 1.0, 0.75); }`,
+          fragmentShader: `precision highp float; out vec4 fragColor; void main(){ fragColor = ${col}; }`,
         }),
       );
-      this.ghost.frustumCulled = false;
-      this.ghost.renderOrder = 39;
-      this.ghost.position.z = 39;
-      this.scene.add(this.ghost);
+      ghost.frustumCulled = false;
+      ghost.renderOrder = 39 - slot;
+      ghost.position.z = 39 - slot;
+      this.scene.add(ghost);
+      this.ghosts[slot] = ghost;
     }
     const n = Math.min(1500, pts.length);
     for (let i = 0; i < n; i++) {
-      this.ghostPos[i * 3] = Math.round(pts[i].x);
-      this.ghostPos[i * 3 + 1] = 360 - Math.round(pts[i].y);
+      pos[i * 3] = Math.round(pts[i].x);
+      pos[i * 3 + 1] = 360 - Math.round(pts[i].y);
     }
-    const geo = this.ghost.geometry;
+    const geo = ghost.geometry;
     geo.setDrawRange(0, n);
     (geo.attributes.position as THREE.BufferAttribute).needsUpdate = true;
   }
