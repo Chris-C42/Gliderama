@@ -1,7 +1,8 @@
+import { signal } from '@preact/signals';
 import { back, go } from '../../app/nav';
 import { activeDesign, unlock } from '../../app/library';
 import { getSave, saveRevision, updateSave, createLevelProgress } from '../../core/storage';
-import { PLACES, isLevelOpen, levelById, type CampaignLevel, type Unlock } from '../../world/campaign';
+import { PLACES, isLevelOpen, levelById, loadLevel, type CampaignLevel, type Unlock } from '../../world/campaign';
 import type { LevelResult } from '../../game/session';
 import { Icon } from '../icons';
 import { Blueprint } from './Library';
@@ -33,8 +34,22 @@ export function recordCampaignResult(levelId: string, r: LevelResult, won: boole
   return gained;
 }
 
-export function startCampaignLevel(cl: CampaignLevel): void {
-  const level = cl.build();
+/** The level being loaded (Classic Houses are fetched when first played). */
+const loading = signal<string | null>(null);
+
+export async function startCampaignLevel(cl: CampaignLevel): Promise<void> {
+  if (loading.peek()) return;
+  loading.value = cl.id;
+  let level;
+  try {
+    level = await loadLevel(cl);
+  } catch (e) {
+    alert(`Couldn't load ${cl.name}${navigator.onLine ? '' : ' (offline: a house you have not played yet is not saved on this device)'}.`);
+    console.error(e);
+    return;
+  } finally {
+    loading.value = null;
+  }
   go({
     name: 'play',
     play: {
@@ -94,13 +109,14 @@ export function Campaign() {
                 {p.levels.map((l, li) => {
                   const lp = save.progress.campaign[l.id];
                   const open = isLevelOpen(l.id, done);
+                  const busy = loading.value === l.id;
                   const medals = lp?.medals;
                   return (
                     <button class={`camp__level ${open ? '' : 'is-locked'} ${lp?.completed ? 'is-done' : ''}`} disabled={!open} onClick={() => startCampaignLevel(l)}>
                       <span class="camp__num">{li + 1}</span>
                       <span class="col" style={{ gap: '0.1em', alignItems: 'flex-start' }}>
                         <span class="label">{l.name}</span>
-                        <span class="small muted">{open ? l.blurb : 'Finish the previous flight'}</span>
+                        <span class="small muted">{busy ? 'Loading…' : open ? l.blurb : 'Finish the previous flight'}</span>
                         <span class="camp__medals">
                           {(['escape', 'allStars', 'pristine', 'swift'] as const).map((m) => (
                             <span class={`camp__medal ${medals?.[m] ? 'is-got' : ''}`} title={{ escape: 'Escape', allStars: 'All stars', pristine: 'Pristine', swift: 'Swift' }[m]}>

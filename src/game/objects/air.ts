@@ -5,11 +5,22 @@ import { Px } from '../../render/pixel';
 import { rgb } from '../../render/particles';
 import { LAYOUT } from '../../world/types';
 import { fanOut, lerp, lineCount } from './airflow';
-import type { ObjFactory } from './types';
+import type { ObjFactory, SessionApi } from './types';
 
 const num = (v: unknown, d: number) => (typeof v === 'number' ? v : d);
 const wisp = rgb('#eaf2ff');
 const warm = rgb('#ffe2b8');
+
+/**
+ * Whether an air mover on switch group `group` is running. A group starting with '!' runs while its switch is
+ * off (Glider PRO blowers that start off and are switched on).
+ */
+export function groupOn(api: SessionApi, group: string): boolean {
+  return group.startsWith('!') ? !api.switchOn(group.slice(1)) : api.switchOn(group);
+}
+
+/** The initial state of a group (switches start on). */
+const groupStartsOn = (group: string | null) => !group || !group.startsWith('!');
 
 /** Smooth bump: 1 in the middle of [a, b], easing to 0 at the edges (gentle entry). */
 function bump(x: number, a: number, b: number): number {
@@ -40,7 +51,7 @@ export const floorVent: ObjFactory = (def, id) => {
       const decay = Math.max(0.35, 1 - (0.45 * h) / Math.max(40, baseY - top));
       out.y += power * k * decay;
     },
-    on: true,
+    on: groupStartsOn(group),
     sound() {
       return this.on ? { loop: 'vent', x: def.x + w / 2, y: baseY, vol: Math.min(1, 0.45 + power / 8) } : null;
     },
@@ -56,7 +67,7 @@ export const floorVent: ObjFactory = (def, id) => {
       return [{ lines, power, on: group ? () => this.on : undefined }];
     },
     update(ctx) {
-      if (group) this.on = ctx.api.switchOn(group);
+      if (group) this.on = groupOn(ctx.api, group);
       if (!this.on) return;
       acc += ctx.dt * (6 + w * 0.12) * Math.min(1.6, power / 3.6);
       while (acc > 1) {
@@ -85,12 +96,14 @@ export const ceilingVent: ObjFactory = (def, id) => {
   const power = num(def.power, 2.2);
   const bottom = num(def.reach, LAYOUT.floor);
   const y0 = LAYOUT.ceiling + 2;
+  const group = typeof def.group === 'string' ? def.group : null;
+  let on = groupStartsOn(group);
   let acc = 0;
   return {
     id,
     def,
     wind(x, y, out) {
-      if (y < y0 || y > bottom) return;
+      if (!on || y < y0 || y > bottom) return;
       const h = y - y0;
       const spread = 6 + h * 0.12;
       const k = bump(x, def.x - spread, def.x + w + spread);
@@ -99,7 +112,7 @@ export const ceilingVent: ObjFactory = (def, id) => {
       out.y -= power * k * decay;
     },
     sound() {
-      return { loop: 'vent', x: def.x + w / 2, y: y0, vol: 0.5 };
+      return on ? { loop: 'vent', x: def.x + w / 2, y: y0, vol: 0.5 } : null;
     },
     airflow() {
       const yEnd = bottom;
@@ -107,9 +120,18 @@ export const ceilingVent: ObjFactory = (def, id) => {
       const a = def.x - sp;
       const b = def.x + w + sp;
       const n = lineCount((w * 0.76 + (b - a) * 0.6) / 2, 26, 2, 5);
-      return [{ lines: fanOut(n, { x: def.x + w * 0.12, y: y0 + 5 }, { x: def.x + w * 0.88, y: y0 + 5 }, { x: lerp(a, b, 0.2), y: yEnd }, { x: lerp(a, b, 0.8), y: yEnd }), power }];
+      const lines = fanOut(
+        n,
+        { x: def.x + w * 0.12, y: y0 + 5 },
+        { x: def.x + w * 0.88, y: y0 + 5 },
+        { x: lerp(a, b, 0.2), y: yEnd },
+        { x: lerp(a, b, 0.8), y: yEnd },
+      );
+      return [{ lines, power, on: group ? () => on : undefined }];
     },
     update(ctx) {
+      if (group) on = groupOn(ctx.api, group);
+      if (!on) return;
       acc += ctx.dt * (5 + w * 0.1);
       while (acc > 1) {
         acc -= 1;
@@ -143,7 +165,7 @@ export const deskFan: ObjFactory = (def, id, gfx) => {
   const px = sprite ? new Px(sprite.canvas, 3) : null;
   let angle = 0;
   let frame = -1;
-  let on = true;
+  let on = groupStartsOn(group);
   let acc = 0;
   const draw = (f: number) => {
     if (!px || !sprite) return;
@@ -199,7 +221,7 @@ export const deskFan: ObjFactory = (def, id, gfx) => {
       return [{ lines, power, fade: dxEnd < reach ? 0 : Math.min(48, reach * 0.2), on: group ? () => on : undefined }];
     },
     update(ctx) {
-      if (group) on = ctx.api.switchOn(group);
+      if (group) on = groupOn(ctx.api, group);
       if (on) angle += ctx.dt * 30;
       const f = Math.floor(angle) % 4;
       if (f !== frame) {
@@ -306,6 +328,82 @@ export const draft: ObjFactory = (def, id) => {
         acc -= 1;
         const life = 1 + Math.random();
         ctx.particles.spawn({ x: def.x + Math.random() * w, y: Math.min(y0, 352), vx: (Math.random() - 0.5) * 6, vy: -50 - Math.random() * 30, life, max: life, ...wisp, a: 0.3, drag: 0.3 });
+      }
+    },
+  };
+};
+
+/**
+ * An invisible current: air moving one way (`dir` up / down / left / right) through the rectangle x, y, w, h,
+ * strongest along the middle and dying away over the last stretch downstream. Stands for Glider PRO's
+ * invisible blowers and lift areas, and the rising air above its candles. `group` as for vents.
+ */
+export const current: ObjFactory = (def, id) => {
+  const dir = def.dir === 'down' || def.dir === 'left' || def.dir === 'right' ? def.dir : 'up';
+  const w = Math.max(4, def.w ?? 60);
+  const h = Math.max(4, def.h ?? 200);
+  const power = num(def.power, 3);
+  const group = typeof def.group === 'string' ? def.group : null;
+  const vertical = dir === 'up' || dir === 'down';
+  // across the flow: a soft-edged band; along it: full strength until the last `fade` px
+  const across = vertical ? w : h;
+  const along = vertical ? h : w;
+  const fade = Math.min(48, along * 0.3);
+  let on = groupStartsOn(group);
+  let acc = 0;
+  const strength = (x: number, y: number): number => {
+    if (x < def.x || x > def.x + w || y < def.y || y > def.y + h) return 0;
+    const k = bump(vertical ? x - def.x : y - def.y, -across * 0.08, across * 1.08);
+    const d = dir === 'up' ? y - def.y : dir === 'down' ? def.y + h - y : dir === 'left' ? x - def.x : def.x + w - x;
+    return k * Math.min(1, d / fade);
+  };
+  return {
+    id,
+    def,
+    wind(x, y, out) {
+      if (!on) return;
+      const k = strength(x, y);
+      if (k <= 0) return;
+      if (dir === 'up') out.y += power * k;
+      else if (dir === 'down') out.y -= power * k;
+      else if (dir === 'left') out.x -= power * k;
+      else out.x += power * k;
+    },
+    sound() {
+      return on && power > 2 ? { loop: 'vent', x: def.x + w / 2, y: def.y + h / 2, vol: 0.2 } : null;
+    },
+    airflow() {
+      // straight lines from the upstream edge to just short of the downstream one, across the middle of the band
+      const n = lineCount(across * 0.6, 34, 2, 5);
+      const e = 2;
+      const L = def.x + e;
+      const R = def.x + w - e;
+      const T = def.y + e;
+      const B = def.y + h - e;
+      const a = (k: number) => (vertical ? def.x + w * k : def.y + h * k);
+      const lines =
+        dir === 'up'
+          ? fanOut(n, { x: a(0.2), y: B }, { x: a(0.8), y: B }, { x: a(0.2), y: T }, { x: a(0.8), y: T })
+          : dir === 'down'
+            ? fanOut(n, { x: a(0.2), y: T }, { x: a(0.8), y: T }, { x: a(0.2), y: B }, { x: a(0.8), y: B })
+            : dir === 'right'
+              ? fanOut(n, { x: L, y: a(0.2) }, { x: L, y: a(0.8) }, { x: R, y: a(0.2) }, { x: R, y: a(0.8) })
+              : fanOut(n, { x: R, y: a(0.2) }, { x: R, y: a(0.8) }, { x: L, y: a(0.2) }, { x: L, y: a(0.8) });
+      return [{ lines, power, fade: fade * 0.8, on: group ? () => on : undefined }];
+    },
+    update(ctx) {
+      if (group) on = groupOn(ctx.api, group);
+      if (!on) return;
+      acc += ctx.dt * across * along * 0.00012;
+      while (acc > 1) {
+        acc -= 1;
+        const life = 0.8 + Math.random() * 0.6;
+        const sp = 40 + Math.random() * 30;
+        const vx = dir === 'left' ? -sp : dir === 'right' ? sp : (Math.random() - 0.5) * 6;
+        const vy = dir === 'up' ? -sp : dir === 'down' ? sp : (Math.random() - 0.5) * 6;
+        const x = vertical ? def.x + w * (0.2 + Math.random() * 0.6) : dir === 'right' ? def.x + 2 : def.x + w - 2;
+        const y = vertical ? (dir === 'up' ? def.y + h - 2 : def.y + 2) : def.y + h * (0.2 + Math.random() * 0.6);
+        ctx.particles.spawn({ x, y: Math.min(352, y), vx, vy, life, max: life, ...wisp, a: 0.22, drag: 0.3 });
       }
     },
   };

@@ -1,5 +1,6 @@
 import type { ObjFactory } from './types';
-import { ceilingVent, deskFan, draft, floorVent, radiator } from './air';
+import { ceilingVent, current, deskFan, draft, floorVent, radiator } from './air';
+import { transport } from './classic';
 import { cat, cuckooClock, fireplace, grandfatherClock, kettle, stove } from './cottage';
 import { stairsDown, stairsUp } from './stairs';
 import { batteryPickup, bandsPickup, candle, drip, exitPortal, hoop, lightSwitch, sheetPickup, star, tapePickup, target, workbench } from './things';
@@ -31,6 +32,8 @@ export const OBJECTS: Record<string, ObjFactory> = {
   stove,
   stairsUp,
   stairsDown,
+  current,
+  transport,
 };
 
 export function registerObjects(extra: Record<string, ObjFactory>): void {

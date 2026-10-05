@@ -6,6 +6,7 @@
 import { Px } from '../pixel';
 import { R, type Ramp } from '../palette';
 import { LAYOUT, type RoomDef, type WallStyle } from '../../world/types';
+import { paintOutdoor } from '../../world/kinds/home';
 
 const W = 640;
 const H = 360;
@@ -312,8 +313,24 @@ function paintFloorOpening(px: Px, room: RoomDef): void {
   for (let x = dn.from + 6; x < dn.to - 4; x += 10) px.vline(x, y0 - 27, 26, t[t.length - 3]);
 }
 
+/**
+ * Outdoors: the window view (sky, clouds, and at ground level hills on the horizon) fills the room instead of
+ * wallpaper and ceiling; at ground level the floor is drawn as usual (grass).
+ */
+function paintOutdoorShell(px: Px, room: RoomDef): void {
+  const ground = room.outdoor === 'ground';
+  // the view draws its hills along its bottom edge: for open sky they fall below the room
+  paintOutdoor(px, 0, 0, W, ground ? LAYOUT.wallBase : H + 60, room.outdoor === 'space', room.seed ?? 3);
+  if (ground) {
+    paintFloor(px, room);
+    paintFloorOpening(px, room);
+  }
+  paintSideWalls(px, room, LAYOUT.ceiling + 2);
+}
+
 /** Paint the static room shell (no items). */
 export function paintRoomShell(px: Px, room: RoomDef): void {
+  if (room.outdoor) return paintOutdoorShell(px, room);
   const st = room.wall;
   const top = LAYOUT.ceiling + 2;
   const wainTop = st.wainscot ? LAYOUT.dado : LAYOUT.baseboard;

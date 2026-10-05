@@ -14,8 +14,15 @@ export interface LevelDef {
   par: number;
   /** Intro text shown before the first throw. */
   intro?: string;
+  /** Text shown on the end card when the level is finished. */
+  outro?: string;
   /** Daily / roguelike twist id. */
   twist?: string;
+  /**
+   * How the level is finished, besides an exit: 'stars' = collecting every goal star (`star` items with
+   * `goal: true`) finishes it, as in Glider PRO; 'none' = it has no finish (free flight).
+   */
+  goal?: 'stars' | 'none';
 }
 
 export function roomKey(gx: number, gy: number): string {
@@ -39,4 +46,27 @@ export function countStars(level: LevelDef): number {
   let n = 0;
   for (const r of Object.values(level.rooms)) for (const it of r.items) if (it.t === 'star') n++;
   return n;
+}
+
+/** The ids of the stars that finish a `goal: 'stars'` level (they carry explicit ids). */
+export function goalStarIds(level: LevelDef): string[] {
+  const out: string[] = [];
+  for (const r of Object.values(level.rooms)) for (const it of r.items) if (it.t === 'star' && it.goal && typeof it.id === 'string') out.push(it.id);
+  return out;
+}
+
+/**
+ * Where a plane that has just flown into room `next` through its `entry` side gets thrown from next time: just
+ * inside the entry edge (shared by the session and the level checks).
+ */
+export function entryCheckpoint(level: LevelDef, next: string, entry: 'left' | 'right' | 'up' | 'down', x: number, y: number, facing: 1 | -1) {
+  const ex = level.rooms[next].exits[entry];
+  let cx = Math.max(40, Math.min(640 - 40, x));
+  let cy = Math.max(40, Math.min(300, y));
+  if (entry === 'left') cx = 44;
+  if (entry === 'right') cx = 640 - 44;
+  if (ex && (entry === 'left' || entry === 'right')) cy = Math.max(ex.from + 16, Math.min(ex.to - 30, y));
+  if (entry === 'down') cy = 280;
+  if (entry === 'up') cy = 60;
+  return { room: next, x: cx, y: cy, facing };
 }

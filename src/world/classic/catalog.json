@@ -1,0 +1,22 @@
+[
+ {
+  "slug": "demo-house",
+  "id": "classic-demo-house",
+  "name": "Demo House",
+  "authors": [
+   "John Calhoun",
+   "Kim Money"
+  ],
+  "credit": "John Calhoun & Kim Money",
+  "rooms": 45,
+  "stars": 1,
+  "goal": "stars",
+  "blurb": "A small beginner house that acts as a tutorial.",
+  "status": {
+   "flyable": true,
+   "reached": "the star, through 13 rooms",
+   "par": 85,
+   "note": "bot pilot: 58 s of flying, no sheet lost"
+  }
+ }
+]

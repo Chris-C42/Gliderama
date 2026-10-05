@@ -18,7 +18,7 @@ import { rgb } from '../render/particles';
 import { OBJECTS } from './objects';
 import type { AirFlow, GameObject, ObjCtx, SessionApi, WindOut } from './objects/types';
 import { bounds, polyVsBox, profileHull, surfaceBelow, type V } from './collide';
-import { countStars, neighbour, type LevelDef } from './level';
+import { countStars, entryCheckpoint, goalStarIds, neighbour, type LevelDef } from './level';
 import { HoverPilot } from './hover';
 import { stairsArrival } from '../world/stairs';
 import { clipFlows, spillFlows, spillsFor, spillWind, updateSpills, type Spill } from './roomAir';
@@ -45,6 +45,8 @@ export interface SessionOptions {
   fixedStart?: boolean;
   /** The hover assist may be switched on (it circles the plane in rising air). */
   hover?: boolean;
+  /** Random source for collision damage (which wing takes a knock); a fixed one makes flights replayable. */
+  rand?: () => number;
 }
 
 export interface FlightStats {
@@ -210,6 +212,8 @@ export class Session {
   time = 0;
   collected = new Set<string>();
   starsTotal: number;
+  /** Stars that finish a `goal: 'stars'` level. */
+  readonly goalStars: Set<string>;
   charges: Charges;
   crashes = 0;
   sheetsUsed = 0;
@@ -242,6 +246,7 @@ export class Session {
   ) {
     this.sheets = level.sheets + (opts.bonusSheets ?? 0);
     this.starsTotal = countStars(level);
+    this.goalStars = new Set(level.goal === 'stars' ? goalStarIds(level) : []);
     this.charges = { boost: 0, bands: 0, helium: 0, ...opts.charges };
     for (const id of opts.collected ?? []) this.collected.add(id);
     this.checkpoint = { ...level.start };
@@ -313,6 +318,11 @@ export class Session {
   private api: SessionApi = {
     collectStar: (id) => {
       this.collected.add(id);
+      // the Glider PRO rule: the house is finished when its last star is collected
+      if (this.goalStars.has(id) && [...this.goalStars].every((g) => this.collected.has(g))) {
+        this.message = this.level.goal === 'stars' && this.goalStars.size > 1 ? 'All the stars! House complete.' : 'You found the star! House complete.';
+        this.complete();
+      } else if (this.goalStars.has(id)) this.message = `Star found! ${this.goalLeft()} to go.`;
     },
     addSheet: () => {
       this.sheets++;
@@ -325,7 +335,12 @@ export class Session {
     addCharge: (k, n) => {
       this.charges[k] += n;
     },
-    toggleLights: () => {
+    toggleLights: (room) => {
+      // a switch may work the lights of another room (Glider PRO links switches to lights anywhere in the house)
+      if (room && room !== this.room.key && this.level.rooms[room]) {
+        this.switches.set(`lights:${room}`, !this.lightsOnIn(room));
+        return;
+      }
       this.room.lightsOn = !this.room.lightsOn;
       this.switches.set(`lights:${this.room.key}`, this.room.lightsOn);
       this.message = null;
@@ -357,23 +372,13 @@ export class Session {
       const next = neighbour(this.level, this.room.key, way);
       if (!next) return;
       const arrive = stairsArrival(this.level.rooms[next].items, way);
-      this.enterRoom(next);
-      this.hover = null;
-      // a reset, Glider style: out at the matching stairs, gliding level at a comfortable speed
-      const p = this.plane;
-      p.x = arrive.x / PX_PER_M;
-      p.y = (ROOM_H - arrive.y) / PX_PER_M;
-      p.facing = arrive.facing;
-      p.turn = null;
-      p.theta = 0;
-      p.q = 0;
-      p.vx = arrive.facing * this.aero.perf.vBest;
-      p.vy = 0;
-      p.liftT = 0;
-      p.exitPending = false;
-      p.exitBoost = 0;
-      if (!this.opts.fixedStart) this.checkpoint = { room: next, x: arrive.x, y: arrive.y, facing: arrive.facing };
+      this.arriveAt(next, arrive.x, arrive.y, arrive.facing);
       this.sfx(way === 'up' ? 'stairsUp' : 'stairsDown');
+    },
+    transport: (toRoom, x, y, facing) => {
+      if (this.phase !== 'fly' || !this.level.rooms[toRoom]) return;
+      this.arriveAt(toRoom, x, y, facing);
+      this.sfx('stairsUp', { pitch: 4 });
     },
     teleport: (toRoom, x, y, facing) => {
       if (toRoom !== this.room.key) this.enterRoom(toRoom);
@@ -390,11 +395,42 @@ export class Session {
       return { x: p.x, y: p.y, vx: this.plane.vx, vy: this.plane.vy, alive: this.phase === 'fly' };
     },
     isCollected: (id) => this.collected.has(id),
-    lightsOn: () => this.room.lightsOn,
+    lightsOn: (room) => (room && room !== this.room.key ? this.lightsOnIn(room) : this.room.lightsOn),
     goal: (kind: string, id: string) => {
       this.cb.goal?.(kind, id);
     },
   };
+
+  /** Come out somewhere else (stairs, transports): a reset, Glider style, gliding level at a comfortable speed. */
+  private arriveAt(room: string, x: number, y: number, facing: 1 | -1): void {
+    if (room !== this.room.key) this.enterRoom(room);
+    this.hover = null;
+    const p = this.plane;
+    p.x = x / PX_PER_M;
+    p.y = (ROOM_H - y) / PX_PER_M;
+    p.facing = facing;
+    p.turn = null;
+    p.theta = 0;
+    p.q = 0;
+    p.vx = facing * this.aero.perf.vBest;
+    p.vy = 0;
+    p.liftT = 0;
+    p.exitPending = false;
+    p.exitBoost = 0;
+    if (!this.opts.fixedStart) this.checkpoint = { room, x, y, facing };
+  }
+
+  /** Whether a room's lights are on (switched, or as it starts). */
+  private lightsOnIn(room: string): boolean {
+    return this.switches.get(`lights:${room}`) ?? !this.level.rooms[room]?.dark;
+  }
+
+  /** Goal stars still to find. */
+  private goalLeft(): number {
+    let n = 0;
+    for (const g of this.goalStars) if (!this.collected.has(g)) n++;
+    return n;
+  }
 
   private sfx(name: string, opts?: { vol?: number; pitch?: number }): void {
     this.cb.sfx?.(name, opts);
@@ -613,7 +649,7 @@ export class Session {
       this.windAt,
       this.room.colliders(),
       dt,
-      { slowMo: this.opts.slowMo },
+      { slowMo: this.opts.slowMo, rand: this.opts.rand },
       {
         impact: (_part, impact, added) => {
           if (added > 0.02) {
@@ -702,15 +738,7 @@ export class Session {
     const np = planePx(p);
     // checkpoint: just inside the entry edge
     const entry = { left: 'right', right: 'left', up: 'down', down: 'up' }[side] as 'left' | 'right' | 'up' | 'down';
-    const ex = this.level.rooms[next].exits[entry];
-    let cx = Math.max(40, Math.min(ROOM_W - 40, np.x));
-    let cy = Math.max(40, Math.min(300, np.y));
-    if (entry === 'left') cx = 44;
-    if (entry === 'right') cx = ROOM_W - 44;
-    if (ex && (entry === 'left' || entry === 'right')) cy = Math.max(ex.from + 16, Math.min(ex.to - 30, np.y));
-    if (entry === 'down') cy = 280;
-    if (entry === 'up') cy = 60;
-    if (!this.opts.fixedStart) this.checkpoint = { room: next, x: cx, y: cy, facing: p.facing };
+    if (!this.opts.fixedStart) this.checkpoint = entryCheckpoint(this.level, next, entry, np.x, np.y, p.facing);
   }
 
   /** Room-grid-aware global pixel position. */
@@ -806,6 +834,7 @@ export class Session {
       idealPower: idealThrowPower(this.aero),
       infiniteSheets: !!this.opts.infiniteSheets,
       hovering: !!this.hover,
+      ...(this.goalStars.size ? { goal: `Goal ★ ${this.goalStars.size - this.goalLeft()}/${this.goalStars.size}` } : {}),
     };
   }
 

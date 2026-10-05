@@ -178,6 +178,12 @@
 .endcard__medals .chip.is-got {
   background: var(--mustard);
 }
+/* a Classic House's closing message, as its author wrote it */
+.endcard__outro {
+  white-space: pre-line;
+  font-style: italic;
+  margin: 0 0 0.6em;
+}
 .endcard__medals .chip.is-missed {
   opacity: 0.45;
 }

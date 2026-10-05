@@ -70,6 +70,11 @@ export interface RoomDef {
   seed?: number;
   /** Continuous open space (hangar): no side walls or door casings are drawn at openings. */
   open?: boolean;
+  /**
+   * Outdoors (the Classic Houses' gardens, roofs and skies): a sky backdrop instead of wallpaper and ceiling.
+   * ground = daytime sky with hills on the horizon and a floor of grass, sky = open sky, space = night sky.
+   */
+  outdoor?: 'ground' | 'sky' | 'space';
 }
 
 /** Layout constants shared by art and collisions. */

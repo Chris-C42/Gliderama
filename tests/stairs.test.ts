@@ -3,7 +3,7 @@ import { buildSimRoom, simulateRoom } from '../src/game/sim';
 import { analyzeDesign } from '../src/paper/aero';
 import { buildMesh } from '../src/paper/build';
 import { RECIPES } from '../src/paper/recipes';
-import { allLevels } from '../src/world/campaign';
+import { journeyLevels } from '../src/world/campaign';
 import { stairsArrival, stairsDownGeom, stairsUpGeom } from '../src/world/stairs';
 import type { ItemDef } from '../src/world/types';
 
@@ -38,7 +38,9 @@ describe('stairs', () => {
 
   it('flying into the doorway (or down the well) ends a headless flight with a stairs outcome', () => {
     const { aero, mesh } = glider();
-    const level = allLevels().find((l) => l.id === 'cottage-2')!.build();
+    const level = journeyLevels()
+      .find((l) => l.id === 'cottage-2')!
+      .build();
     const up = level.rooms['1,0'];
     const door = stairsUpGeom(up.items.find((i) => i.t === 'stairsUp')!).door;
     const r1 = simulateRoom(buildSimRoom(up), aero, mesh, { x: door.x - 50, y: door.y + door.h / 2, vx: 3, vy: 0, facing: 1 }, undefined, { maxT: 3 });

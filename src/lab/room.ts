@@ -1,11 +1,12 @@
 import { paintRoom } from '../render/roomArt';
 import { BEDROOM } from '../world/levels/sample';
-import { allLevels } from '../world/campaign';
+import { allLevels, loadLevel } from '../world/campaign';
 
 const q = new URLSearchParams(location.search);
 const scale = Number(q.get('scale') ?? 2);
-// ?level=cottage-1&room=1,0 previews a campaign room
-const lv = q.get('level') ? allLevels().find((l) => l.id === q.get('level'))?.build() : undefined;
+// ?level=cottage-1&room=1,0 previews a campaign room (Classic Houses too: ?level=classic-demo-house&room=63,-1)
+const cl = q.get('level') ? allLevels().find((l) => l.id === q.get('level')) : undefined;
+const lv = cl ? await loadLevel(cl) : undefined;
 const art = paintRoom(lv ? lv.rooms[q.get('room') ?? lv.start.room] : BEDROOM);
 const show = (src: HTMLCanvasElement, overlay?: (ctx: CanvasRenderingContext2D) => void) => {
   const c = document.createElement('canvas');

@@ -3,6 +3,7 @@ import * as home from './home';
 import * as hangar from './hangar';
 import * as cottage from './cottage';
 import * as stairs from './stairs';
+import * as classic from './classic';
 
 export const KINDS: Record<string, KindDef> = {
   window: home.windowKind,
@@ -62,6 +63,8 @@ export const KINDS: Record<string, KindDef> = {
   oilLamp: cottage.oilLampKind,
   beam: cottage.beamKind,
   herbs: cottage.herbsKind,
+  solid: classic.solidKind,
+  transport: classic.transportKind,
 };
 
 export function registerKinds(extra: Record<string, KindDef>): void {
