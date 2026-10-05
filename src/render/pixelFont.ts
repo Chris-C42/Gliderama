@@ -52,6 +52,8 @@ const G: Record<string, string> = {
   "'": '010010000000000',
   '#': '101111101111101',
   '★': '010111111010101',
+  '<': '001010100010001',
+  '>': '100010001010100',
 };
 
 /** Draw text at (x, y) top-left; returns the width drawn. `scale` repeats pixels. */

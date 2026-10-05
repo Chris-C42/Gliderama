@@ -38,6 +38,8 @@ export interface SessionOptions {
   infiniteSheets?: boolean;
   /** Record the flight path (for ghosts / reports). */
   record?: boolean;
+  /** Every throw starts from the level start: rooms passed are not checkpoints (challenges). */
+  fixedStart?: boolean;
 }
 
 export interface FlightStats {
@@ -84,6 +86,9 @@ export interface HudState {
   stall: number;
   power: number;
   idealPower: number;
+  infiniteSheets: boolean;
+  /** Mode goal progress shown in the HUD (set by the play screen), e.g. "Hoops 1/3". */
+  goal?: string;
 }
 
 /** What the ambient mixer needs each frame (all 0..1 except speed). */
@@ -107,6 +112,10 @@ export interface LevelResult {
   roomsVisited: number;
   /** Per-room outcome in visit order (for the daily share card). */
   roomLog: ('clear' | 'damaged' | 'crash')[];
+  /** Throws made. */
+  flights: number;
+  /** Best single flight (m, real s). */
+  best: { distance: number; timeAloft: number };
 }
 
 export interface SessionCallbacks {
@@ -188,6 +197,8 @@ export class Session {
   charges: Charges;
   crashes = 0;
   sheetsUsed = 0;
+  flights = 0;
+  best = { distance: 0, timeAloft: 0 };
   roomLog: ('clear' | 'damaged' | 'crash')[] = [];
   roomsVisited = new Set<string>();
   checkpoint: { room: string; x: number; y: number; facing: 1 | -1 };
@@ -390,6 +401,7 @@ export class Session {
     this.message = null;
     const g = this.globalPos(cp.x, cp.y);
     this.flight = { x0: g.x, y0: g.y, t0: this.time, maxH: 0, path: [g], k: 0 };
+    this.flights++;
     this.sfx('throw', { vol: 0.5 + power * 0.5 });
   }
 
@@ -403,8 +415,14 @@ export class Session {
     return this.flightStats('grounded', null);
   }
 
+  private noteBest(st: FlightStats): void {
+    this.best.distance = Math.max(this.best.distance, st.distance);
+    this.best.timeAloft = Math.max(this.best.timeAloft, st.timeAloft);
+  }
+
   private complete(): void {
     if (this.phase === 'complete') return;
+    if (this.phase === 'fly') this.noteBest(this.flightStats('grounded', null));
     this.logRoom();
     this.phase = 'complete';
     this.sfx('win');
@@ -422,6 +440,8 @@ export class Session {
       crashes: this.crashes,
       roomsVisited: this.roomsVisited.size,
       roomLog: this.roomLog,
+      flights: this.flights,
+      best: { ...this.best },
     };
   }
 
@@ -437,7 +457,9 @@ export class Session {
         if (r && q.x >= r.x && q.x <= r.x + r.w && q.y >= r.y - 30 && q.y <= r.y + r.h + 10) targetId = o.id;
       }
     }
-    this.cb.flightEnded?.(this.flightStats(targetId ? 'target' : reason, targetId));
+    const stats = this.flightStats(targetId ? 'target' : reason, targetId);
+    this.noteBest(stats);
+    this.cb.flightEnded?.(stats);
     if (targetId) {
       this.cb.goal?.('target', targetId);
       this.sfx('win');
@@ -632,7 +654,7 @@ export class Session {
     if (ex && (entry === 'left' || entry === 'right')) cy = Math.max(ex.from + 16, Math.min(ex.to - 30, np.y));
     if (entry === 'down') cy = 280;
     if (entry === 'up') cy = 60;
-    this.checkpoint = { room: next, x: cx, y: cy, facing: p.facing };
+    if (!this.opts.fixedStart) this.checkpoint = { room: next, x: cx, y: cy, facing: p.facing };
   }
 
   /** Room-grid-aware global pixel position. */
@@ -725,6 +747,7 @@ export class Session {
       stall: p.stall,
       power: this.aim.power,
       idealPower: idealThrowPower(this.aero),
+      infiniteSheets: !!this.opts.infiniteSheets,
     };
   }
 

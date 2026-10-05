@@ -421,6 +421,10 @@ export const hoop: ObjFactory = (def, id) => {
   return {
     id,
     def,
+    update(ctx) {
+      // hoops count per flight: re-arm while the next sheet is being thrown
+      if (passed && !ctx.api.plane().alive) passed = false;
+    },
     trigger() {
       return passed ? null : { x: def.x - 3, y: def.y - r + 6, w: 6, h: 2 * r - 12 };
     },

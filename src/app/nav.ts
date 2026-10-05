@@ -22,6 +22,17 @@ export interface PlaySpec {
   goal?: PlayGoal;
   /** Never run out of sheets (challenges). */
   infiniteSheets?: boolean;
+  /** Mode-specific lines for the end card (challenge stars, scores). */
+  summary?: (r: LevelResult, won: boolean) => EndSummary;
+}
+
+export interface EndSummary {
+  /** Stars earned out of three (challenges), or undefined. */
+  stars?: number;
+  /** Label / value rows. */
+  rows: [string, string][];
+  /** A line of advice (shown after a failed run). */
+  note?: string;
 }
 
 export type PlayGoal =
@@ -29,7 +40,7 @@ export type PlayGoal =
   | { kind: 'target' }
   | { kind: 'hoops'; count: number }
   | { kind: 'distance'; meters: number }
-  | { kind: 'aloft'; seconds: number };
+  | { kind: 'aloft'; seconds: number; /** End the level as soon as a flight lasts this long. */ autoAt?: number };
 
 export interface WorkshopSpec {
   /** Design to edit (cloned on open). */

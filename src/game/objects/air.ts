@@ -23,6 +23,8 @@ export const floorVent: ObjFactory = (def, id) => {
   const top = num(def.reach, LAYOUT.ceiling);
   const group = typeof def.group === 'string' ? def.group : null;
   const baseY = LAYOUT.floor - 4;
+  /** How fast the column widens with height (chimney-like when small). */
+  const flare = num(def.spread, 0.24);
   let acc = 0;
   return {
     id,
@@ -31,7 +33,7 @@ export const floorVent: ObjFactory = (def, id) => {
       if (group && !this.on) return;
       if (y > baseY + 6 || y < top) return;
       const h = baseY - y;
-      const spread = 30 + h * 0.24;
+      const spread = 30 + h * flare;
       const k = bump(x, def.x - spread, def.x + w + spread);
       if (k <= 0) return;
       const decay = Math.max(0.35, 1 - (0.45 * h) / Math.max(40, baseY - top));
@@ -226,6 +228,36 @@ export const radiator: ObjFactory = (def, id) => {
         acc -= 1;
         const life = 1 + Math.random();
         ctx.particles.spawn({ x: def.x + Math.random() * w, y: baseY, vx: 0, vy: -40 - Math.random() * 20, life, max: life, ...warm, a: 0.22 });
+      }
+    },
+  };
+};
+
+/** An invisible rising draft (warm air coming up a shaft): a soft-edged vertical column, no fixture. */
+export const draft: ObjFactory = (def, id) => {
+  const w = def.w ?? 100;
+  const power = num(def.power, 2.4);
+  const y0 = def.y;
+  const top = num(def.top, 0);
+  let acc = 0;
+  return {
+    id,
+    def,
+    wind(x, y, out) {
+      if (y > y0 || y < top) return;
+      const k = bump(x, def.x - 12, def.x + w + 12);
+      if (k <= 0) return;
+      out.y += power * k * Math.min(1, (y - top) / 70);
+    },
+    sound() {
+      return { loop: 'vent', x: def.x + w / 2, y: Math.min(y0, 330), vol: 0.3 };
+    },
+    update(ctx) {
+      acc += ctx.dt * w * 0.08;
+      while (acc > 1) {
+        acc -= 1;
+        const life = 1 + Math.random();
+        ctx.particles.spawn({ x: def.x + Math.random() * w, y: Math.min(y0, 352), vx: (Math.random() - 0.5) * 6, vy: -50 - Math.random() * 30, life, max: life, ...wisp, a: 0.3, drag: 0.3 });
       }
     },
   };

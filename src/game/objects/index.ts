@@ -1,5 +1,5 @@
 import type { ObjFactory } from './types';
-import { ceilingVent, deskFan, floorVent, radiator } from './air';
+import { ceilingVent, deskFan, draft, floorVent, radiator } from './air';
 import { batteryPickup, bandsPickup, candle, drip, exitPortal, hoop, lightSwitch, sheetPickup, star, tapePickup, target, workbench } from './things';
 
 /** Item kinds that have runtime behaviour (art may come from world/kinds as well). */
@@ -8,6 +8,7 @@ export const OBJECTS: Record<string, ObjFactory> = {
   ceilingVent,
   fan: deskFan,
   radiator,
+  draft,
   candle,
   switch: lightSwitch,
   star,

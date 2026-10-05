@@ -15,6 +15,7 @@ import { HANGAR_BAYS, hangarLevel } from '../../world/levels/hangar';
 import { Icon } from '../icons';
 import { sfx } from '../../audio/bridge';
 import { HangarTests } from './HangarTests';
+import { Ambient } from '../../app/audio';
 import './play.css';
 import './hangar.css';
 
@@ -154,6 +155,7 @@ export function Hangar(props: { design?: Design }) {
     host.addEventListener('pointerdown', place);
 
     const idle: ThrowState = { aiming: false, angle: 0, power: 0, released: false };
+    const ambient = new Ambient();
     const loop = createLoop({
       update(dt) {
         input.update(dt);
@@ -169,6 +171,7 @@ export function Hangar(props: { design?: Design }) {
           if (rel) setHoops(0);
         }
         session.update(dt, { ...ctl, gadgetPressed: edges.gadgetPressed, pausePressed: false }, ts);
+        ambient.update(dt, session.ambience());
         // after a landing, go back to the launcher
         if (session.phase === 'aim' && session.checkpoint.room !== '0,0') {
           session.checkpoint = { room: '0,0', x: 76, y: 176, facing: 1 };
@@ -196,6 +199,7 @@ export function Hangar(props: { design?: Design }) {
       removeEventListener('resize', fit);
       host.removeEventListener('pointerdown', place);
       loop.stop();
+      ambient.stop();
       thr.detach();
       input.detach();
       session.dispose();

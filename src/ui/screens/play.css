@@ -190,3 +190,36 @@
   --tc-fill-held: rgba(251, 248, 239, 0.22);
   --tc-inset-bottom: max(5vmin, env(safe-area-inset-bottom, 0px));
 }
+
+.endcard__stars {
+  display: flex;
+  justify-content: center;
+  gap: 0.4em;
+  margin: 0.5em 0 0.2em;
+  font-size: 2em;
+  color: var(--ink-3);
+}
+.endcard__stars .is-got {
+  color: var(--mustard);
+  filter: drop-shadow(0 2px 0 var(--ink));
+  animation: endstar 0.4s steps(4) both;
+}
+.endcard__stars .is-got:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.endcard__stars .is-got:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes endstar {
+  from {
+    transform: scale(0.2) rotate(-40deg);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.hud__goal {
+  background: var(--mustard-l);
+}

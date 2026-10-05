@@ -12,18 +12,25 @@ export function Hud(props: { hud: HudState; onPause: () => void; flightData: boo
       <div class="hud__top">
         <div class="hud__group">
           <span class="hud__pill" title="Spare sheets">
-            {sheets <= 6 ? (
+            {h.infiniteSheets ? (
+              <>
+                <Icon name="sheet" class="hud__sheet" /> ∞
+              </>
+            ) : sheets <= 6 ? (
               Array.from({ length: sheets }, () => <Icon name="sheet" class="hud__sheet" />)
             ) : (
               <>
                 <Icon name="sheet" class="hud__sheet" /> ×{sheets}
               </>
             )}
-            {sheets === 0 && <span class="small">last sheet!</span>}
+            {sheets === 0 && !h.infiniteSheets && <span class="small">last sheet!</span>}
           </span>
-          <span class="hud__pill" title="Stars">
-            <Icon name="star" class="hud__star" /> {h.stars}/{h.starsTotal}
-          </span>
+          {h.starsTotal > 0 && (
+            <span class="hud__pill" title="Stars">
+              <Icon name="star" class="hud__star" /> {h.stars}/{h.starsTotal}
+            </span>
+          )}
+          {h.goal && <span class="hud__pill hud__goal">{h.goal}</span>}
         </div>
         <div class="hud__center">
           <span class="tape hud__room">{h.roomName}</span>

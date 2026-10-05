@@ -6,8 +6,10 @@ import { Workshop } from '../ui/screens/Workshop';
 import { Campaign } from '../ui/screens/Campaign';
 import { SettingsScreen } from '../ui/screens/Settings';
 import { Library } from '../ui/screens/Library';
-import { Placeholder } from '../ui/screens/Placeholder';
 import { Hangar } from '../ui/screens/Hangar';
+import { Trail } from '../ui/screens/Trail';
+import { Daily } from '../ui/screens/Daily';
+import { Challenges } from '../ui/screens/Challenges';
 import { parseImportFromHash } from '../core/share';
 import { decodeDesign } from '../paper/codec';
 import { saveDesign } from './library';
@@ -55,8 +57,17 @@ export function App() {
     case 'hangar':
       screen = <Hangar design={r.design} />;
       break;
+    case 'trail':
+      screen = <Trail />;
+      break;
+    case 'daily':
+      screen = <Daily />;
+      break;
+    case 'challenges':
+      screen = <Challenges />;
+      break;
     default:
-      screen = <Placeholder name={r.name} />;
+      screen = <Title />;
   }
   return (
     <>
