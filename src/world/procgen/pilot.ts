@@ -7,6 +7,8 @@
  *   it only climbs where it needs to, leaves on the exit side once the updraft has topped out, and dives a little if
  *   it would arrive above the doorway's lintel;
  * - leaves up through a ceiling opening by thermalling under it, and goes down a floor opening by spiralling over it;
+ * - takes the stairs: up, climbs in the vent in front of the flight and glides into the doorway on its landing; down,
+ *   spirals over the stairwell until it drops into it;
  * - lands on the workbench desk by hovering down over it.
  * It never reads obstacles: the generator keeps the flight corridor clear, and the simulator is the judge.
  */
@@ -19,16 +21,17 @@ import type { Side } from './types';
 export interface PilotSpec {
   /** Direction of progress along x (+1 = right). */
   dirX: 1 | -1;
-  exit: Side;
+  /** Where the plane leaves the room: a side doorway, an opening in the ceiling / floor, or the stairs (up into the doorway, down into the well). */
+  exit: Side | 'stairsUp' | 'stairsDown';
   /** Floor vents the pilot may climb in: centre x, width and the height (px) the updraft tops out at. */
   vents: { cx: number; w: number; top: number }[];
-  /** Horizontal exits: leave below this height (px, y down) so the next room can be entered. */
+  /** Horizontal exits: leave below this height (px, y down) so the next room can be entered. Stairs up: the lowest the doorway can be reached. */
   yc: number;
   /** The exit leads out of the house: nobody enters a next room, so the height it is reached at does not matter. */
   final?: boolean;
   /** Top of the exit doorway (px): never arrive above it. */
   doorTop: number;
-  /** Centre x of the ceiling / floor opening for `up` / `down` exits. */
+  /** Centre x of the ceiling / floor opening for `up` / `down` exits; of the doorway / the stairwell for the stairs. */
   holeCx?: number;
   /** Land on this desk top (x-range and surface y) instead of leaving the room. */
   land?: { x0: number; x1: number; top: number };
@@ -66,8 +69,10 @@ export function makePilot(plane: RefPlane, spec: PilotSpec, debug?: (s: string) 
   const dirX = spec.dirX;
   const land = spec.land;
   const landCx = land ? (land.x0 + land.x1) / 2 : 0;
-  // where the pilot is heading: the exit wall, or the middle of the desk it wants to land on
-  const goalX = land ? landCx : dirX > 0 ? 640 : 0;
+  // up the stairs: the doorway on the landing is the target, not the wall behind it
+  const toDoor = spec.exit === 'stairsUp';
+  // where the pilot is heading: the exit wall, the stairs doorway, or the middle of the desk it wants to land on
+  const goalX = land ? landCx : toDoor ? (spec.holeCx ?? 320) : dirX > 0 ? 640 : 0;
   // the height it wants to be at when it gets there
   const goalY = land ? land.top - 40 : spec.yc;
   const slope = glideSlope(plane);
@@ -101,14 +106,14 @@ export function makePilot(plane: RefPlane, spec: PilotSpec, debug?: (s: string) 
       return st.spiral ? oscillate(c) : heading();
     }
 
-    // ---- floor opening: fly over it and spiral down
-    if (!land && spec.exit === 'down') {
+    // ---- floor opening or stairwell: fly over it and spiral down
+    if (!land && (spec.exit === 'down' || spec.exit === 'stairsDown')) {
       const c = spec.holeCx ?? 320;
       if (!st.spiral && (c - x) * dirX < 30) st.spiral = true;
       return st.spiral ? oscillate(c) : heading();
     }
 
-    // ---- side exit or desk landing: climb in vents only as far as needed
+    // ---- side exit, stairs doorway or desk landing: climb in vents only as far as needed
     if (st.thermal < 0) {
       for (let i = 0; i < spec.vents.length; i++) {
         if (st.done.has(i)) continue;
@@ -148,7 +153,7 @@ export function makePilot(plane: RefPlane, spec: PilotSpec, debug?: (s: string) 
     // ---- cruise: do not arrive above the doorway's lintel (dive if the glide would end too high; vent columns
     // passed on the way hold the plane up, so look at the height now rather than trusting the nominal glide alone)
     let pit = pitch;
-    if (spec.exit === 'left' || spec.exit === 'right') {
+    if (spec.exit === 'left' || spec.exit === 'right' || toDoor) {
       const D = Math.abs(goalX - x);
       const limit = spec.doorTop + 36;
       // the slope needed to arrive at the limit, against the plane's natural glide: dive in proportion to the shortfall
@@ -156,7 +161,10 @@ export function makePilot(plane: RefPlane, spec: PilotSpec, debug?: (s: string) 
       const climb = Math.max(0, p.vy);
       const yEff = y - climb * climb * 6.5;
       const sReq = (limit - yEff) / Math.max(30, D);
-      if (sReq > slope * 1.05 && D > 20) pit = Math.min(pit, -clamp((sReq - slope) * 6, 0, 0.85));
+      // (the stairs doorway has to be hit, not just entered: a dive already steeper than the glide counts, and eases off in
+      // time, or the plane carries on below the sill)
+      const have = toDoor ? Math.max(slope, -p.vy / Math.max(1, Math.abs(p.vx))) : slope;
+      if (sReq > slope * 1.05 && sReq > have && D > 20) pit = Math.min(pit, -clamp((sReq - have) * 6, 0, 0.85));
     }
     return heading(pit);
   };

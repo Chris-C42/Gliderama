@@ -1,23 +1,29 @@
 /**
  * Floor layout: a path of rooms on the grid ("gx,gy", gy grows downward), mostly horizontal progress in one direction
  * chosen by the seed, with the occasional storey change. Produces one `RoomIO` per room: where the plane comes in,
- * where it leaves and the exact spans of the openings (shared by the two rooms they connect).
+ * where it leaves and the exact spans of the openings (shared by the two rooms they connect). A storey is changed
+ * through an opening in the floor and ceiling or, about half the time, by a flight of stairs (`RoomIO.link`).
  */
 
 import type { Rng } from '../../core/rng';
 import { roomKey } from '../../game/level';
 import type { ExitSpan } from '../types';
-import type { EntrySide, RoomIO, Side } from './types';
+import type { EntrySide, RoomIO, Side, VerticalLink } from './types';
 
 export interface RouteOptions {
   count: number;
   floor: number;
   /** The last transition is always horizontal; a vertical move never follows a vertical move. */
   allowVertical?: boolean;
+  /** Chance that a change of storey is a flight of stairs instead of an opening (default `STAIRS_CHANCE`). */
+  stairsChance?: number;
 }
 
 /** Half width of a stairwell opening (ceiling or floor): wide enough that a plane hovering over it fits either way. */
 export const HOLE_HALF = 65;
+
+/** Probability that a change of storey is made by stairs (flown into at the top, or down into the well) instead of an opening. */
+export const STAIRS_CHANCE = 0.5;
 
 /** Probability that a transition changes storey: about 1 in 5, more on later floors. */
 export function verticalChance(floor: number): number {
@@ -61,6 +67,10 @@ export function planRoute(rng: Rng, opts: RouteOptions): RoomIO[] {
     } else kinds.push('side');
   }
 
+  // how each change of storey is made (its own stream: the rest of the layout does not depend on it)
+  const linkRng = rng.fork('links');
+  const links = kinds.map((k): VerticalLink | undefined => (k === 'side' ? undefined : linkRng.chance(opts.stairsChance ?? STAIRS_CHANCE) ? 'stairs' : 'hole'));
+
   // grid positions
   const cells: { gx: number; gy: number }[] = [{ gx: 0, gy: 0 }];
   for (let i = 0; i < n - 1; i++) {
@@ -73,11 +83,13 @@ export function planRoute(rng: Rng, opts: RouteOptions): RoomIO[] {
 
   const rooms: RoomIO[] = [];
   let incoming: { side: EntrySide; span: ExitSpan } | null = null;
+  let incomingLink: VerticalLink | undefined;
   for (let i = 0; i < n; i++) {
     const c = cells[i];
     const gx = c.gx - minX;
     const gy = c.gy - minY;
     const k = i < n - 1 ? kinds[i] : 'final';
+    const link = (i < n - 1 ? links[i] : undefined) ?? incomingLink;
     let exit: Side;
     let exitSpan: ExitSpan;
     let next: { side: EntrySide; span: ExitSpan } | null = null;
@@ -109,8 +121,10 @@ export function planRoute(rng: Rng, opts: RouteOptions): RoomIO[] {
       entrySpan: incoming?.span,
       exit,
       exitSpan,
+      ...(link ? { link } : {}),
     });
     incoming = next;
+    incomingLink = i < n - 1 ? links[i] : undefined;
   }
   return rooms;
 }

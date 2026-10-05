@@ -10,7 +10,8 @@ import type { ItemDef, RoomDef } from '../types';
 import { entriesFor, flyRoom, pilotSpec } from './fly';
 import { referencePlanes } from './fleet';
 import { routeIO } from './route';
-import type { FlightRun, RoomIO } from './types';
+import { stairsArrive } from './stairsPlan';
+import { entersByStairs, stairsKindOf, type FlightRun, type RoomIO } from './types';
 
 export interface RoomFlight {
   key: string;
@@ -43,12 +44,16 @@ export function flyLevelRoom(level: LevelDef, io: RoomIO, opts: { needBoth?: boo
   const planes = referencePlanes();
   const sim = buildSimRoom(room, { level, key: io.key });
   const vents = ventsOf(room);
-  const spec = pilotSpec(io, vents);
+  // a room left by stairs has to be flown to them; one entered by stairs is flown from where they bring the plane out
+  const kind = stairsKindOf(io);
+  const stairs = kind ? room.items.find((i: ItemDef) => i.t === kind) : undefined;
+  const spec = pilotSpec(io, vents, { stairs });
   const sw = room.items.find((i: ItemDef) => i.t === 'switch');
   const touch = sw ? { x: sw.x - 4, y: sw.y - 4, w: 18, h: 24 } : undefined;
   const bench = room.items.find((i: ItemDef) => i.t === 'workbench');
   const benchRestart = bench ? { x: bench.x + (bench.w ?? 120) / 2, y: bench.y - 16 } : undefined;
-  const entries = entriesFor(io, { start: io.index === 0 ? { x: level.start.x, y: level.start.y } : undefined, bench: benchRestart });
+  const arrive = stairs && entersByStairs(io) ? stairsArrive(stairs) : undefined;
+  const entries = entriesFor(io, { start: io.index === 0 ? { x: level.start.x, y: level.start.y } : undefined, bench: benchRestart, arrive });
   const runs: FlightRun[] = [];
   const planeOk: Record<string, boolean> = {};
   for (const plane of planes) {
@@ -65,7 +70,7 @@ export function flyLevelRoom(level: LevelDef, io: RoomIO, opts: { needBoth?: boo
       const lowEntry = entries.find((e) => e.id === 'door-lo');
       if (lowEntry) {
         const land = { x0: bench.x + 6, x1: bench.x + (bench.w ?? 120) - 6, top: bench.y };
-        const r = flyRoom(sim, plane, pilotSpec(io, vents, { land }), { ...lowEntry, id: 'land' });
+        const r = flyRoom(sim, plane, pilotSpec(io, vents, { land, stairs }), { ...lowEntry, id: 'land' });
         runs.push(r);
         if (!r.ok) ok = false;
       }

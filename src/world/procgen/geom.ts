@@ -27,6 +27,9 @@ export function unionX(boxes: Box[]): { x0: number; x1: number } {
 export const ROOM_W = 640;
 export const ROOM_H = 360;
 
+/** px from the entry wall -> x (the direction of progress `dirX` says which wall that is). */
+export const toX = (dirX: 1 | -1, u: number) => (dirX > 0 ? u : ROOM_W - u);
+
 const COL = 4;
 const NCOL = ROOM_W / COL;
 
