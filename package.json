@@ -1,6 +1,7 @@
 {
   "name": "gliderama",
   "private": true,
+  "license": "GPL-2.0-only",
   "version": "0.1.0",
   "description": "Fold your own paper airplanes and fly them through a house. A Glider-inspired PWA with real aerodynamics.",
   "type": "module",

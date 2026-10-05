@@ -95,3 +95,9 @@ src/audio      chiptune engine, song notation, sound effects, ambient loops, sou
 src/ui         screens, HUD, workshop, design system
 docs           GAME_DESIGN.md
 ```
+
+## Licence
+
+Gliderama is free software under the GNU General Public License, version 2 (`LICENSE`). The Classic Houses are
+adapted from the houses in John Calhoun's [Glider PRO](https://github.com/softdorothy/GliderPRO), released under the
+same licence; see `CREDITS.md` for the house authors.
