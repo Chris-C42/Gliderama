@@ -28,10 +28,26 @@ export function freshDamage(): Damage {
   return { nose: 0, wingL: 0, wingR: 0, tail: 0, body: 0, soak: 0, scorch: 0, burning: 0, tailTrim: 0 };
 }
 
+/** How much each part counts towards the structure (`structural`). */
+const WEIGHT: Record<PartName, number> = { nose: 0.9, wingL: 0.8, wingR: 0.8, tail: 0.6, body: 1.0 };
+const PARTS_TOTAL = 2.4;
+
 /** Structural integrity lost, 0..1 (1 = destroyed). */
 export function structural(d: Damage): number {
-  const parts = d.nose * 0.9 + d.wingL * 0.8 + d.wingR * 0.8 + d.tail * 0.6 + d.body * 1.0;
-  return Math.min(1, parts / 2.4 + d.scorch * 0.55 + Math.max(0, d.soak - 0.7) * 0.6);
+  let parts = 0;
+  for (const p of PART_NAMES) parts += d[p] * WEIGHT[p];
+  return Math.min(1, parts / PARTS_TOTAL + d.scorch * 0.55 + Math.max(0, d.soak - 0.7) * 0.6);
+}
+
+/** Crumple `part` so the plane loses `amount` (0..1) more of its structure: what that part can't take goes to the body, then the rest. */
+export function crumple(d: Damage, part: PartName, amount: number): void {
+  let left = amount * PARTS_TOTAL;
+  for (const p of [part, 'body' as const, ...PART_NAMES.filter((q) => q !== part && q !== 'body')]) {
+    if (left <= 0) break;
+    const take = Math.min(left, (1 - d[p]) * WEIGHT[p]);
+    d[p] += take / WEIGHT[p];
+    left -= take;
+  }
 }
 
 /** Overall damage percentage for HUD / scoring. */

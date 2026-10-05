@@ -169,6 +169,32 @@ export class Px {
     }
   }
 
+  /**
+   * A lit ellipsoid (a ball, a balloon): shaded through `ramp` (dark → light, ≥ 5 entries) with ordered dithering,
+   * light from the upper left, a darker rim and a small highlight.
+   */
+  sphere(cx: number, cy: number, rx: number, ry: number, ramp: readonly string[]): void {
+    const n = ramp.length;
+    for (let j = -Math.ceil(ry); j <= Math.ceil(ry); j++)
+      for (let i = -Math.ceil(rx); i <= Math.ceil(rx); i++) {
+        const u = i / (rx + 0.3);
+        const v = j / (ry + 0.3);
+        const d = u * u + v * v;
+        if (d > 1) continue;
+        const nz = Math.sqrt(1 - d);
+        const lit = Math.max(0, Math.min(1, 0.5 - u * 0.4 - v * 0.45 + nz * 0.35));
+        const x = Math.round(cx + i);
+        const y = Math.round(cy + j);
+        // the rim, then the light with dithered steps between shades
+        const t = d > 0.82 ? 0 : 1 + lit * (n - 3);
+        const k = Math.min(n - 2, Math.floor(t) + (bayer(x, y) < t - Math.floor(t) ? 1 : 0));
+        this.ctx.fillStyle = ramp[k];
+        this.ctx.fillRect(x, y, 1, 1);
+      }
+    // the highlight
+    this.ellipse(cx - rx * 0.38, cy - ry * 0.42, Math.max(1, rx * 0.16), Math.max(1, ry * 0.2), ramp[n - 1]);
+  }
+
   /** Filled polygon (even-odd scanline). */
   poly(pts: Pt[], c: string): void {
     let minY = Infinity;

@@ -10,11 +10,13 @@ import { buildMesh, type PlaneBuild, type PlaneMesh } from '../paper/build';
 import { PHYS, PX_PER_M, ROOM_H, ROOM_W } from '../physics/config';
 import { createPlane, launch, planePx, stepPlane, idealThrowPower, type Plane } from '../physics/flight';
 import { flightTick, planeHull, type TickState } from './flightTick';
-import { damagePct, ignite, repair, soakUp, structural } from '../physics/damage';
+import { crumple, damagePct, ignite, repair, soakUp, structural, type PartName } from '../physics/damage';
 import type { ControlState, ThrowState } from '../core/types';
 import { paintRoom, type RoomArt } from '../render/roomArt';
-import type { ActiveLight, GameRenderer } from '../render/GameRenderer';
+import type { ActiveLight, GameRenderer, SpriteHandle } from '../render/GameRenderer';
 import { rgb } from '../render/particles';
+import { Px } from '../render/pixel';
+import { R } from '../render/palette';
 import { OBJECTS } from './objects';
 import type { AirFlow, GameObject, ObjCtx, SessionApi, WindOut } from './objects/types';
 import { bounds, polyVsBox, profileHull, surfaceBelow, type V } from './collide';
@@ -232,6 +234,11 @@ export class Session {
   private flight = { x0: 0, y0: 0, t0: 0, maxH: 0, path: [] as { x: number; y: number }[], k: 0 };
   /** The hover assist, while it is circling the plane. */
   private hover: HoverPilot | null = null;
+  /** Caught in a cobweb: seconds left, and where. */
+  private snagT = 0;
+  private snagAt = { x: 0, y: 0 };
+  /** Rubber bands in flight (room px, px/s). */
+  private bands: { x: number; y: number; vx: number; vy: number; t: number; s: SpriteHandle }[] = [];
 
   constructor(
     readonly renderer: GameRenderer,
@@ -284,6 +291,8 @@ export class Session {
   }
 
   private enterRoom(key: string): void {
+    this.clearBands();
+    this.snagT = 0;
     if (this.room) {
       this.room.dispose();
       this.renderer.clearSprites();
@@ -343,6 +352,35 @@ export class Session {
     },
     tear: (a) => {
       this.plane.damage.body = Math.min(1, this.plane.damage.body + a);
+    },
+    strike: (amount, from) => {
+      if (this.phase !== 'fly') return;
+      const p = this.plane;
+      const q = planePx(p);
+      // the part facing whatever hit it takes the blow
+      const ahead = (from.x - q.x) * p.facing;
+      const part: PartName = ahead > 12 ? 'nose' : ahead < -16 ? 'tail' : Math.random() < 0.5 ? 'wingL' : 'wingR';
+      crumple(p.damage, part, amount);
+      // knocked away from it, but still flying the way it was
+      const dx = q.x - from.x;
+      const dy = q.y - from.y;
+      const n = Math.hypot(dx, dy) || 1;
+      p.vx += (dx / n) * 1.4;
+      p.vy -= (dy / n) * 1.4;
+      if (p.vx * p.facing < 0.3) p.vx = p.facing * 0.3;
+      p.turn = null;
+      this.hover = null;
+      this.flash = Math.min(1, amount * 2);
+      this.shakeAmt = Math.max(this.shakeAmt, Math.min(1, amount * 1.6));
+      this.sfx('crumple', { vol: 0.7 });
+    },
+    snag: (x, y) => {
+      if (this.phase !== 'fly' || this.snagT > 0) return;
+      this.snagT = 1.1;
+      this.snagAt = { x, y };
+      this.hover = null;
+      this.plane.turn = null;
+      this.sfx('twang');
     },
     completeLevel: () => this.complete(),
     openWorkbench: () => {
@@ -466,6 +504,8 @@ export class Session {
   private complete(): void {
     if (this.phase === 'complete') return;
     this.hover = null;
+    this.snagT = 0;
+    this.clearBands();
     if (this.phase === 'fly') this.noteBest(this.flightStats('grounded', null));
     this.logRoom();
     this.phase = 'complete';
@@ -492,6 +532,8 @@ export class Session {
   private flightOver(reason: 'grounded' | 'crashed'): void {
     if (this.phase !== 'fly') return;
     this.hover = null;
+    this.snagT = 0;
+    this.clearBands();
     // landed in a target zone?
     let targetId: string | null = null;
     if (reason === 'grounded') {
@@ -585,6 +627,67 @@ export class Session {
     }
   }
 
+  /** A rubber band shot forward from the nose. */
+  private fireBand(): void {
+    const p = this.plane;
+    const q = planePx(p);
+    const s = this.renderer.createSprite(8, 5, 0, 9);
+    const px = new Px(s.canvas, 1);
+    px.hline(1, 0, 6, R.peach[4]);
+    px.hline(1, 4, 6, R.peach[2]);
+    px.vline(0, 1, 3, R.peach[3]);
+    px.vline(7, 1, 3, R.peach[3]);
+    s.refresh();
+    const nose = this.tick.halfLen * 0.9;
+    this.bands.push({
+      x: q.x + Math.cos(p.theta) * nose * p.facing,
+      y: q.y - Math.sin(p.theta) * nose,
+      vx: p.facing * 520 + p.vx * PX_PER_M * 0.5,
+      vy: -p.vy * PX_PER_M * 0.3,
+      t: 0,
+      s,
+    });
+    this.sfx('twang', { pitch: 5, vol: 0.5 });
+  }
+
+  /** Rubber bands fly on, dropping a little, until they hit something (and knock it down if they can) or leave the room. */
+  private flyBands(dt: number, ctx: ObjCtx): void {
+    if (!this.bands.length) return;
+    const cols = this.room.colliders();
+    this.bands = this.bands.filter((b) => {
+      b.t += dt;
+      b.vy += 160 * dt;
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+      let gone = b.t > 2.5 || b.x < -8 || b.x > ROOM_W + 8 || b.y < -8 || b.y > ROOM_H + 8;
+      if (!gone)
+        for (const o of this.room.objects)
+          if (o.shot?.(b.x, b.y, ctx)) {
+            gone = true;
+            break;
+          }
+      if (!gone)
+        for (const c of cols)
+          if (b.x >= c.x && b.x <= c.x + c.w && b.y >= c.y && b.y <= c.y + c.h) {
+            gone = true;
+            this.sfx('bump', { vol: 0.15, pitch: 9 });
+            for (let k = 0; k < 3; k++) ctx.particles.spawn({ x: b.x, y: b.y, vx: -Math.sign(b.vx) * 40 + (Math.random() - 0.5) * 40, vy: -30 - Math.random() * 30, grav: 300, life: 0.3, max: 0.3, ...rgb(R.peach[3]), a: 1 });
+            break;
+          }
+      if (gone) {
+        b.s.dispose();
+        return false;
+      }
+      b.s.set(b.x - 4, b.y - 2);
+      return true;
+    });
+  }
+
+  private clearBands(): void {
+    for (const b of this.bands) b.s.dispose();
+    this.bands = [];
+  }
+
   private flyStep(dt: number, input: ControlState, ctx: ObjCtx): void {
     const p = this.plane;
     // gadgets
@@ -598,7 +701,26 @@ export class Session {
         this.charges.helium--;
         p.heliumLeft = PHYS.heliumTime;
         this.sfx('pop', { pitch: 7 });
+      } else if (this.design.extras.gadget === 'bands' && this.charges.bands > 0 && this.snagT <= 0) {
+        this.charges.bands--;
+        this.fireBand();
       }
+    }
+    this.flyBands(dt, ctx);
+    // caught in a cobweb: held towards its middle, shivering, then let go to fall out of it
+    if (this.snagT > 0) {
+      this.snagT -= dt;
+      const q = planePx(p);
+      const k = 1 - Math.exp(-dt * 6);
+      p.x += ((this.snagAt.x + (Math.random() - 0.5) * 2 - q.x) * k) / PX_PER_M;
+      p.y -= ((this.snagAt.y - q.y) * k) / PX_PER_M;
+      p.theta += (-0.35 - p.theta) * k;
+      p.vx = 0;
+      p.vy = 0;
+      p.q = 0;
+      if (this.snagT <= 0) p.vx = p.facing * 0.4;
+      this.recordPath();
+      return;
     }
     // hover: toggled by its button / key; any direction from the player takes over again
     if (input.hoverPressed && this.opts.hover) {

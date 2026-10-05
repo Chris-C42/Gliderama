@@ -21,6 +21,13 @@ export interface SessionApi {
   ignite(): void;
   burnDamage(amount: number): void;
   tear(amount: number): void;
+  /**
+   * Struck by something moving (a balloon, a toy helicopter, another dart): crumples the plane by `amount` of its
+   * structure (1 = destroyed) and knocks it away from `from` (room px).
+   */
+  strike(amount: number, from: { x: number; y: number }): void;
+  /** Caught in a cobweb at room px (x, y): held there a moment, then let go with no speed to speak of. */
+  snag(x: number, y: number): void;
   completeLevel(): void;
   openWorkbench(objId: string): void;
   teleport(toRoom: string, x: number, y: number, facing?: 1 | -1): void;
@@ -63,6 +70,10 @@ export interface GameObject {
   onTouch?(ctx: ObjCtx): void;
   /** Extra moving colliders. */
   colliders?(): Collider[];
+  /** Touching its trigger hurts (an enemy, a cobweb): the headless simulator fails a flight that does. */
+  hazard?: boolean;
+  /** A rubber band at room px (x, y): true when it hits this object, which reacts (a balloon pops). */
+  shot?(x: number, y: number, ctx: ObjCtx): boolean;
   lights?(): ActiveLight[];
   /** Ambient sound source (room px) for the mixer, or null when silent. */
   sound?(): AmbientSound | null;
