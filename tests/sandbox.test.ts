@@ -104,6 +104,7 @@ describe('open-air simulator', () => {
       colliders: [{ x: -1e5, y: ROOM_H, w: 2e5, h: 1e4, kind: 'solid' }],
       objects: [],
       hazards: [],
+      spills: [],
     };
     const rand = () => 0.25;
     for (const id of ['dart', 'glider']) {

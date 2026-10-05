@@ -34,6 +34,8 @@ export interface Entry {
   /** Throw elevation above the heading (rad). */
   elev: number;
   dirX: 1 | -1;
+  /** Arriving already in flight instead of thrown: velocity in m/s (y up). */
+  v?: { x: number; y: number };
 }
 
 const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b : v);
@@ -63,7 +65,9 @@ export function entriesFor(io: RoomIO, extras: EntryExtras = {}): Entry[] {
     const cx = span ? (span.from + span.to) / 2 : 320;
     // 'up': dropping in through the ceiling opening; 'down': rising through the floor opening
     if (io.entry === 'up') out.push({ id: 'above', x: cx, y: 60, elev: 0, dirX });
-    else out.push({ id: 'below', x: cx, y: 280, elev: 0.05, dirX });
+    // rising through the floor opening as the plane really arrives: at the edge of the room, slow,
+    // carried by the air coming up from the room below
+    else out.push({ id: 'below', x: cx, y: 352, elev: 0, dirX, v: { x: dirX * 1.5, y: 1.0 } });
   }
   if (extras.bench) out.push({ id: 'bench', x: extras.bench.x, y: extras.bench.y, elev: 0, dirX });
   return out;
@@ -122,7 +126,8 @@ function run(
     return pilot(p, t);
   };
   const angle = entry.dirX > 0 ? elev : Math.PI - elev;
-  const res = simulateRoom(sim, plane.aero, plane.mesh, { x: entry.x, y: entry.y, angle, power: plane.power }, ctl, {
+  const start = entry.v ? { x: entry.x, y: entry.y, vx: entry.v.x, vy: entry.v.y, facing: entry.dirX } : { x: entry.x, y: entry.y, angle, power: plane.power };
+  const res = simulateRoom(sim, plane.aero, plane.mesh, start, ctl, {
     maxT: opts.maxT,
     record: opts.record,
     rand: fixedRand(0x5eed),
@@ -143,7 +148,7 @@ function aimCandidates(entry: Entry, target: Rect): number[] {
 /** Fly one plane from one entry and judge it. */
 export function flyRoom(sim: SimRoom, plane: RefPlane, spec: PilotSpec, entry: Entry, opts: FlyOptions = {}): FlightRun {
   let elev = entry.elev;
-  if (opts.touch) {
+  if (opts.touch && !entry.v) {
     // a pilot who has to flip the switch aims the throw at it
     for (const a of aimCandidates(entry, opts.touch)) {
       const probe = run(sim, plane, spec, entry, a, { touch: opts.touch, maxT: 1.6, record: 12 });

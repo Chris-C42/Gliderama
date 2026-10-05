@@ -14,6 +14,8 @@ import { profileHull, bounds, polyVsBox } from './collide';
 import { flightTick, planeHull, type TickState } from './flightTick';
 import { OBJECTS } from './objects';
 import type { GameObject, ObjCtx, SessionApi, WindOut } from './objects/types';
+import type { LevelDef } from './level';
+import { spillsFor, spillWind, updateSpills, type Spill } from './roomAir';
 
 export interface SimRoom {
   def: RoomDef;
@@ -21,9 +23,12 @@ export interface SimRoom {
   objects: GameObject[];
   /** Areas the plane must not touch (flames etc.). */
   hazards: Rect[];
+  /** Air from the rooms above and below, through the floor and ceiling openings. */
+  spills: Spill[];
 }
 
-export function buildSimRoom(def: RoomDef): SimRoom {
+/** A room ready to fly headless. Pass the level and the room's key so air from the rooms above and below counts. */
+export function buildSimRoom(def: RoomDef, where?: { level: Pick<LevelDef, 'rooms'>; key: string }): SimRoom {
   const objects: GameObject[] = [];
   let i = 0;
   for (const it of def.items) {
@@ -37,7 +42,7 @@ export function buildSimRoom(def: RoomDef): SimRoom {
   }
   const colliders = roomColliders(def);
   for (const o of objects) if (o.colliders) colliders.push(...o.colliders());
-  return { def, colliders, objects, hazards };
+  return { def, colliders, objects, hazards, spills: where ? spillsFor(where.level, where.key) : [] };
 }
 
 export type SimOutcome = 'left' | 'right' | 'up' | 'down' | 'grounded' | 'crashed' | 'hazard' | 'timeout';
@@ -127,6 +132,7 @@ export function simulateRoom(
     const x = xm * PX_PER_M;
     const y = ROOM_H - ym * PX_PER_M;
     for (const o of room.objects) o.wind?.(x, y, out);
+    spillWind(room.spills, x, y, out);
     return { x: out.x * airMul, y: out.y * airMul };
   };
   const ctx: ObjCtx = { dt: 1 / 120, time: 0, particles: { spawn() {} }, api: noopApi(() => plane) };
@@ -139,6 +145,7 @@ export function simulateRoom(
   for (;;) {
     ctx.time = t;
     for (const o of room.objects) o.update?.(ctx);
+    updateSpills(room.spills, ctx);
     const r = flightTick(st, control(plane, t), wind, room.colliders, dt, { rand: opts.rand }, {});
     t += dt;
     const pos = planePx(plane);

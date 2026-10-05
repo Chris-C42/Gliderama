@@ -118,7 +118,8 @@ const L2_LANDING: RoomDef = {
     { t: 'wallClock', x: 260, y: 90 },
     { t: 'banister', x: 40, y: 272, w: 230, h: 68 },
     { t: 'plant', x: 300, y: 314, tall: 56, v: 2 },
-    { t: 'floorVent', x: 394, y: 330, w: 62, power: 4.4, reach: -60 },
+    // its air carries on up through the opening into the attic
+    { t: 'floorVent', x: 394, y: 330, w: 62, power: 4.4, reach: -150 },
     { t: 'radiator', x: 520, y: 284, w: 80 },
     star('l2b', 0, 425, 250),
     star('l2b', 1, 425, 150),
@@ -138,11 +139,11 @@ const L2_ATTIC: RoomDef = {
     { t: 'window', x: 150, y: 70, v: 2, w: 90, h: 90 },
     { t: 'poster', x: 300, y: 60, v: 1 },
     { t: 'toyBox', x: 40, y: 286 },
-    { t: 'shelf', x: 480, y: 250, w: 120 },
+    { t: 'shelf', x: 510, y: 250, w: 106 },
     { t: 'ceilingVent', x: 300, y: 0, w: 48 },
     { t: 'drip', x: 250, y: 20, every: 1.8 },
     // warm air keeps rising out of the stairwell
-    { t: 'draft', x: 376, y: 372, w: 98, top: 96, power: 3.2 },
+    { t: 'draft', x: 366, y: 372, w: 118, top: 96, power: 3.2 },
     { t: 'exit', x: 604, y: 70, w: 36, h: 150 },
     star('l2c', 0, 520, 120),
     star('l2c', 1, 200, 220),

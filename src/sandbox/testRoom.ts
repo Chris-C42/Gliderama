@@ -195,7 +195,7 @@ export function pieceWindInto(p: Piece, x: number, y: number, out: WindVec): voi
       const above = y - (p.y + p.h);
       if (above > p.reach || above < -0.046875) return;
       const h = Math.max(0, above);
-      const spread = 0.234375 + h * 0.24;
+      const spread = 0.234375 + h * 0.22;
       const k = bump(x, p.x - spread, p.x + p.w + spread);
       if (k <= 0) return;
       const decay = Math.max(0.35, 1 - (0.45 * h) / Math.max(0.3125, p.reach));

@@ -18,6 +18,8 @@ import type { Difficulty, FlightRun, RoomIO, RoomReport, Side } from './types';
 export interface RoomContext {
   difficulty: Difficulty;
   workbench: boolean;
+  /** The floor's rooms built so far: air rising from the room below carries on through a floor opening. */
+  rooms?: Record<string, RoomDef>;
 }
 
 export interface BuiltRoom {
@@ -157,6 +159,8 @@ function benchRestart(air: AirPlan, io: RoomIO): { x: number; y: number } | unde
 
 interface FlyInput {
   def: RoomDef;
+  /** The rooms built so far (for the air coming up through a floor opening). */
+  rooms?: Record<string, RoomDef>;
   io: RoomIO;
   air: AirPlan;
   start?: { x: number; y: number };
@@ -169,7 +173,7 @@ interface FlyInput {
 
 function flyAll(inp: FlyInput): FlightSet {
   const planes = referencePlanes();
-  const sim = buildSimRoom(inp.def);
+  const sim = buildSimRoom(inp.def, inp.rooms ? { level: { rooms: { ...inp.rooms, [inp.io.key]: inp.def } }, key: inp.io.key } : undefined);
   const spec = pilotSpec(inp.io, pilotVents(inp.air));
   const entries = entriesFor(inp.io, { start: inp.start, bench: benchRestart(inp.air, inp.io) });
   const runs: FlightRun[] = [];
@@ -384,6 +388,7 @@ function blame(scene: Scene, runs: FlightRun[]): Placed | null {
 /** Everything one attempt decided before dressing. */
 interface Attempt {
   io: RoomIO;
+  rooms?: Record<string, RoomDef>;
   template: RoomTemplate;
   plan: Plan;
   baseDef: RoomDef;
@@ -422,7 +427,7 @@ function dressAndFly(a: Attempt, sk: FlightSet, rng: Rng, minimal: boolean): Dre
     minimal,
   });
   const touch = switchAt ? { x: switchAt.x - 4, y: switchAt.y - 4, w: 18, h: 24 } : undefined;
-  const fly = () => flyAll({ def: compose(baseDef, scene, plan.air, []), io, air: plan.air, start: a.start, touch, bench: a.bench, needBoth: a.needBoth });
+  const fly = () => flyAll({ def: compose(baseDef, scene, plan.air, []), rooms: a.rooms, io, air: plan.air, start: a.start, touch, bench: a.bench, needBoth: a.needBoth });
   let flights = fly();
   for (let fix = 0; fix < 4 && !flights.ok; fix++) {
     const victim = blame(scene, flights.runs);
@@ -465,6 +470,7 @@ export function buildRoom(ctx: RoomContext, io: RoomIO, template: RoomTemplate, 
     if (plan.flags.night) baseDef.night = true;
     const a: Attempt = {
       io,
+      rooms: ctx.rooms,
       template,
       plan,
       baseDef,
@@ -474,7 +480,7 @@ export function buildRoom(ctx: RoomContext, io: RoomIO, template: RoomTemplate, 
     };
 
     // 1) fly the bare shell
-    const sk = flyAll({ def: { ...baseDef, items: airItems(plan.air) }, io, air: plan.air, start: a.start, needBoth: a.needBoth });
+    const sk = flyAll({ def: { ...baseDef, items: airItems(plan.air) }, rooms: a.rooms, io, air: plan.air, start: a.start, needBoth: a.needBoth });
     lastAttempt = { a, sk };
     if (!sk.ok) continue;
     passing = { a, sk, r };

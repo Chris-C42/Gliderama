@@ -28,7 +28,7 @@ export function simLevel(level: LevelDef, d: Design, angle: number, power: numbe
   for (let hop = 0; hop < 12; hop++) {
     const def = level.rooms[key];
     const [gx, gy] = key.split(',').map(Number);
-    const r = simulateRoom(buildSimRoom(def), aero, mesh, start, (p, t) => ctl(p, t + t0, key), { maxT: maxT - t0, record: 2 });
+    const r = simulateRoom(buildSimRoom(def, { level, key }), aero, mesh, start, (p, t) => ctl(p, t + t0, key), { maxT: maxT - t0, record: 2 });
     for (const q of r.path) path.push({ x: gx * 640 + q.x, y: gy * 360 + q.y });
     t0 += r.t;
     const out = r.outcome;

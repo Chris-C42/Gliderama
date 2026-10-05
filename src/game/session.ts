@@ -19,6 +19,7 @@ import { OBJECTS } from './objects';
 import type { AirFlow, GameObject, ObjCtx, SessionApi, WindOut } from './objects/types';
 import { bounds, polyVsBox, profileHull, surfaceBelow, type V } from './collide';
 import { countStars, neighbour, type LevelDef } from './level';
+import { clipFlows, spillFlows, spillsFor, spillWind, updateSpills, type Spill } from './roomAir';
 import type { Collider, ItemDef, RoomDef } from '../world/types';
 
 export type Phase = 'aim' | 'fly' | 'down' | 'workbench' | 'complete' | 'failed';
@@ -135,6 +136,8 @@ const DEG = Math.PI / 180;
 
 class RoomRuntime {
   objects: GameObject[] = [];
+  /** Air from the rooms above and below that comes through the floor and ceiling openings. */
+  readonly spills: Spill[];
   lightsOn: boolean;
   constructor(
     readonly key: string,
@@ -142,7 +145,9 @@ class RoomRuntime {
     readonly art: RoomArt,
     renderer: GameRenderer,
     readonly switches: Map<string, boolean>,
+    level: LevelDef,
   ) {
+    this.spills = spillsFor(level, key);
     this.lightsOn = !def.dark;
     let i = 0;
     for (const it of def.items) {
@@ -160,7 +165,7 @@ class RoomRuntime {
   }
 
   airflows(): AirFlow[] {
-    return this.objects.flatMap((o) => o.airflow?.() ?? []);
+    return clipFlows(this.objects.flatMap((o) => o.airflow?.() ?? [])).concat(spillFlows(this.spills));
   }
 
   lights(): ActiveLight[] {
@@ -181,6 +186,7 @@ class RoomRuntime {
 
   dispose(): void {
     for (const o of this.objects) o.dispose?.();
+    for (const sp of this.spills) for (const o of sp.objects) o.dispose?.();
     this.objects = [];
   }
 }
@@ -279,7 +285,7 @@ export class Session {
     const art = this.artFor(key);
     this.renderer.setRoom(art);
     this.renderer.particles.clear();
-    this.room = new RoomRuntime(key, def, art, this.renderer, this.switches);
+    this.room = new RoomRuntime(key, def, art, this.renderer, this.switches, this.level);
     this.renderer.setAir(this.room.airflows());
     if (this.switches.get(`lights:${key}`) !== undefined) this.room.lightsOn = this.switches.get(`lights:${key}`)!;
     this.roomsVisited.add(key);
@@ -374,6 +380,7 @@ export class Session {
     const x = xm * PX_PER_M;
     const y = ROOM_H - ym * PX_PER_M;
     for (const o of this.room.objects) o.wind?.(x, y, out);
+    spillWind(this.room.spills, x, y, out);
     const m = this.opts.airMul ?? 1;
     return { x: out.x * m, y: out.y * m };
   };
@@ -508,6 +515,7 @@ export class Session {
     this.triggeredThisTick.clear();
     const ctx: ObjCtx = { dt, time: this.realTime, particles: this.renderer.particles, api: this.api };
     for (const o of this.room.objects) o.update?.(ctx);
+    updateSpills(this.room.spills, ctx);
 
     if (this.phase === 'aim') {
       this.time += dt;
@@ -708,7 +716,7 @@ export class Session {
     const def = this.level.rooms[key];
     const art = this.artFor(key);
     this.renderer.setRoom(art);
-    this.room = new RoomRuntime(key, def, art, this.renderer, this.switches);
+    this.room = new RoomRuntime(key, def, art, this.renderer, this.switches, this.level);
     this.renderer.setAir(this.room.airflows());
   }
 

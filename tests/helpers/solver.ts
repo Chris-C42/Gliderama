@@ -20,7 +20,7 @@ import type { Rect } from '../../src/world/types';
 const TICK = 1 / 120;
 
 interface Goal {
-  kind: 'side' | 'up' | 'rect';
+  kind: 'side' | 'up' | 'down' | 'rect';
   side?: 'left' | 'right';
   /** Top of the doorway for side exits (being higher than this at the wall is no use). */
   from?: number;
@@ -72,12 +72,14 @@ function routeOf(level: LevelDef): { key: string; goal: Goal }[] {
       const span = room.exits[side];
       if (!span) continue;
       const next = neighbour(level, key, side);
+      const goal: Goal =
+        side === 'up' || side === 'down' ? { kind: side, holeCx: (span.from + span.to) / 2 } : { kind: 'side', side, from: span.from };
       if (!next && (span as { exit?: boolean }).exit) {
-        out.push({ key, goal: side === 'up' ? { kind: 'up', holeCx: (span.from + span.to) / 2 } : { kind: 'side', side: side as 'left' | 'right', from: span.from } });
+        out.push({ key, goal });
         return out;
       }
       if (next && !seen.has(next)) {
-        out.push({ key, goal: side === 'up' ? { kind: 'up', holeCx: (span.from + span.to) / 2 } : { kind: 'side', side: side as 'left' | 'right', from: span.from } });
+        out.push({ key, goal });
         key = next;
         moved = true;
         break;
@@ -93,6 +95,7 @@ function progress(goal: Goal, x: number, y: number): number {
   const H = 4.5;
   if (goal.kind === 'side') return (goal.side === 'right' ? x : 640 - x) + H * (340 - Math.max(y, (goal.from ?? 16) + 12));
   if (goal.kind === 'up') return 4 * (360 - y) - 0.6 * Math.abs(x - goal.holeCx!);
+  if (goal.kind === 'down') return 2 * y + 1200 - 2.5 * Math.abs(x - goal.holeCx!);
   const r = goal.rect!;
   const cx = r.x + r.w / 2;
   const dx = Math.max(0, Math.abs(x - cx) - r.w / 2);
@@ -114,7 +117,7 @@ export function solveLevel(
   const rooms = new Map<string, SimRoom>();
   const roomOf = (k: string) => {
     let r = rooms.get(k);
-    if (!r) rooms.set(k, (r = buildSimRoom(level.rooms[k])));
+    if (!r) rooms.set(k, (r = buildSimRoom(level.rooms[k], { level, key: k })));
     return r;
   };
   const beamW = opts.beam ?? 60;

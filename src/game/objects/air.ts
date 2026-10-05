@@ -25,7 +25,7 @@ export const floorVent: ObjFactory = (def, id) => {
   const group = typeof def.group === 'string' ? def.group : null;
   const baseY = LAYOUT.floor - 4;
   /** How fast the column widens with height (chimney-like when small). */
-  const flare = num(def.spread, 0.24);
+  const flare = num(def.spread, 0.22);
   let acc = 0;
   return {
     id,
@@ -45,13 +45,14 @@ export const floorVent: ObjFactory = (def, id) => {
       return this.on ? { loop: 'vent', x: def.x + w / 2, y: baseY, vol: Math.min(1, 0.45 + power / 8) } : null;
     },
     airflow() {
-      // from the grille up to `reach` (or out of the top of the room), widening like the column does
-      const yEnd = Math.max(top, 0);
+      // from the grille up to `reach`, widening like the column does (past the top of the room, the air
+      // carries on through a ceiling opening: see game/roomAir)
+      const yEnd = top;
       const sp = 30 + (baseY - yEnd) * flare;
       const a = def.x - sp;
       const b = def.x + w + sp;
-      const n = lineCount((w * 0.76 + (b - a) * 0.56) / 2, 30, 2, 6);
-      const lines = fanOut(n, { x: def.x + w * 0.12, y: baseY }, { x: def.x + w * 0.88, y: baseY }, { x: lerp(a, b, 0.22), y: yEnd }, { x: lerp(a, b, 0.78), y: yEnd });
+      const n = lineCount((w * 0.76 + (b - a) * 0.5) / 2, 30, 2, 6);
+      const lines = fanOut(n, { x: def.x + w * 0.12, y: baseY }, { x: def.x + w * 0.88, y: baseY }, { x: lerp(a, b, 0.25), y: yEnd }, { x: lerp(a, b, 0.75), y: yEnd });
       return [{ lines, power, on: group ? () => this.on : undefined }];
     },
     update(ctx) {
@@ -101,7 +102,7 @@ export const ceilingVent: ObjFactory = (def, id) => {
       return { loop: 'vent', x: def.x + w / 2, y: y0, vol: 0.5 };
     },
     airflow() {
-      const yEnd = Math.min(bottom, 360);
+      const yEnd = bottom;
       const sp = 6 + (yEnd - y0) * 0.12;
       const a = def.x - sp;
       const b = def.x + w + sp;
@@ -291,8 +292,8 @@ export const draft: ObjFactory = (def, id) => {
     },
     airflow() {
       // no fixture: the lines rise out of the floor (or the room below) and fade where the draft tapers off
-      const yStart = Math.min(y0, 360);
-      const yEnd = Math.max(top, 0);
+      const yStart = y0;
+      const yEnd = top;
       const a = def.x - 12;
       const b = def.x + w + 12;
       const n = lineCount((b - a) * 0.64, 34, 2, 5);

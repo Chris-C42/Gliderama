@@ -94,10 +94,10 @@ export function generateFloorWithReport(opts: FloorOptions): GeneratedFloor {
 
   const route = planRoute(root.fork('layout'), { count, floor });
   const templates = pickTemplates(theme, route, workbench, root.fork('templates'));
-  const ctx = { difficulty: { floor, twist }, workbench };
   const levelId = `${opts.theme}-s${opts.seed}-f${floor}`;
 
   const rooms: LevelDef['rooms'] = {};
+  const ctx = { difficulty: { floor, twist }, workbench, rooms };
   const reports: RoomReport[] = [];
   let start: LevelDef['start'] | undefined;
   for (const io of route) {

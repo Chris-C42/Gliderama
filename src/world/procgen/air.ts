@@ -119,7 +119,8 @@ export function planAir(io: RoomIO, rng: Rng, o: AirOptions): AirPlan {
   // ---- rooms with a stairwell
   if (io.exit === 'up') {
     const cx = (io.exitSpan.from + io.exitSpan.to) / 2;
-    plan.vents.push({ x: cx - 32, w: 64, power: Math.round(rng.float(4.4, 4.9) * 10) / 10, top: -60, role: 'hole' });
+    // its air carries on through the opening and well up into the room above (see game/roomAir)
+    plan.vents.push({ x: cx - 32, w: 64, power: Math.round(rng.float(4.4, 4.9) * 10) / 10, top: -170, role: 'hole' });
     return finish(plan, io, rng, o);
   }
   if (io.exit === 'down') return finish(plan, io, rng, o);

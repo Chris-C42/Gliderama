@@ -8,7 +8,8 @@ import { OBJECTS } from '../src/game/objects';
 import type { GameObject } from '../src/game/objects/types';
 import { CHALLENGES } from '../src/modes/challenges';
 import { allLevels } from '../src/world/campaign';
-import { generateFloor } from '../src/world/procgen';
+import { generateFloor, themeForFloor } from '../src/world/procgen';
+import { spillFlows, spillsFor, spillWind } from '../src/game/roomAir';
 import type { ItemDef, RoomDef } from '../src/world/types';
 
 const ROOM = { dark: false, night: false };
@@ -89,6 +90,40 @@ describe('air-current lines', () => {
     for (const l of allLevels()) for (const { key, it } of airItems(l.build().rooms)) n += checkObject(make(it), `${l.id} ${key} ${it.t}`);
     for (const c of CHALLENGES) for (const { key, it } of airItems(c.level().rooms)) n += checkObject(make(it), `${c.id} ${key} ${it.t}`);
     expect(n).toBeGreaterThan(40);
+  });
+
+  it('air carried through floor and ceiling openings', () => {
+    let n = 0;
+    const levels = [...allLevels().map((l) => l.build())];
+    for (let seed = 1; seed <= 12; seed++) levels.push(generateFloor({ seed, floor: seed % 9, theme: themeForFloor(seed % 9) }));
+    for (const level of levels)
+      for (const key of Object.keys(level.rooms)) {
+        const spills = spillsFor(level, key);
+        for (const f of spillFlows(spills))
+          for (const line of f.lines) {
+            const a = line[0];
+            const b = line[line.length - 1];
+            const len = Math.hypot(b.x - a.x, b.y - a.y);
+            const dx = (b.x - a.x) / len;
+            const dy = (b.y - a.y) / len;
+            const at = (x: number, y: number) => {
+              const out = { x: 0, y: 0 };
+              spillWind(spills, x, y, out);
+              return { x: out.x, y: -out.y };
+            };
+            for (const t of [0.03, 0.5, 0.97]) {
+              const w = at(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t);
+              expect(w.x * dx + w.y * dy, `${level.id} ${key}: carried air blows along the line`).toBeGreaterThan(0);
+            }
+            const edge = b.y <= 0.5 || b.y >= 359.5;
+            if (!edge) {
+              const w = at(b.x + dx * 4, b.y + dy * 4);
+              expect(Math.hypot(w.x, w.y), `${level.id} ${key}: no carried air past the end`).toBeLessThan(1e-9);
+            }
+            n++;
+          }
+      }
+    expect(n).toBeGreaterThan(10);
   });
 
   it('generated floors', () => {

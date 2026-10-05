@@ -41,7 +41,7 @@ function ventsOf(room: RoomDef): { cx: number; w: number; top: number }[] {
 export function flyLevelRoom(level: LevelDef, io: RoomIO, opts: { needBoth?: boolean } = {}): RoomFlight {
   const room = level.rooms[io.key];
   const planes = referencePlanes();
-  const sim = buildSimRoom(room);
+  const sim = buildSimRoom(room, { level, key: io.key });
   const vents = ventsOf(room);
   const spec = pilotSpec(io, vents);
   const sw = room.items.find((i: ItemDef) => i.t === 'switch');
