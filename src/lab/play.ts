@@ -204,6 +204,8 @@ if (q.has('autopilot') && campaignLevel) {
   w.__autopilot(plan);
 }
 
+const trail: unknown[][] | null = q.has('trail') ? [] : null;
+w.__trail = trail;
 const STEP = 1 / 120;
 let acc = 0;
 let last = performance.now();
@@ -215,6 +217,11 @@ function frame(now: number) {
     if (pilot) drive();
     else readInput(STEP);
     session.update(STEP, ctl, thr);
+    // &trail: the plane tick by tick while it flies (comparing the game with the bot pilot's own flight of a plan)
+    if (trail && session.phase === 'fly') {
+      const pl = session.plane;
+      trail.push([session.room.key, +(pl.x * 128).toFixed(2), +(360 - pl.y * 128).toFixed(2), +pl.vx.toFixed(4), +pl.vy.toFixed(4), +pl.theta.toFixed(4)]);
+    }
     ctl.gadgetPressed = false;
     thr.released = false;
   }
