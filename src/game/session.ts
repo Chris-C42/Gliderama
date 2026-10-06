@@ -18,7 +18,7 @@ import { rgb } from '../render/particles';
 import { Px } from '../render/pixel';
 import { R } from '../render/palette';
 import { Slingshot, pulledBack } from '../render/slingshot';
-import { OBJECTS } from './objects';
+import { OBJECTS, stillHazards } from './objects';
 import { TRANSPORT_REST } from './objects/classic';
 import type { AirFlow, GameObject, ObjCtx, SessionApi, WindOut } from './objects/types';
 import { bounds, polyVsBox, profileHull, surfaceBelow, type V } from './collide';
@@ -884,7 +884,7 @@ export class Session {
     const np = planePx(p);
     // checkpoint: just inside the entry edge
     const entry = { left: 'right', right: 'left', up: 'down', down: 'up' }[side] as 'left' | 'right' | 'up' | 'down';
-    if (!this.opts.fixedStart) this.checkpoint = entryCheckpoint(this.level, next, entry, np.x, np.y, p.facing);
+    if (!this.opts.fixedStart) this.checkpoint = entryCheckpoint(this.level, next, entry, np.x, np.y, p.facing, stillHazards(this.room.objects));
   }
 
   /** Room-grid-aware global pixel position. */

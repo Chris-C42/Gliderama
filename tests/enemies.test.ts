@@ -264,6 +264,21 @@ describe('clutter', () => {
       expect(calls.sfx.filter((n) => n === sound)).toHaveLength(2);
     }
   });
+
+  it("a trigger flips its switch only its delay after the plane came through (Glider PRO's 8 second shopping spree)", () => {
+    const { calls, ctx } = harness();
+    const state = new Map<string, boolean>();
+    Object.assign(ctx.api, { switchOn: (g: string) => state.get(g) ?? true, setSwitch: (g: string, on: boolean) => void state.set(g, on) });
+    const o = make({ t: 'switch', x: 68, y: 10, group: 'away', hidden: true, w: 60, h: 51, delay: 2 });
+    o.update!(ctx);
+    o.onTouch!(ctx);
+    run(o, ctx, 1.9);
+    expect(state.has('away')).toBe(false);
+    expect(calls.sfx).not.toContain('switch');
+    run(o, ctx, 0.2);
+    expect(state.get('away')).toBe(false);
+    expect(calls.sfx).toContain('switch');
+  });
 });
 
 describe('crumpling', () => {

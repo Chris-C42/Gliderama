@@ -881,19 +881,21 @@ function switchObj(ob, c) {
   const y = r1(Y(ob.topLeft.v + 2));
   const look = SWITCH_LOOKS[ob.type] ? { look: SWITCH_LOOKS[ob.type] } : {};
   const hidden = visible ? {} : { hidden: true, w: r1(X(w)), h: r1(SY * h) };
+  // a trigger fires `delay` × 3 frames (at 30 a second) after the glider goes through, if it is still in the room
+  // (Sources/Triggers.c ArmTrigger; RoomGraphics.c DrawLocale zeroes the triggers in a new room)
+  const delay = TRIGGERS.includes(ob.type) && ob.delay > 0 ? { delay: ob.delay / 10 } : {};
   const l = flipped(ob, c.link);
   const t = l?.target;
   if (t?.family === 'light') {
     // a light switch: the lights of the room the light is in
-    c.emit({ t: 'switch', x, y, ...look, ...(l.key !== c.key ? { room: l.key } : {}), ...hidden });
+    c.emit({ t: 'switch', x, y, ...look, ...(l.key !== c.key ? { room: l.key } : {}), ...hidden, ...delay });
   } else if (t && (t.family === 'blower' || SWITCHABLE.has(t.type))) {
-    c.emit({ t: 'switch', x, y, ...look, group: c.groupName(l.room, t.slot), ...hidden });
+    c.emit({ t: 'switch', x, y, ...look, group: c.groupName(l.room, t.slot), ...hidden, ...delay });
   } else if (visible) {
     // nothing here for it to switch: it still flips (a group of its own, that nothing listens to)
     c.emit({ t: 'switch', x, y, ...look, group: c.groupName(c.room, ob.slot) });
     return c.approx(ob.type, idleSwitch(ob, c));
   } else return c.drop(ob.type, idleSwitch(ob, c), true);
-  if (TRIGGERS.includes(ob.type)) c.approx(ob.type, `${GREASE.includes(t.type) ? 'spills its grease' : 'fires its switch'} as the plane goes through (no delay)`);
 }
 
 function light(ob, c) {
@@ -1004,9 +1006,9 @@ function plantFrom(ob, c) {
  * plants, windows, the teddy bear, the fireplace, the lamps). The Gliderama kinds they are drawn as that are solid
  * are marked `solid: false` here: nothing to bump into (a fireplace in Leviathan has a transport in its hearth).
  */
-export const SCENERY = new Set(
-  'ozma mirror mousehole fireplace flower wallWindow bear calendar vase1 vase2 bulletin cloud faucet rug ceilingLight lightBulb tableLamp hipLamp decoLamp flourescent trackLight'.split(' '),
-);
+const PICTURES = 'ozma mirror mousehole fireplace flower wallWindow bear calendar vase1 vase2 bulletin cloud faucet rug';
+const LAMPS = 'ceilingLight lightBulb tableLamp hipLamp decoLamp flourescent trackLight';
+export const SCENERY = new Set(`${PICTURES} ${LAMPS}`.split(' '));
 /** The Gliderama kinds scenery is drawn as that are solid in Gliderama's own rooms. */
 export const SOLID_SCENERY = new Set(['fireplace', 'window', 'bear', 'plant', 'pendant', 'floorLamp', 'deskLamp']);
 

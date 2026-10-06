@@ -5,7 +5,7 @@ import { R } from '../../render/palette';
 import { Px } from '../../render/pixel';
 import { rgb } from '../../render/particles';
 import { fanOut } from './airflow';
-import type { ObjFactory } from './types';
+import type { ObjCtx, ObjFactory } from './types';
 
 const num = (v: unknown, d: number) => (typeof v === 'number' ? v : d);
 const str = (v: unknown, d: string) => (typeof v === 'string' ? v : d);
@@ -137,12 +137,15 @@ function paintSwitch(px: Px, look: string, on: boolean) {
 // ---------------------------------------------------------------------------------------------
 // Light switch: fly into it to flip the room lights (or a named group, e.g. a fan). `room` wires it to another
 // room's lights; `hidden` makes it an invisible trigger of size w × h (Glider PRO's invisible switches). It flips once
-// each time the plane comes through (lingering in a big trigger does not flip it back).
+// each time the plane comes through (lingering in a big trigger does not flip it back). `delay` (s): it flips that
+// long after the plane came through, if the plane is still in the room then (Glider PRO's triggers, which go dead
+// when the glider leaves the room).
 
 export const lightSwitch: ObjFactory = (def, id, gfx) => {
   const group = str(def.group, 'lights');
   const room = typeof def.room === 'string' ? def.room : undefined;
   const hidden = !!def.hidden;
+  const delay = num(def.delay, 0);
   const sprite = hidden ? null : (gfx?.createSprite(10, 16, 0, 6) ?? null);
   const px = sprite ? new Px(sprite.canvas, 2) : null;
   let state: boolean | null = null;
@@ -150,11 +153,18 @@ export const lightSwitch: ObjFactory = (def, id, gfx) => {
   // touched this tick / the tick before
   let over = false;
   let wasOver = false;
+  // set off and still to flip (s to go)
+  let armed: number[] = [];
   const draw = (on: boolean) => {
     if (!px || !sprite) return;
     px.ctx.clearRect(0, 0, 10, 16);
     paintSwitch(px, str(def.look, 'light'), on);
     sprite.refresh();
+  };
+  const flip = (ctx: ObjCtx) => {
+    if (group === 'lights') ctx.api.toggleLights(room);
+    else ctx.api.setSwitch(group, !ctx.api.switchOn(group));
+    ctx.api.sfx('switch');
   };
   sprite?.set(def.x, def.y);
   return {
@@ -164,6 +174,14 @@ export const lightSwitch: ObjFactory = (def, id, gfx) => {
       cooldown = Math.max(0, cooldown - ctx.dt);
       wasOver = over;
       over = false;
+      if (armed.length) {
+        armed = armed.map((s) => s - ctx.dt);
+        // (to the tick: a delay is a whole number of them, give or take the rounding)
+        while (armed.length && armed[0] <= 1e-6) {
+          armed.shift();
+          flip(ctx);
+        }
+      }
       const on = group === 'lights' ? ctx.api.lightsOn(room) : ctx.api.switchOn(group);
       if (on !== state) {
         state = on;
@@ -177,9 +195,8 @@ export const lightSwitch: ObjFactory = (def, id, gfx) => {
       over = true;
       if (wasOver || cooldown > 0) return;
       cooldown = 0.8;
-      if (group === 'lights') ctx.api.toggleLights(room);
-      else ctx.api.setSwitch(group, !ctx.api.switchOn(group));
-      ctx.api.sfx('switch');
+      if (delay > 0) armed.push(delay);
+      else flip(ctx);
     },
     dispose() {
       sprite?.dispose();

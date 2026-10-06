@@ -25,7 +25,7 @@ import { createPlane, launch, planePx, type FlightInput, type Plane } from '../.
 import { damagePct } from '../../src/physics/damage';
 import { PX_PER_M, ROOM_H, ROOM_W } from '../../src/physics/config';
 import type { GameObject, ObjCtx, SessionApi, WindOut } from '../../src/game/objects/types';
-import { OBJECTS } from '../../src/game/objects';
+import { OBJECTS, stillHazards } from '../../src/game/objects';
 import { LAYOUT, type ItemDef, type Rect, type RoomDef } from '../../src/world/types';
 import { stairsArrival, stairsDownGeom, stairsUpGeom } from '../../src/world/stairs';
 import { spillWind, updateSpills } from '../../src/game/roomAir';
@@ -124,6 +124,8 @@ interface Node {
   got: string[];
   /** The switches the plane is in (a switch flips once each time the plane comes through it, as in the game). */
   over: string[];
+  /** Switches with a delay set off in this room, still to flip (group, flight time it flips at; in order). */
+  armed: { g: string; at: number }[];
   trace: string[];
   thrown: { from: Checkpoint; angle: number; power: number; wait: number; stepTicks: number };
   steps: Steps | null;
@@ -965,6 +967,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
             roomSig: sig,
             got: [],
             over: [],
+            armed: [],
             trace: [`throw ${facing > 0 ? '>' : '<'} a${angle} p${power}${wait ? ` after ${wait}s` : ''} from ${cp.room}`],
             thrown: { from: { ...cp }, angle: facing > 0 ? angle : Math.PI - angle, power, wait: Math.round(wait / TICK), stepTicks: tryNow.step },
             steps: null,
@@ -984,6 +987,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       plane: clonePlane(n0.plane),
       switches: new Map(n0.switches),
       got: n0.got.slice(),
+      armed: n0.armed.slice(),
       checkpoint: { ...n0.checkpoint },
       steps: { dir: input.dir as -1 | 0 | 1, pitch: input.pitch, prev: n0.steps },
     };
@@ -1024,6 +1028,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       p.liftT = 0;
       p.exitPending = false;
       p.exitBoost = 0;
+      if (key !== n.key) n.armed = [];
       n.key = key;
       room = roomOf(key);
       n.checkpoint = { room: key, x, y, facing };
@@ -1036,8 +1041,21 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       onDeath(n);
       return null;
     };
+    /** Flip a switch group; false when that flips back a switch the bot went for (the flight is given up). */
+    const flip = (g: string): boolean => {
+      const now = !(n.switches.get(g) ?? true);
+      if (wanted.has(g) && wanted.get(g) !== now && !(target?.kind === 'switch' && target.group === g)) return false;
+      n.switches.set(g, now);
+      // (what it switches here goes by the new state from now on, as if it had been so since the plane came in)
+      n.roomSig = sigOf(n.key, n.switches);
+      n.got.push(`toggled:${g}`);
+      n.trace = [...n.trace, `switch ${g} in ${n.key} @${(totalT + n.t).toFixed(1)}s`];
+      return true;
+    };
     for (let k = 0; k < n.thrown.stepTicks; k++) {
       ctx.time = n.t;
+      // a switch set off a while ago flips now (as the game's does, before the plane flies on)
+      while (n.armed.length && n.armed[0].at <= n.t + 1e-6) if (!flip(n.armed.shift()!.g)) return die('switched back');
       // (switched air and transports; moving hazards are flown on their own, see MoverTrack)
       for (const o of room.objects) if (typeof o.def.group === 'string' && !o.hazard) o.update?.(ctx);
       updateSpills(room.spills, ctx);
@@ -1072,13 +1090,11 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
           over.push(o.id);
           const g = typeof o.def.group === 'string' ? o.def.group : 'lights';
           if (g !== 'lights' && !n.over.includes(o.id)) {
-            const now = !(n.switches.get(g) ?? true);
-            if (wanted.has(g) && wanted.get(g) !== now && !(target?.kind === 'switch' && target.group === g)) return die('switched back');
-            n.switches.set(g, now);
-            // (what it switches here goes by the new state from now on, as if it had been so since the plane came in)
-            n.roomSig = sigOf(n.key, n.switches);
-            n.got.push(`toggled:${g}`);
-            n.trace = [...n.trace, `switch ${g} in ${n.key} @${(totalT + n.t).toFixed(1)}s`];
+            // (one with a delay flips that long after, the plane still in the room: from the start of the tick it
+            // came through, as the game counts)
+            const delay = Number(o.def.delay ?? 0);
+            if (delay > 0) n.armed = [...n.armed, { g, at: n.t - TICK + delay }].sort((a, b) => a.at - b.at);
+            else if (!flip(g)) return die('switched back');
           }
         } else if (t === 'star') {
           const id = o.def.id;
@@ -1111,7 +1127,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       n.over = over;
       if (hurt) return die('hazard');
       if (moved) continue;
-      if (reached(n, target)) return n;
+      // (a target reached counts once the step is flown: a recorded flight is whole steps, the game flies them all)
       const pos = planePx(n.plane);
       let side: Side | null = null;
       if (pos.x < -2) side = 'left';
@@ -1135,9 +1151,10 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
         if (side === 'down') n.plane.y += ROOM_H / PX_PER_M;
         const np = planePx(n.plane);
         const entry = ({ left: 'right', right: 'left', up: 'down', down: 'up' } as const)[side];
-        n.checkpoint = entryCheckpoint(level, next, entry, np.x, np.y, n.plane.facing);
-        n.key = next;
         room = roomOf(next);
+        n.checkpoint = entryCheckpoint(level, next, entry, np.x, np.y, n.plane.facing, stillHazards(room.objects));
+        n.key = next;
+        n.armed = [];
         n.roomTick = 0;
         n.roomSig = sigOf(next, n.switches);
         n.trace = [...n.trace, `-> ${next} @${(totalT + n.t).toFixed(1)}s`];
@@ -1171,6 +1188,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       roomSig: sigOf(f.from.room, sw),
       got: [],
       over: [],
+      armed: [],
       trace: [],
       thrown: { ...f, wait: f.wait ?? 0, stepTicks: f.stepTicks ?? stepTicks },
       steps: null,
