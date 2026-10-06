@@ -29,6 +29,7 @@ import { OBJECTS } from '../../src/game/objects';
 import { LAYOUT, type ItemDef, type Rect, type RoomDef } from '../../src/world/types';
 import { stairsArrival, stairsDownGeom, stairsUpGeom } from '../../src/world/stairs';
 import { spillWind, updateSpills } from '../../src/game/roomAir';
+import { roomColliders } from '../../src/world/colliders';
 import { TRANSPORT_REST } from '../../src/game/objects/classic';
 
 const TICK = 1 / 120;
@@ -50,10 +51,18 @@ export interface Way {
   from?: number;
   /** Middle of a floor / ceiling opening. */
   cx?: number;
+  /**
+   * Where a floor / ceiling opening can be gone through from the part of the room it leads out of (x from..to of the
+   * plane's middle): two shafts down a Glider PRO room are one wide opening here (Gliderama rooms have one opening a
+   * side), with a block between them.
+   */
+  spans?: [number, number][];
   /** Stairs doorway, transport mouth. */
   rect?: Rect;
   /** The switch group of a switched transport (`!g`: open while g is switched off). */
   gate?: string;
+  /** Where in its room the plane goes out by it (room px): an edge's stretch, a doorway, a transport's mouth. */
+  mouth?: Rect;
   /** A ceiling opening with rising air up to it (false: no plane can glide up there)... */
   lift?: boolean;
   /** ...or with rising air only while one of these switch groups is on. */
@@ -65,6 +74,8 @@ interface Target {
   key: string;
   kind: 'star' | 'switch';
   room: string;
+  /** The part of the room it is in (see `partMap`). */
+  node: string;
   x: number;
   y: number;
   /** The group a switch target flips. */
@@ -83,6 +94,8 @@ export interface Flight {
   from: Checkpoint;
   angle: number;
   power: number;
+  /** Game ticks the player waits before throwing, the room's moving hazards going round (timing a throw past them). */
+  wait?: number;
   stepTicks: number;
   steps: { dir: -1 | 0 | 1; pitch: number }[];
 }
@@ -109,7 +122,7 @@ interface Node {
   /** The switches the plane is in (a switch flips once each time the plane comes through it, as in the game). */
   over: string[];
   trace: string[];
-  thrown: { from: Checkpoint; angle: number; power: number; stepTicks: number };
+  thrown: { from: Checkpoint; angle: number; power: number; wait: number; stepTicks: number };
   steps: Steps | null;
 }
 
@@ -135,6 +148,8 @@ export interface HouseSolveResult {
   stepTicks: number;
   /** Search steps used (of `maxSteps`). */
   steps?: number;
+  /** The switches as the bot left them (group → on). */
+  switches?: Record<string, boolean>;
 }
 
 function clonePlane(p: Plane): Plane {
@@ -214,6 +229,257 @@ export function houseMap(level: LevelDef): Map<string, Way[]> {
 }
 
 /**
+ * A room's free space on a grid of CELL px, in the parts a plane can fly between without leaving the room (a shelf
+ * across a room, the walls of a maze or of two shafts side by side make several): the part of each cell, -1 where
+ * something solid is (or within CLEAR px of it: gaps narrower than a plane is thick are shut).
+ */
+interface RoomParts {
+  part: Int16Array;
+  count: number;
+}
+const CELL = 8;
+const CLEAR = 3;
+const COLS = ROOM_W / CELL;
+const ROWS = ROOM_H / CELL;
+
+function roomParts(room: RoomDef): RoomParts {
+  const part = new Int16Array(COLS * ROWS);
+  for (const c of roomColliders(room)) {
+    const i0 = Math.max(0, Math.floor((c.x - CLEAR) / CELL));
+    const i1 = Math.min(COLS - 1, Math.ceil((c.x + c.w + CLEAR) / CELL) - 1);
+    const j0 = Math.max(0, Math.floor((c.y - CLEAR) / CELL));
+    const j1 = Math.min(ROWS - 1, Math.ceil((c.y + c.h + CLEAR) / CELL) - 1);
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) part[j * COLS + i] = -1;
+  }
+  // flood fill the free cells (0 until then) into parts 1, 2, ... (then counted from 0)
+  let count = 0;
+  const stack: number[] = [];
+  for (let k = 0; k < part.length; k++) {
+    if (part[k] !== 0) continue;
+    count++;
+    part[k] = count;
+    stack.push(k);
+    while (stack.length) {
+      const q = stack.pop()!;
+      const i = q % COLS;
+      const j = (q - i) / COLS;
+      for (const n of [i > 0 ? q - 1 : -1, i < COLS - 1 ? q + 1 : -1, j > 0 ? q - COLS : -1, j < ROWS - 1 ? q + COLS : -1])
+        if (n >= 0 && part[n] === 0) {
+          part[n] = count;
+          stack.push(n);
+        }
+    }
+  }
+  for (let k = 0; k < part.length; k++) if (part[k] > 0) part[k]--;
+  return { part, count };
+}
+
+/** The cell a point is in, or the nearest free one (next to a wall); -1 if none is near. */
+function cellAt(rp: RoomParts, x: number, y: number): number {
+  const i0 = Math.max(0, Math.min(COLS - 1, Math.floor(x / CELL)));
+  const j0 = Math.max(0, Math.min(ROWS - 1, Math.floor(y / CELL)));
+  for (let r = 0; r <= 4; r++)
+    for (let dj = -r; dj <= r; dj++)
+      for (let di = -r; di <= r; di++) {
+        if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue;
+        const i = i0 + di;
+        const j = j0 + dj;
+        if (i < 0 || j < 0 || i >= COLS || j >= ROWS) continue;
+        if (rp.part[j * COLS + i] >= 0) return j * COLS + i;
+      }
+  return -1;
+}
+
+/** The part of a room a point is in: its cell's, or the nearest free cell's (next to a wall); 0 if none is near. */
+function partAt(rp: RoomParts, x: number, y: number): number {
+  const k = cellAt(rp, x, y);
+  return k < 0 ? 0 : rp.part[k];
+}
+
+/**
+ * The house as the parts of its rooms (`room#part`) and the ways between them: what the bot plans its routes on, so
+ * that a way out of a room counts only from the part of the room it leads out of (Glider PRO houses are full of rooms
+ * split by shelves and walls, the way on from one part of them often leading round through other rooms). `partOf`
+ * says which part of a room a point is in.
+ */
+export function partMap(level: LevelDef): {
+  map: Map<string, Way[]>;
+  partOf: (room: string, x: number, y: number) => string;
+  grid: (room: string) => RoomParts;
+} {
+  const parts = new Map<string, RoomParts>();
+  const rp = (k: string) => parts.get(k) ?? parts.set(k, roomParts(level.rooms[k])).get(k)!;
+  const partOf = (k: string, x: number, y: number) => `${k}#${partAt(rp(k), x, y)}`;
+  const map = new Map<string, Way[]>();
+  const add = (from: string, w: Way) => (map.get(from) ?? map.set(from, []).get(from)!).push(w);
+  for (const [key, room] of Object.entries(level.rooms)) {
+    const a = rp(key);
+    for (let p = 0; p < a.count; p++) if (!map.has(`${key}#${p}`)) map.set(`${key}#${p}`, []);
+    for (const side of ['left', 'right', 'up', 'down'] as const) {
+      const span = room.exits[side];
+      const to = span && neighbour(level, key, side);
+      if (!span || !to) continue;
+      const b = rp(to);
+      // the cells along the edge here, and the ones they meet on the other side of it: a way for each two parts that
+      // meet, over the stretch where they do
+      const meet = new Map<string, { lo: number; hi: number }>();
+      const n = side === 'left' || side === 'right' ? ROWS : COLS;
+      for (let k = 0; k < n; k++) {
+        const here = side === 'left' ? k * COLS : side === 'right' ? k * COLS + COLS - 1 : side === 'up' ? k : (ROWS - 1) * COLS + k;
+        const there = side === 'left' ? k * COLS + COLS - 1 : side === 'right' ? k * COLS : side === 'up' ? (ROWS - 1) * COLS + k : k;
+        const pa = a.part[here];
+        const pb = b.part[there];
+        if (pa < 0 || pb < 0) continue;
+        const along = (k + 0.5) * CELL;
+        if ((side === 'left' || side === 'right') && (along < span.from || along > span.to)) continue;
+        if ((side === 'up' || side === 'down') && (along < span.from || along > span.to)) continue;
+        const m = meet.get(`${pa}>${pb}`);
+        if (m) m.hi = along;
+        else meet.set(`${pa}>${pb}`, { lo: along, hi: along });
+      }
+      for (const [k, m] of meet) {
+        const [pa, pb] = k.split('>');
+        const target = `${to}#${pb}`;
+        const from = `${key}#${pa}`;
+        const x0 = m.lo - CELL / 2;
+        const x1 = m.hi + CELL / 2;
+        const mouth =
+          side === 'left'
+            ? { x: 0, y: x0, w: CELL, h: x1 - x0 }
+            : side === 'right'
+              ? { x: ROOM_W - CELL, y: x0, w: CELL, h: x1 - x0 }
+              : side === 'up'
+                ? { x: x0, y: 0, w: x1 - x0, h: CELL }
+                : { x: x0, y: ROOM_H - CELL, w: x1 - x0, h: CELL };
+        if (side === 'down') add(from, { to: target, kind: 'down', cx: (x0 + x1) / 2, spans: [[x0 + 12, Math.max(x0 + 12, x1 - 12)]], mouth });
+        else if (side === 'up') {
+          const lift = liftUnder(room, x0, x1);
+          add(from, {
+            to: target,
+            kind: 'up',
+            cx: (x0 + x1) / 2,
+            spans: [[x0 + 12, Math.max(x0 + 12, x1 - 12)]],
+            mouth,
+            lift: lift === true,
+            ...(lift !== true && lift.length ? { liftGates: lift } : {}),
+          });
+        } else add(from, { to: target, kind: 'side', side, from: Math.max(span.from, x0), mouth });
+      }
+    }
+    // stairs and transports: from the parts their mouths are in to the part where they come out
+    for (const it of room.items) {
+      let rect: Rect | null = null;
+      let to: string | null = null;
+      let out: { x: number; y: number } | null = null;
+      if (it.t === 'stairsUp' || it.t === 'stairsDown') {
+        const way = it.t === 'stairsUp' ? 'up' : 'down';
+        to = neighbour(level, key, way);
+        if (!to) continue;
+        rect = it.t === 'stairsUp' ? stairsUpGeom(it).door : stairsDownGeom(it).trigger;
+        out = stairsArrival(level.rooms[to].items, way);
+      } else if (it.t === 'transport' && typeof it.to === 'string' && level.rooms[it.to]) {
+        to = it.to;
+        rect = { x: it.x, y: it.y, w: it.w ?? 60, h: it.h ?? 40 };
+        out = { x: Number(it.ax ?? 320), y: Number(it.ay ?? 180) };
+      } else continue;
+      const target = partOf(to, out.x, out.y);
+      const mouths = new Set<number>();
+      for (let j = Math.max(0, Math.floor(rect.y / CELL)); j <= Math.min(ROWS - 1, Math.floor((rect.y + rect.h) / CELL)); j++)
+        for (let i = Math.max(0, Math.floor(rect.x / CELL)); i <= Math.min(COLS - 1, Math.floor((rect.x + rect.w) / CELL)); i++)
+          if (a.part[j * COLS + i] >= 0) mouths.add(a.part[j * COLS + i]);
+      if (!mouths.size) mouths.add(partAt(a, rect.x + rect.w / 2, rect.y + rect.h / 2));
+      for (const p of mouths)
+        add(`${key}#${p}`, {
+          to: target,
+          kind: 'rect',
+          rect,
+          mouth: rect,
+          ...(it.t === 'transport' && typeof it.group === 'string' ? { gate: it.group } : {}),
+        });
+    }
+  }
+  return { map, partOf, grid: rp };
+}
+
+/**
+ * How far it is from each cell of part `part` of a room to `mouth`, flying round what is in the way (px, through the
+ * part's free cells; Infinity where the part doesn't reach).
+ */
+function fieldTo(rp: RoomParts, part: number, mouth: Rect): Float32Array {
+  const d = new Float32Array(COLS * ROWS).fill(Infinity);
+  const heap: number[] = [];
+  const less = (a: number, b: number) => d[a] < d[b];
+  const push = (k: number) => {
+    heap.push(k);
+    for (let i = heap.length - 1; i > 0; ) {
+      const up = (i - 1) >> 1;
+      if (!less(heap[i], heap[up])) break;
+      [heap[up], heap[i]] = [heap[i], heap[up]];
+      i = up;
+    }
+  };
+  const pop = () => {
+    const top = heap[0];
+    const last = heap.pop()!;
+    if (heap.length) {
+      heap[0] = last;
+      for (let i = 0; ; ) {
+        const l = 2 * i + 1;
+        if (l >= heap.length) break;
+        const m = l + 1 < heap.length && less(heap[l + 1], heap[l]) ? l + 1 : l;
+        if (!less(heap[m], heap[i])) break;
+        [heap[m], heap[i]] = [heap[i], heap[m]];
+        i = m;
+      }
+    }
+    return top;
+  };
+  const i0 = Math.max(0, Math.floor(mouth.x / CELL));
+  const i1 = Math.min(COLS - 1, Math.floor((mouth.x + mouth.w - 0.01) / CELL));
+  const j0 = Math.max(0, Math.floor(mouth.y / CELL));
+  const j1 = Math.min(ROWS - 1, Math.floor((mouth.y + mouth.h - 0.01) / CELL));
+  for (let j = j0; j <= j1; j++)
+    for (let i = i0; i <= i1; i++)
+      if (rp.part[j * COLS + i] === part) {
+        d[j * COLS + i] = 0;
+        push(j * COLS + i);
+      }
+  const D = CELL * Math.SQRT2;
+  const done = new Uint8Array(COLS * ROWS);
+  while (heap.length) {
+    const k = pop();
+    if (done[k]) continue;
+    done[k] = 1;
+    const i = k % COLS;
+    const j = (k - i) / COLS;
+    for (let dj = -1; dj <= 1; dj++)
+      for (let di = -1; di <= 1; di++) {
+        if (!di && !dj) continue;
+        const ii = i + di;
+        const jj = j + dj;
+        if (ii < 0 || jj < 0 || ii >= COLS || jj >= ROWS) continue;
+        const n = jj * COLS + ii;
+        if (rp.part[n] !== part) continue;
+        // (not diagonally between two blocked cells)
+        if (di && dj && (rp.part[j * COLS + ii] !== part || rp.part[jj * COLS + i] !== part)) continue;
+        const nd = d[k] + (di && dj ? D : CELL);
+        if (nd < d[n]) {
+          d[n] = nd;
+          push(n);
+        }
+      }
+  }
+  return d;
+}
+
+/** Straight-line distance from (x, y) to a rectangle. */
+function distToRect(r: Rect, x: number, y: number): number {
+  const dx = Math.max(r.x - x, 0, x - (r.x + r.w));
+  const dy = Math.max(r.y - y, 0, y - (r.y + r.h));
+  return Math.hypot(dx, dy);
+}
+
+/**
  * Rising air up to `top` (by default the top of the room: what it takes to leave through the ceiling) somewhere
  * between x0 and x1: true when some always blows there, else the switch groups of what blows there only when
  * switched (none: no lift).
@@ -272,12 +538,18 @@ const wayCost = (w: Way, sw: Map<string, boolean>) => (w.lift !== false || (w.li
 function progress(w: Way, x: number, y: number): number {
   const H = 4.5;
   if (w.kind === 'side') return (w.side === 'right' ? x : 640 - x) + H * (340 - Math.max(y, (w.from ?? 16) + 12));
-  if (w.kind === 'up') return 4 * (360 - y) - 0.6 * Math.abs(x - w.cx!);
-  if (w.kind === 'down') return 2 * y + 1200 - 2.5 * Math.abs(x - w.cx!);
+  if (w.kind === 'up') return 4 * (360 - y) - 0.6 * offOpening(w, x);
+  if (w.kind === 'down') return 2 * y + 1200 - 2.5 * offOpening(w, x);
   const r = w.rect!;
   const dx = Math.max(0, Math.abs(x - (r.x + r.w / 2)) - r.w / 2);
   const below = Math.max(0, y - (r.y + r.h));
   return 1500 - dx - 3 * below + H * (340 - Math.max(y, r.y + 10));
+}
+
+/** How far x is from the open parts of a floor or ceiling opening (from its middle when nothing is known of them). */
+function offOpening(w: Way, x: number): number {
+  if (!w.spans?.length) return Math.abs(x - w.cx!);
+  return Math.min(...w.spans.map(([a, b]) => (x < a ? a - x : x > b ? x - b : 0)));
 }
 
 /** Closing in on a target at (sx, sy): being below it is worse than being above (a plane can always glide down). */
@@ -309,6 +581,8 @@ export interface HouseSolveOptions {
    * tries the star itself first: a plane can often climb where the original's glider needed the air).
    */
   switches?: 'early' | 'late';
+  /** How the switches are when the bot starts (flying a section of a house): group → on. */
+  switchesAt?: Map<string, boolean>;
 }
 
 export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOptions = {}): HouseSolveResult {
@@ -316,7 +590,22 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
   const mesh = buildMesh(build, aero.cg);
   const hullLocal = profileHull(mesh);
   const halfLen = ((mesh.max.x - mesh.min.x) * PX_PER_M) / 2;
-  const map = houseMap(level);
+  const { map, partOf, grid } = partMap(level);
+  const nodeOf = (k: string, x: number, y: number) => partOf(k, x, y);
+  // how much further than straight there it is to a way out (or a target) from where the plane is, flying round what
+  // is in the way: a way out right overhead counts for little with a shelf between
+  const fields = new Map<string, Float32Array>();
+  const detour = (room: string, mouth: Rect, x: number, y: number): number => {
+    const rp = grid(room);
+    const k = cellAt(rp, x, y);
+    if (k < 0) return 0;
+    const part = rp.part[k];
+    const fk = `${room}|${part}|${mouth.x},${mouth.y},${mouth.w},${mouth.h}`;
+    const f = fields.get(fk) ?? fields.set(fk, fieldTo(rp, part, mouth)).get(fk)!;
+    const d = f[k];
+    return d === Infinity ? 0 : Math.max(0, d - distToRect(mouth, x, y));
+  };
+  const DETOUR = 1.5;
   const rooms = new Map<string, SimRoom>();
   const roomOf = (k: string) => rooms.get(k) ?? rooms.set(k, buildSimRoom(level.rooms[k], { level, key: k })).get(k)!;
   // moving hazards: one track per room and state of the switches they go by
@@ -352,7 +641,6 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
 
   // what there is to fly to: goal stars, and the switches of switched transports
   const stars = new Map<string, Target>();
-  const switchesOf = new Map<string, Target[]>();
   const gates = new Set<string>();
   for (const ways of map.values())
     for (const w of ways) {
@@ -365,22 +653,33 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
   for (const [k, r] of Object.entries(level.rooms))
     for (const it of r.items) {
       if (it.t !== 'star' || !it.goal || typeof it.id !== 'string') continue;
-      stars.set(it.id, { key: it.id, kind: 'star', room: k, x: it.x, y: it.y });
+      stars.set(it.id, { key: it.id, kind: 'star', room: k, node: nodeOf(k, it.x, it.y), x: it.x, y: it.y });
       const lift = it.y < 200 ? liftUnder(r, it.x, it.x, it.y + 20) : true;
       if (lift === true || !lift.length) continue;
       starGates.set(it.id, lift);
       for (const g of lift) gates.add(g.replace(/^!/, ''));
     }
   const starCost = (t: Target, sw: Map<string, boolean>) => (starGates.get(t.key)?.some((g) => groupOn(g, sw)) === false ? NO_LIFT : 0);
-  for (const [k, r] of Object.entries(level.rooms))
+  // the places to flip switches, room by room (switches in one place flip together: a trigger can be wired to
+  // two things); one inside something solid (Glider PRO houses hide a few in their walls) can't be flown to
+  const spots = new Map<string, { target: Target; groups: string[] }[]>();
+  for (const [k, r] of Object.entries(level.rooms)) {
+    const solid = roomColliders(r);
     r.items.forEach((it, i) => {
       if (it.t === 'switch' && typeof it.group === 'string' && gates.has(it.group)) {
         const w = it.hidden ? Number(it.w ?? 16) : 10;
         const h = it.hidden ? Number(it.h ?? 16) : 16;
-        const s: Target = { key: `switch ${k}#${i}`, kind: 'switch', room: k, x: it.x + w / 2, y: it.y + h / 2, group: it.group };
-        (switchesOf.get(it.group) ?? switchesOf.set(it.group, []).get(it.group)!).push(s);
+        const x = it.x + w / 2;
+        const y = it.y + h / 2;
+        const s: Target = { key: `switch ${k}#${i}`, kind: 'switch', room: k, node: nodeOf(k, x, y), x, y, group: it.group };
+        if (solid.some((c) => s.x > c.x && s.x < c.x + c.w && s.y > c.y && s.y < c.y + c.h)) return;
+        const here = spots.get(s.node) ?? spots.set(s.node, []).get(s.node)!;
+        const at = here.find((p) => Math.abs(p.target.x - s.x) < 8 && Math.abs(p.target.y - s.y) < 8);
+        if (at) at.groups.push(it.group);
+        else here.push({ target: s, groups: [it.group] });
       }
     });
+  }
 
   const got = new Set<string>();
   const order: string[] = [];
@@ -391,27 +690,34 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
   let checkpoint: Checkpoint = { ...level.start };
   let totalT = 0;
   // switch states carried from flight to flight (a switch stays flipped)
-  let switchesNow = new Map<string, boolean>();
+  let switchesNow = new Map<string, boolean>(opts.switchesAt ?? []);
 
-  // distances to a room, as the switches are (only the gates' states matter: switched transports, and switched air
-  // up through ceiling openings): a ceiling opening without rising air counts as a long way round
+  // distances to a part of a room, as the switches are (only the gates' states matter: switched transports, and
+  // switched air up through ceiling openings): a ceiling opening without rising air counts as a long way round
   const distCache = new Map<string, Map<string, number>>();
   const open = (sw: Map<string, boolean>) => (w: Way) => !w.gate || groupOn(w.gate, sw);
-  const distTo = (room: string, sw: Map<string, boolean>, plain = false) => {
-    const k = `${room}|${[...gates].map((g) => (groupOn(g, sw) ? 1 : 0)).join('')}${plain ? '|plain' : ''}`;
+  const distTo = (node: string, sw: Map<string, boolean>, plain = false) => {
+    const k = `${node}|${[...gates].map((g) => (groupOn(g, sw) ? 1 : 0)).join('')}${plain ? '|plain' : ''}`;
     const cost = (w: Way) => (plain ? 1 : wayCost(w, sw));
-    return distCache.get(k) ?? distCache.set(k, distancesTo(map, room, open(sw), cost)).get(k)!;
+    return distCache.get(k) ?? distCache.set(k, distancesTo(map, node, open(sw), cost)).get(k)!;
   };
+  /** Distances to a part of a room with every way open (whatever the switches; how far it is at the least). */
+  const allOpen = new Map<string, Map<string, number>>();
+  const openTo = (node: string) => allOpen.get(node) ?? allOpen.set(node, distancesTo(map, node)).get(node)!;
   /**
-   * What to fly to from `room`: the nearest star still to find; when the way to it is shut, or needs air that is
-   * switched off (a climb out through a ceiling, a star high up), a switch on the way that makes the way to one
-   * shorter. `skip`: targets that got nowhere from here.
+   * What to fly to from `room` (a part of a room, see `partMap`): the nearest star still to find; when the way to it
+   * is shut, or needs air that is switched off (a climb out through a ceiling, a star high up), a switch on the way
+   * that makes the way to one shorter. `skip`: targets that got nowhere from here.
    */
   const late = opts.switches === 'late';
   const chooseTarget = (room: string, sw: Map<string, boolean>, skip: Set<string>): Target | null => {
-    const toFind = goals.filter((id) => !got.has(id)).map((id) => stars.get(id)!);
+    const all = goals.filter((id) => !got.has(id)).map((id) => stars.get(id)!);
+    // a star with no way on from it to the others (in a room with no way out: the last room of Rainbow's End) is
+    // for last
+    const onward = (t: Target) => all.every((o) => o === t || (openTo(o.node).get(t.node) ?? Infinity) < Infinity);
+    const toFind = all.some(onward) ? all.filter(onward) : all;
     const left = toFind.filter((t) => !skip.has(t.key));
-    const cost = (t: Target, state: Map<string, boolean>, from: string) => (distTo(t.room, state).get(from) ?? Infinity) + starCost(t, state);
+    const cost = (t: Target, state: Map<string, boolean>, from: string) => (distTo(t.node, state).get(from) ?? Infinity) + starCost(t, state);
     let best: Target | null = null;
     let bd = Infinity;
     for (const t of left) {
@@ -422,62 +728,131 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       }
     }
     // the way to the nearest star is clear (no rising air missing on it), or the star itself is to be tried first
-    if (best && (late || bd <= (distTo(best.room, sw, true).get(room) ?? Infinity))) return best;
-    // a switch that opens the way to a star or makes it shorter (late: any star still to find, those that got
-    // nowhere from here too)
+    if (best && (late || bd <= (distTo(best.node, sw, true).get(room) ?? Infinity))) return best;
+    // the first switch on a way that opens the way to a star or makes it shorter (late: any star still to find,
+    // those that got nowhere from here too)
     const after = late ? toFind : left;
     if (late) bd = Math.min(...toFind.map((t) => cost(t, sw, room)), Infinity);
-    for (const [group, list] of switchesOf) {
-      const flipped = new Map(sw).set(group, !(sw.get(group) ?? true));
-      for (const s of list) {
-        if (skip.has(s.key)) continue;
-        const toSwitch = distTo(s.room, sw).get(room) ?? Infinity;
-        if (toSwitch === Infinity) continue;
-        const d = toSwitch + Math.min(...after.map((t) => cost(t, flipped, s.room)), Infinity);
-        if (d < bd) {
-          bd = d;
-          best = s;
+    const p = switchPlan(room, sw, after, skip);
+    return p.first && p.cost < bd ? p.first : best;
+  };
+
+  /**
+   * The cheapest way from `room` to one of the stars `to`, switches on the way included: a search over the rooms and
+   * the states of the switches (each flips its group: a switched transport opens or shuts, switched air comes on or
+   * goes off), ways costing what they do in `distTo`, with a few switches at most. Returns the first switch on it
+   * (null: none is needed, or there is no way) and its cost. (One switch is often not enough: in SpacePods the air
+   * up a shaft needs a switch at the bottom of it, and then one in the room above.)
+   */
+  const switchPlan = (room: string, sw: Map<string, boolean>, to: Target[], skip: Set<string>): { first: Target | null; cost: number } => {
+    const hs = to.map((t) => openTo(t.node));
+    // (rooms to go at the least, every way open: the search heads for the stars)
+    const near = (r: string) => Math.min(...hs.map((d) => d.get(r) ?? Infinity));
+    const list = [...gates];
+    const keyOf = (r: string, s: Map<string, boolean>) => `${r}|${list.map((g) => (groupOn(g, s) ? 1 : 0)).join('')}`;
+    interface S {
+      r: string;
+      s: Map<string, boolean>;
+      g: number;
+      f: number;
+      first: Target | null;
+      flips: number;
+    }
+    const heap: S[] = [];
+    const push = (x: S) => {
+      if (x.f === Infinity) return;
+      heap.push(x);
+      for (let i = heap.length - 1; i > 0; ) {
+        const up = (i - 1) >> 1;
+        if (heap[up].f <= heap[i].f) break;
+        [heap[up], heap[i]] = [heap[i], heap[up]];
+        i = up;
+      }
+    };
+    const pop = (): S => {
+      const top = heap[0];
+      const last = heap.pop()!;
+      if (heap.length) {
+        heap[0] = last;
+        for (let i = 0; ; ) {
+          const l = 2 * i + 1;
+          const m = l + 1 < heap.length && heap[l + 1].f < heap[l].f ? l + 1 : l;
+          if (l >= heap.length || heap[i].f <= heap[m].f) break;
+          [heap[m], heap[i]] = [heap[i], heap[m]];
+          i = m;
         }
       }
+      return top;
+    };
+    const done = new Set<string>();
+    let best: { first: Target | null; cost: number } = { first: null, cost: Infinity };
+    push({ r: room, s: sw, g: 0, f: near(room), first: null, flips: 0 });
+    for (let budget = 50000; heap.length && budget > 0; budget--) {
+      const x = pop();
+      if (x.f >= best.cost) break;
+      const k = keyOf(x.r, x.s);
+      if (done.has(k)) continue;
+      done.add(k);
+      for (const t of to) if (t.node === x.r && x.g + starCost(t, x.s) < best.cost) best = { first: x.first, cost: x.g + starCost(t, x.s) };
+      for (const w of map.get(x.r) ?? []) {
+        if (w.gate && !groupOn(w.gate, x.s)) continue;
+        const g = x.g + wayCost(w, x.s);
+        push({ r: w.to, s: x.s, g, f: g + near(w.to), first: x.first, flips: x.flips });
+      }
+      if (x.flips < 3)
+        for (const sp of spots.get(x.r) ?? []) {
+          if (skip.has(sp.target.key)) continue;
+          const s = new Map(x.s);
+          for (const g of sp.groups) s.set(g, !groupOn(g, s));
+          // (a little for the detour: no switch is flown to for nothing)
+          push({ r: x.r, s, g: x.g + 0.5, f: x.g + 0.5 + near(x.r), first: x.first ?? sp.target, flips: x.flips + 1 });
+        }
     }
     return best;
   };
 
   const throwsFrom = (cp: Checkpoint): Node[] => {
     const out: Node[] = [];
-    for (const facing of [cp.facing, -cp.facing as 1 | -1])
-      for (const [angle, power] of [
-        [0, 0.3],
-        [0, 0.5],
-        [0.15, 0.4],
-        [0.3, 0.6],
-        [-0.15, 0.35],
-        [0.1, 0.75],
-        [0.5, 0.8],
-      ]) {
-        const plane = createPlane(aero);
-        launch(plane, cp.x, cp.y, facing > 0 ? angle : Math.PI - angle, power);
-        out.push({
-          key: cp.room,
-          plane,
-          groundT: 0,
-          stillT: 0,
-          t: 0,
-          switches: new Map(switchesNow),
-          checkpoint: { ...cp },
-          score: 0,
-          peak: -Infinity,
-          peakT: 0,
-          transT: -Infinity,
-          roomTick: 0,
-          roomSig: sigOf(cp.room, switchesNow),
-          got: [],
-          over: [],
-          trace: [`throw ${facing > 0 ? '>' : '<'} a${angle} p${power} from ${cp.room}`],
-          thrown: { from: { ...cp }, angle: facing > 0 ? angle : Math.PI - angle, power, stepTicks: tryNow.step },
-          steps: null,
-        });
-      }
+    // where things move about (balloons rising, a fish leaping), the throw can be timed: now, or a second or two on
+    const sig = sigOf(cp.room, switchesNow);
+    const waits = trackOf(cp.room, sig) ? [0, 1, 2] : [0];
+    for (const wait of waits)
+      for (const facing of [cp.facing, -cp.facing as 1 | -1])
+        for (const [angle, power] of [
+          [0, 0.3],
+          [0, 0.5],
+          [0.15, 0.4],
+          [0.3, 0.6],
+          [-0.15, 0.35],
+          [0.1, 0.75],
+          [0.5, 0.8],
+          // steeply down (a player aiming with the mouse can): down a shaft, nose first
+          [-0.8, 0.3],
+          [-1.3, 0.25],
+        ]) {
+          const plane = createPlane(aero);
+          launch(plane, cp.x, cp.y, facing > 0 ? angle : Math.PI - angle, power);
+          out.push({
+            key: cp.room,
+            plane,
+            groundT: 0,
+            stillT: 0,
+            t: 0,
+            switches: new Map(switchesNow),
+            checkpoint: { ...cp },
+            score: 0,
+            peak: -Infinity,
+            peakT: 0,
+            transT: -Infinity,
+            roomTick: Math.round(wait / TICK),
+            roomSig: sig,
+            got: [],
+            over: [],
+            trace: [`throw ${facing > 0 ? '>' : '<'} a${angle} p${power}${wait ? ` after ${wait}s` : ''} from ${cp.room}`],
+            thrown: { from: { ...cp }, angle: facing > 0 ? angle : Math.PI - angle, power, wait: Math.round(wait / TICK), stepTicks: tryNow.step },
+            steps: null,
+          });
+        }
     return out;
   };
 
@@ -497,7 +872,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
     };
     const st: TickState = { plane: n.plane, aero, hullLocal, halfLen, groundT: n.groundT, stillT: n.stillT };
     let room = roomOf(n.key);
-    const api = {
+    const known: Partial<SessionApi> = {
       setSwitch: (g: string, on: boolean) => void n.switches.set(g, on),
       switchOn: (g: string) => n.switches.get(g) ?? true,
       lightsOn: () => true,
@@ -505,7 +880,9 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
         const q = planePx(n.plane);
         return { x: q.x, y: q.y, vx: n.plane.vx, vy: n.plane.vy, alive: true };
       },
-    } as unknown as SessionApi;
+    };
+    // (sounds and the like do nothing here)
+    const api = new Proxy(known as SessionApi, { get: (t, k: string) => t[k as keyof SessionApi] ?? (() => {}) });
     const ctx: ObjCtx = { dt: TICK, time: 0, particles: { spawn() {} }, api };
     const out: WindOut = { x: 0, y: 0 };
     const wind = (xm: number, ym: number) => {
@@ -536,7 +913,9 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       n.roomTick = 0;
       n.roomSig = sigOf(key, n.switches);
     };
-    const die = () => {
+    const die = (why: string) => {
+      const q = planePx(n.plane);
+      n.trace = [...n.trace, `lost (${why}) in ${n.key} @${Math.round(q.x)},${Math.round(q.y)}`];
       onDeath(n);
       return null;
     };
@@ -548,7 +927,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       const r = flightTick(st, input, wind, room.colliders, TICK, { rand: () => 0.5 }, {});
       opts.onTick?.(n.plane, wind(n.plane.x, n.plane.y), room.colliders.length);
       n.t += TICK;
-      if (r === 'crashed' || r === 'grounded' || damagePct(n.plane.damage) >= 90) return die();
+      if (r === 'crashed' || r === 'grounded' || damagePct(n.plane.damage) >= 90) return die(r === 'ok' ? 'crumpled' : r);
       const hw = planeHull(st);
       const bb = bounds(hw);
       // touching a hazard loses the plane, but what else it touches as it does counts (the game goes through all of
@@ -611,7 +990,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
         }
       }
       n.over = over;
-      if (hurt) return die();
+      if (hurt) return die('hazard');
       if (moved) continue;
       if (reached(n, target)) return n;
       const pos = planePx(n.plane);
@@ -629,7 +1008,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
             n.got.push('exit');
             return n;
           }
-          return die();
+          return die('out of the house');
         }
         if (side === 'left') n.plane.x += ROOM_W / PX_PER_M;
         if (side === 'right') n.plane.x -= ROOM_W / PX_PER_M;
@@ -644,7 +1023,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
         n.roomSig = sigOf(next, n.switches);
         n.trace = [...n.trace, `-> ${next} @${(totalT + n.t).toFixed(1)}s`];
       }
-      if (n.t > maxFlight) return die();
+      if (n.t > maxFlight) return die('too long');
     }
     n.groundT = st.groundT;
     n.stillT = st.stillT;
@@ -656,24 +1035,25 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
     const f = opts.replay;
     const plane = createPlane(aero);
     launch(plane, f.from.x, f.from.y, f.angle, f.power);
+    const sw = new Map(opts.switchesAt ?? []);
     let n: Node | null = {
       key: f.from.room,
       plane,
       groundT: 0,
       stillT: 0,
       t: 0,
-      switches: new Map(),
+      switches: sw,
       checkpoint: { ...f.from },
       score: 0,
       peak: -Infinity,
       peakT: 0,
       transT: -Infinity,
-      roomTick: 0,
-      roomSig: sigOf(f.from.room, new Map()),
+      roomTick: f.wait ?? 0,
+      roomSig: sigOf(f.from.room, sw),
       got: [],
       over: [],
       trace: [],
-      thrown: { ...f, stepTicks: f.stepTicks ?? stepTicks },
+      thrown: { ...f, wait: f.wait ?? 0, stepTicks: f.stepTicks ?? stepTicks },
       steps: null,
     };
     for (const s of f.steps) {
@@ -697,14 +1077,17 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
 
   /** Score a live node for the search towards `target`. */
   const scoreOf = (n: Node, target: Target): number => {
-    const dist = distTo(target.room, n.switches);
-    const d = dist.get(n.key) ?? 999;
+    const dist = distTo(target.node, n.switches);
     const q = planePx(n.plane);
+    const node = nodeOf(n.key, q.x, q.y);
+    const d = dist.get(node) ?? 999;
     let best = -1e9;
-    if (n.key === target.room) best = toward(q.x, q.y, target.x, target.y);
+    if (node === target.node)
+      best = toward(q.x, q.y, target.x, target.y) - DETOUR * detour(n.key, { x: target.x - 6, y: target.y - 6, w: 12, h: 12 }, q.x, q.y);
     else
-      for (const w of map.get(n.key) ?? [])
-        if ((!w.gate || groupOn(w.gate, n.switches)) && wayCost(w, n.switches) + (dist.get(w.to) ?? 999) <= d) best = Math.max(best, progress(w, q.x, q.y));
+      for (const w of map.get(node) ?? [])
+        if ((!w.gate || groupOn(w.gate, n.switches)) && wayCost(w, n.switches) + (dist.get(w.to) ?? 999) <= d)
+          best = Math.max(best, progress(w, q.x, q.y) - (w.mouth ? DETOUR * detour(n.key, w.mouth, q.x, q.y) : 0));
     // a flight in a steep dive or about to stall is worth less than its position suggests
     const dive = Math.max(0, -n.plane.vy - 0.9) * 60 + Math.max(0, -n.plane.theta - 0.5) * 80;
     const slow = n.plane.V < 1 ? (1 - n.plane.V) * 120 : 0;
@@ -713,8 +1096,9 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
 
   /** How good a checkpoint is to throw from, for `target`. */
   const cpRank = (cp: Checkpoint, target: Target, sw: Map<string, boolean>): number => {
-    const d = distTo(target.room, sw).get(cp.room) ?? 999;
-    return -d * 10000 + (cp.room === target.room ? toward(cp.x, cp.y, target.x, target.y) : 0);
+    const node = nodeOf(cp.room, cp.x, cp.y);
+    const d = distTo(target.node, sw).get(node) ?? 999;
+    return -d * 10000 + (node === target.node ? toward(cp.x, cp.y, target.x, target.y) : 0);
   };
 
   /** The rooms a flight went into, from its trace. */
@@ -724,9 +1108,15 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
   const flightOf = (n: Node): Flight => {
     const steps: Flight['steps'] = [];
     for (let s = n.steps; s; s = s.prev) steps.push({ dir: s.dir, pitch: s.pitch });
-    return { ...n.thrown, steps: steps.reverse() };
+    const { wait, ...rest } = n.thrown;
+    return { ...rest, ...(wait ? { wait } : {}), steps: steps.reverse() };
   };
   const flights: Flight[] = [];
+  /** A flight of the way through (the time spent waiting to throw it counts as the player's). */
+  const record = (n: Node) => {
+    flights.push(flightOf(n));
+    totalT += n.thrown.wait * TICK;
+  };
   // the search is deterministic: from a checkpoint already thrown from (near enough) it would only fly the same
   // flights again, so each try searches differently; after the last, that checkpoint is used up for the target
   const tries = new Map<string, number>();
@@ -741,7 +1131,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       skipRoom = checkpoint.room;
     }
     if (!flying) {
-      target = chooseTarget(checkpoint.room, switchesNow, skip);
+      target = chooseTarget(nodeOf(checkpoint.room, checkpoint.x, checkpoint.y), switchesNow, skip);
       if (!target || sheets > maxSheets) break;
       const k = cpKey(checkpoint, target);
       const tried = tries.get(k) ?? 0;
@@ -816,7 +1206,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
         checkpoint = done.checkpoint;
         switchesNow = done.switches;
         if (done.got.includes('exit') || got.size >= goals.length) {
-          flights.push(flightOf(done));
+          record(done);
           break outer;
         }
         opts.log?.(`${tgt.kind} ${tgt.key} in ${tgt.room} after ${totalT.toFixed(1)}s, ${sheets} sheets`);
@@ -826,9 +1216,10 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
         done.peakT = 0;
         done.got = [];
         done.trace = [];
-        target = chooseTarget(done.key, switchesNow, skip);
+        const at = planePx(done.plane);
+        target = chooseTarget(nodeOf(done.key, at.x, at.y), switchesNow, skip);
         if (!target) {
-          flights.push(flightOf(done));
+          record(done);
           break outer;
         }
         flying = [done];
@@ -859,7 +1250,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
     opts.log?.(`sheet ${sheets} for ${tgt.key}: best flight ended in ${bd.at} -> next from ${cpKey(bd.cp, tgt)} [${bd.trace.join(' | ')}]`);
     // the flight that got there is part of the way (a checkpoint carried over from before needs none)
     if (bd.node) {
-      flights.push(flightOf(bd.node));
+      record(bd.node);
       switchesNow = bd.node.switches;
       // its time and rooms count too (the player flies it)
       totalT += bd.node.t;
@@ -875,8 +1266,9 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
     sheets++;
   }
   const solved = got.size >= goals.length;
-  const stuckTarget = solved ? null : chooseTarget(checkpoint.room, switchesNow, new Set());
-  const short = stuckTarget ? distancesTo(map, stuckTarget.room, open(switchesNow)).get(checkpoint.room) : undefined;
+  const cpNode = nodeOf(checkpoint.room, checkpoint.x, checkpoint.y);
+  const stuckTarget = solved ? null : chooseTarget(cpNode, switchesNow, new Set());
+  const short = stuckTarget ? distancesTo(map, stuckTarget.node, open(switchesNow)).get(cpNode) : undefined;
   return {
     solved,
     starsTotal: goals.length,
@@ -890,5 +1282,6 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
     flights,
     stepTicks,
     steps: budget - Math.max(0, stepsLeft),
+    switches: Object.fromEntries(switchesNow),
   };
 }

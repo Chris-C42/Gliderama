@@ -51,6 +51,8 @@ export interface SessionOptions {
   hover?: boolean;
   /** Random source for collision damage (which wing takes a knock); a fixed one makes flights replayable. */
   rand?: () => number;
+  /** Switch groups as they are at the start (a lab starting part way through a house): group → on. */
+  switches?: [string, boolean][];
 }
 
 export interface FlightStats {
@@ -264,6 +266,7 @@ export class Session {
     this.goalStars = new Set(level.goal === 'stars' ? goalStarIds(level) : []);
     this.charges = { boost: 0, bands: 0, helium: 0, ...opts.charges };
     for (const id of opts.collected ?? []) this.collected.add(id);
+    for (const [g, on] of opts.switches ?? []) this.switches.set(g, on);
     this.checkpoint = { ...level.start };
     this.setDesign(design, true);
     this.enterRoom(level.start.room);

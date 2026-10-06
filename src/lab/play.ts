@@ -34,10 +34,20 @@ const level =
     })) ||
   (q.has('menagerie') && structuredClone(MENAGERIE)) ||
   SAMPLE_LEVEL;
-// &room=1,0 starts in another room of the level (for looking at its art and air)
-if (q.get('room') && level.rooms[q.get('room')!]) level.start = { ...level.start, room: q.get('room')! };
+// &room=1,0 starts in another room of the level (for looking at its art and air), &at=596,150,-1 where in it (x, y,
+// facing); &goal=63,0:star:0 makes that the only star to find, &sw=gp1.14=0,gp5.11=1 sets switches (a part of a
+// house on its own, for the autopilot)
+if (q.get('room') && level.rooms[q.get('room')!]) {
+  const [x, y, f] = (q.get('at') ?? '').split(',').map(Number);
+  level.start = { ...level.start, room: q.get('room')!, ...(q.has('at') ? { x, y, facing: f < 0 ? -1 : 1 } : {}) };
+}
+if (q.get('goal')) for (const r of Object.values(level.rooms)) for (const it of r.items) if (it.t === 'star' && it.id !== q.get('goal')) delete it.goal;
+const presets: [string, boolean][] = (q.get('sw') ?? '')
+  .split(',')
+  .filter(Boolean)
+  .map((kv) => [kv.split('=')[0], kv.split('=')[1] === '1']);
 // &det: knocks always damage the same wing, as in the headless bot pilot (so its flights replay exactly)
-const opts = { autoTrim: q.has('autotrim'), slowMo: false, rand: q.has('det') ? () => 0.5 : undefined };
+const opts = { autoTrim: q.has('autotrim'), slowMo: false, rand: q.has('det') ? () => 0.5 : undefined, switches: presets };
 const session = new Session(renderer, level, design, opts, {
   hud(h) {
     hudEl.textContent = `${h.roomName}  phase:${h.phase}  sheets:${h.sheets}  stars:${h.stars}/${h.starsTotal}  dmg:${h.damage}%  t:${h.time.toFixed(1)}\nV ${h.speed.toFixed(2)} m/s  α ${h.alpha.toFixed(1)}°  L/D ${h.ld.toFixed(1)} ${h.stall > 0.5 ? 'STALL' : ''}  ${h.message ?? ''}`;
@@ -136,14 +146,16 @@ interface PilotFlight {
   from?: { room: string; x: number; y: number };
   angle: number;
   power: number;
+  /** Game ticks to wait before throwing (the room's balloons and darts going round). */
+  wait?: number;
   /** Game ticks per entry of `steps`. */
   stepTicks: number;
   steps: { dir: -1 | 0 | 1; pitch: number }[];
 }
-let pilot: { flights: PilotFlight[]; i: number; tick: number; thrown: boolean } | null = null;
+let pilot: { flights: PilotFlight[]; i: number; tick: number; thrown: boolean; waiting: number | null } | null = null;
 w.__pilotLog = [] as string[];
 w.__autopilot = (plan: { flights: PilotFlight[] }) => {
-  pilot = { ...plan, i: 0, tick: 0, thrown: false };
+  pilot = { ...plan, i: 0, tick: 0, thrown: false, waiting: null };
 };
 function drive() {
   const p = pilot!;
@@ -152,11 +164,16 @@ function drive() {
   ctl.pitch = 0;
   if (!f) return;
   if (session.phase === 'aim' && !p.thrown) {
-    const cp = session.checkpoint;
-    const planned = f.from ? `${f.from.room} (${Math.round(f.from.x)},${Math.round(f.from.y)})` : '?';
-    w.__pilotLog.push(`flight ${p.i} from ${cp.room} (${Math.round(cp.x)},${Math.round(cp.y)}), planned from ${planned}`);
-    // the plan has the room's balloons and darts set off as the sheet is thrown
-    session.restartRoom();
+    if (p.waiting === null) {
+      const cp = session.checkpoint;
+      const planned = f.from ? `${f.from.room} (${Math.round(f.from.x)},${Math.round(f.from.y)})` : '?';
+      w.__pilotLog.push(`flight ${p.i} from ${cp.room} (${Math.round(cp.x)},${Math.round(cp.y)}), planned from ${planned}`);
+      // the plan has the room's balloons and darts set off as the sheet is thrown (or as long before as it waits)
+      session.restartRoom();
+      p.waiting = f.wait ?? 0;
+    }
+    if (p.waiting-- > 0) return;
+    p.waiting = null;
     thr.released = true;
     thr.angle = f.angle;
     thr.power = f.power;
@@ -182,7 +199,7 @@ function drive() {
 if (q.has('autopilot') && campaignLevel) {
   const { solveHouse } = await import('../../tests/helpers/houseSolver');
   const t0 = performance.now();
-  const plan = solveHouse(level, design, { maxSteps: Number(q.get('steps') ?? 4000) });
+  const plan = solveHouse(level, design, { maxSteps: Number(q.get('steps') ?? 4000), switchesAt: new Map(presets) });
   w.__plan = { ...plan, ms: performance.now() - t0 };
   w.__autopilot(plan);
 }
