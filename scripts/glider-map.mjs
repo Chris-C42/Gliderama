@@ -999,6 +999,17 @@ function plantFrom(ob, c) {
   c.emit({ t: 'plant', x: r1(cx - w / 2), y: r1(bottom - pot), w, tall: Math.max(16, r1(Y(b.bottom) - Y(b.top) - pot)), v: c.seed % 4 });
 }
 
+/**
+ * Things Glider PRO draws but the glider flies through (Sources/ObjectRects.c gives them nothing to touch: pictures,
+ * plants, windows, the teddy bear, the fireplace, the lamps). The Gliderama kinds they are drawn as that are solid
+ * are marked `solid: false` here: nothing to bump into (a fireplace in Leviathan has a transport in its hearth).
+ */
+export const SCENERY = new Set(
+  'ozma mirror mousehole fireplace flower wallWindow bear calendar vase1 vase2 bulletin cloud faucet rug ceilingLight lightBulb tableLamp hipLamp decoLamp flourescent trackLight'.split(' '),
+);
+/** The Gliderama kinds scenery is drawn as that are solid in Gliderama's own rooms. */
+export const SOLID_SCENERY = new Set(['fireplace', 'window', 'bear', 'plant', 'pendant', 'floorLamp', 'deskLamp']);
+
 /** Handlers by Glider PRO object type. `null` = dropped with the reason given. */
 export const OBJECT_MAP = {
   floorVent: floorBlower,

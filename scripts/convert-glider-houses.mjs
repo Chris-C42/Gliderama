@@ -31,6 +31,8 @@ import {
   BUILTIN,
   MISSING_ART,
   OBJECT_MAP,
+  SCENERY,
+  SOLID_SCENERY,
   ORDER,
   OVERRIDES,
   ROOF_RAMP,
@@ -372,6 +374,8 @@ export function convertHouse(name, house, rsrc, file = '', pictures = null) {
       const n0 = items.length;
       const art0 = missingArt[ob.type] ?? 0;
       handler(ob, ctx);
+      // (scenery is nothing to bump into, as in Glider PRO)
+      if (SCENERY.has(ob.type)) for (const it of items.slice(n0)) if (SOLID_SCENERY.has(it.t)) it.solid = false;
       if (droppedHere === before) {
         mapped++;
         // drawn with the art of something else (unless the handler said how already)

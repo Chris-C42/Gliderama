@@ -198,6 +198,7 @@ the original stands on the floor; furniture and clutter are drawn over the origi
 | Calendar / bulletin board | 58 / 38 | wall calendar / cork board with notes |
 | Mouse hole / teddy bear / cloud / faucet | 174 / 169 / 1860 / 28 | mouse hole in the skirting / teddy bear / cloud / tap |
 | Flower, vase | 547, 158 | plant (no art of their own; a flower in a vase is part of the vase's plant) |
+| *Scenery* | | the lamps, pictures, plants, windows, the teddy bear and the fireplace are nothing to bump into, as in Glider PRO (it gives them nothing the glider touches): the Gliderama kinds that are solid in its own rooms are marked `solid: false` |
 | Custom picture (`customPict`) | 4782 | dropped (the house's own pictures; they colour the obstacles drawn where they were) |
 
 **What moves or sparks** (balloons, helicopters, darts, balls, fish, outlets) starts where Glider PRO's does, at
@@ -304,7 +305,8 @@ Not drawn at all: the houses' own pictures (`customPict`, 4782 of them), which G
 - **Lights**: a switch can work another room's lights; darkness follows the original's rule, but rooms are
   lit or dark as a whole (every lamp in a room is on its light switch).
 - **Roofs** are stepped blocks, not slopes.
-- **Fireplaces** add Gliderama's fire and its updraft.
+- **Fireplaces** add Gliderama's fire and its updraft (the fireplace itself is scenery: a plane can fly into its
+  hearth, as Leviathan's way on does, through a transport there).
 
 ## Overrides
 

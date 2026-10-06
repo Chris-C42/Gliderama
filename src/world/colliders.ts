@@ -42,7 +42,8 @@ export function roomColliders(room: RoomDef): Collider[] {
   const out = shellColliders(room);
   for (const it of room.items) {
     const k = KINDS[it.t];
-    if (k?.colliders) out.push(...k.colliders(it, room));
+    // (`solid: false`: drawn, but nothing to bump into: Glider PRO's scenery in the Classic Houses)
+    if (k?.colliders && it.solid !== false) out.push(...k.colliders(it, room));
   }
   return out;
 }
