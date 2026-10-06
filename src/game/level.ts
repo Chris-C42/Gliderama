@@ -1,4 +1,5 @@
-import type { RoomDef } from '../world/types';
+import { roomColliders } from '../world/colliders';
+import type { Collider, RoomDef } from '../world/types';
 
 export interface LevelDef {
   id: string;
@@ -56,11 +57,15 @@ export function goalStarIds(level: LevelDef): string[] {
 }
 
 /**
- * Where a plane that has just flown into room `next` through its `entry` side gets thrown from next time: just
- * inside the entry edge (shared by the session and the level checks).
+ * Where a plane that has just flown into room `next` through its `entry` side gets thrown from next time (after a
+ * crash): just inside the entry edge, up at the height the level starts at (near the ceiling) rather than wherever
+ * it happened to come in. It goes up from where it came in only as far as the room is clear straight above that
+ * point, so it never ends up over a ledge, or in a part of the room it could not have flown to. Shared by the
+ * session and the level checks.
  */
 export function entryCheckpoint(level: LevelDef, next: string, entry: 'left' | 'right' | 'up' | 'down', x: number, y: number, facing: 1 | -1) {
-  const ex = level.rooms[next].exits[entry];
+  const room = level.rooms[next];
+  const ex = room.exits[entry];
   let cx = Math.max(40, Math.min(640 - 40, x));
   let cy = Math.max(40, Math.min(300, y));
   if (entry === 'left') cx = 44;
@@ -68,5 +73,28 @@ export function entryCheckpoint(level: LevelDef, next: string, entry: 'left' | '
   if (ex && (entry === 'left' || entry === 'right')) cy = Math.max(ex.from + 16, Math.min(ex.to - 30, y));
   if (entry === 'down') cy = 280;
   if (entry === 'up') cy = 60;
+  const high = Math.max(RELAUNCH_TOP, Math.min(RELAUNCH_LOW, level.start.y));
+  if (entry !== 'up' && cy > high) cy = climb(roomColliders(room), cx, cy, high);
   return { room: next, x: cx, y: cy, facing };
+}
+
+/** A relaunch goes no higher than this (room px): room to throw upwards under the ceiling. */
+const RELAUNCH_TOP = 60;
+/** ...and is lifted at least this high, whatever height the level itself starts at. */
+const RELAUNCH_LOW = 180;
+/** The room a plane at a launch point takes up (px either side of it). */
+const PLANE_HALF = { w: 22, h: 9 };
+
+/** As far up from (x, y) towards `top` as the plane fits without touching anything (y stays put if it doesn't fit there). */
+function climb(cols: Collider[], x: number, y: number, top: number): number {
+  const blocked = (yy: number) =>
+    cols.some((c) => x + PLANE_HALF.w > c.x && x - PLANE_HALF.w < c.x + c.w && yy + PLANE_HALF.h > c.y && yy - PLANE_HALF.h < c.y + c.h);
+  if (blocked(y)) return y;
+  let best = y;
+  for (let yy = y - 4; yy >= top; yy -= 4) {
+    if (blocked(yy)) break;
+    best = yy;
+  }
+  if (best - top < 4 && !blocked(top)) best = top;
+  return best;
 }
