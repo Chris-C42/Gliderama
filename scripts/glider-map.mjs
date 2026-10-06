@@ -527,7 +527,8 @@ export function objectRect(ob) {
 
 // ---------------------------------------------------------------------------------------------
 // Objects. Each handler turns one Glider PRO object into Gliderama items (or none, saying why). `c` is the room
-// context: { room, key, emit(item), drop(type, why), note(text), link(ob) → link info, group(ob) → switch group }.
+// context: { room, key, emit(item), drop(type, why), missing(type, how) (drawn as something else), approx(type, how)
+// (not quite as the original works), link(ob) → link info, group(ob) → switch group, ... } (see the converter).
 
 const center = (b) => ({ x: (b.left + b.right) / 2, y: (b.top + b.bottom) / 2 });
 
@@ -1186,5 +1187,56 @@ export const OVERRIDES = {};
  * a few), note }.
  */
 export const STATUS = {
-  'Demo House': { flyable: true, reached: 'the star, through 13 rooms', par: 85, lost: 0, note: 'bot pilot: 58 s of flying, no sheet lost' },
+  'Demo House': { flyable: true, reached: 'the star, through 13 rooms', par: 90, lost: 0, note: 'bot pilot: 62 s of flying, no sheet lost' },
+  Sampler: { flyable: true, reached: 'the star, through 1 room', par: 15, lost: 0, note: 'bot pilot: 4 s of flying, no sheet lost' },
+  'California or Bust!': { flyable: true, reached: 'the star, through 14 rooms', par: 80, lost: 0, note: 'bot pilot: 54 s of flying, no sheet lost' },
+  'Fun House': { flyable: false, reached: 'no stars to find (free flight)', note: 'the house has no stars, as in Glider PRO' },
+  "Castle o' the Air": {
+    flyable: false,
+    reached: '2 of 4 stars, through 11 rooms; stuck in "Castletop" (64,-3), 3 rooms from the next star',
+    lost: 14,
+    note: 'bot pilot: 101 s of flying, 14 sheets lost',
+  },
+  'Empty House': { flyable: true, reached: 'the star, through 12 rooms', par: 65, lost: 0, note: 'bot pilot: 40 s of flying, no sheet lost' },
+  'Davis Station': {
+    flyable: false,
+    reached: '2 of 4 stars, through 35 rooms; stuck in "Is This a Silo?" (63,3), 3 rooms from the next star',
+    lost: 61,
+    note: 'bot pilot: 331 s of flying, 61 sheets lost',
+  },
+  'In The Mirror': { flyable: true, reached: 'the star, through 26 rooms', par: 145, lost: 1, note: 'bot pilot: 96 s of flying, 1 sheet lost' },
+  'Art Museum': { flyable: true, reached: 'all 6 stars, through 46 rooms', par: 320, lost: 5, note: 'bot pilot: 209 s of flying, 5 sheets lost' },
+  "Nemo's Market": { flyable: true, reached: 'all 5 stars, through 34 rooms', par: 455, lost: 9, note: 'bot pilot: 289 s of flying, 9 sheets lost' },
+  Metropolis: { flyable: true, reached: 'all 4 stars, through 38 rooms', par: 915, lost: 58, note: 'bot pilot: 348 s of flying, 58 sheets lost' },
+  'The Asylum Pro': { flyable: true, reached: 'the star, through 15 rooms', par: 125, lost: 0, note: 'bot pilot: 87 s of flying, no sheet lost' },
+  'Grand Prix': { flyable: true, reached: 'all 3 stars, through 49 rooms', par: 425, lost: 2, note: 'bot pilot: 308 s of flying, 2 sheets lost' },
+  'CD Demo House': { flyable: true, reached: 'all 9 stars, through 50 rooms', par: 1485, lost: 55, note: 'bot pilot: 806 s of flying, 55 sheets lost' },
+  Titanic: { flyable: true, reached: 'the star, through 26 rooms', par: 215, lost: 3, note: 'bot pilot: 141 s of flying, 3 sheets lost' },
+  "Rainbow's End": {
+    flyable: false,
+    reached: '1 of 5 stars, through 16 rooms; stuck in "The Playground!" (71,-1), 2 rooms from the next star',
+    lost: 15,
+    note: 'bot pilot: 118 s of flying, 15 sheets lost',
+  },
+  'ImagineHouse PRO II': { flyable: true, reached: 'all 3 stars, through 38 rooms', par: 365, lost: 13, note: 'bot pilot: 196 s of flying, 13 sheets lost' },
+  'Land of Illusion': {
+    flyable: false,
+    reached: '0 of 5 stars, through 13 rooms; stuck in "Honey, I Shrunk The House!" (75,-3), 1 room from the next star',
+    lost: 12,
+    note: 'bot pilot: 104 s of flying, 12 sheets lost',
+  },
+  Slumberland: {
+    flyable: false,
+    reached: '2 of 6 stars, through 21 rooms; stuck in "Give It Some Gas!" (72,-2), 21 rooms from the next star',
+    lost: 61,
+    note: 'bot pilot: 412 s of flying, 61 sheets lost',
+  },
+  SpacePods: {
+    flyable: false,
+    reached: 'not the star, through 3 rooms; stuck in "The Pod Connection" (118,-12), 1 room from the next star',
+    lost: 61,
+    note: 'bot pilot: 141 s of flying, 61 sheets lost',
+  },
+  Leviathan: { flyable: true, reached: 'all 6 stars, through 95 rooms', par: 895, lost: 14, note: 'bot pilot: 598 s of flying, 14 sheets lost' },
+  'Teddy World': { flyable: true, reached: 'the star, through 7 rooms', par: 105, lost: 6, note: 'bot pilot: 38 s of flying, 6 sheets lost' },
 };

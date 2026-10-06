@@ -41,7 +41,7 @@ export interface PlaceDef {
 
 /** What the card says about finishing a house: none to finish, or not shown to be finishable as converted. */
 const classicCaveat = (h: (typeof CLASSIC_HOUSES)[number]) =>
-  h.goal === 'none' ? ' · no stars: free flight' : h.status.flyable ? '' : ' · may not be finishable here';
+  h.goal === 'none' ? ' · no stars: free flight' : h.status.flyable ? '' : ' · not yet known to be finishable here';
 
 /** Glider PRO's houses, as in the original: all of them open from the start. */
 const CLASSIC_LEVELS: CampaignLevel[] = CLASSIC_HOUSES.map((h) => ({

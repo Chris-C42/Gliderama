@@ -5,6 +5,8 @@
  *   CLASSIC_REPORT=all npx vitest run tests/classicReport.test.ts --silent=false
  *   CLASSIC_REPORT=titanic,metropolis CLASSIC_STEPS=20000 CLASSIC_OUT=/tmp/report npx vitest run tests/classicReport.test.ts
  *
+ * A house the bot does not finish going for switches early (as soon as the way to the next star needs one) is flown
+ * again going for them late (only once every star still to find got nowhere), and the better of the two counts.
  * Each house prints a suggested entry for STATUS in scripts/glider-map.mjs (convert again afterwards); with
  * CLASSIC_OUT the full result (route, flights) is written there as <slug>.json.
  */
@@ -34,8 +36,18 @@ describe.skipIf(!which)('Classic Houses flight check', () => {
         const plane = process.env.CLASSIC_PLANE ?? 'glider';
         const t0 = Date.now();
         const log = (s: string) => console.log(`[${slug}] ${s}`);
-        const r = solveHouse(level, RECIPES.find((q) => q.id === plane)!.make(), { maxSteps: Number(process.env.CLASSIC_STEPS ?? 12000), log });
+        const design = RECIPES.find((q) => q.id === plane)!.make();
+        const maxSteps = Number(process.env.CLASSIC_STEPS ?? 12000);
         const n = goalStarIds(level).length;
+        // (CLASSIC_SWITCHES=late: only the second way of choosing targets)
+        const lateOnly = process.env.CLASSIC_SWITCHES === 'late';
+        let r = solveHouse(level, design, { maxSteps, log, switches: lateOnly ? 'late' : 'early' });
+        if (n && !r.solved && !lateOnly) {
+          // the other way of choosing targets: each star tried first, switches only once they got nowhere
+          log(`not solved with switches early (${r.stars.length}/${n} stars): again with switches late`);
+          const r2 = solveHouse(level, design, { maxSteps, log, switches: 'late' });
+          if (r2.stars.length > r.stars.length || (r2.stars.length === r.stars.length && r2.sheetsUsed < r.sheetsUsed)) r = r2;
+        }
         const secs = Math.round(r.t);
         const lost = r.sheetsUsed ? `${r.sheetsUsed} sheet${r.sheetsUsed === 1 ? '' : 's'} lost` : 'no sheet lost';
         const rooms = `${r.rooms.length} room${r.rooms.length === 1 ? '' : 's'}`;
@@ -51,9 +63,10 @@ describe.skipIf(!which)('Classic Houses flight check', () => {
           };
         else {
           const key = r.stuck!.split(' ')[0];
+          const short = r.roomsShort ?? '?';
           status = {
             flyable: false,
-            reached: `${r.stars.length} of ${n} stars, through ${rooms}; stuck in "${level.rooms[key]?.name}" (${key}), ${r.roomsShort ?? '?'} rooms from the next star`,
+            reached: `${n === 1 ? 'not the star' : `${r.stars.length} of ${n} stars`}, through ${rooms}; stuck in "${level.rooms[key]?.name}" (${key}), ${short} room${short === 1 ? '' : 's'} from the next star`,
             lost: r.sheetsUsed,
             note: `bot pilot: ${secs} s of flying, ${lost}`,
           };

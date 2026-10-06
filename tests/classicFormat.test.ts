@@ -11,7 +11,8 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { BinHexError, crc16, decodeBinHex, parseResourceFork } from '../scripts/glider/binhex.mjs';
-import { extractFloorSuite, parseHouse } from '../scripts/glider/house.mjs';
+import { extractFloorSuite, parseHouse, type GPObject } from '../scripts/glider/house.mjs';
+import { flipped, merge, obstacleWalls, subtract } from '../scripts/glider-map.mjs';
 import { colourStats, decodePict } from '../scripts/glider/pict.mjs';
 import { parseRez } from '../scripts/glider/rez.mjs';
 import { convertHouse } from '../scripts/convert-glider-houses.mjs';
@@ -119,6 +120,39 @@ describe('pictures', () => {
     ]);
     expect(rez.PICT).toEqual([{ id: 2000, name: 'Simple Room', data: new Uint8Array([0, 1, 2, 3, 4]) }]);
     expect(rez['snd ']).toBeUndefined();
+  });
+});
+
+describe('mapping', () => {
+  const ob = (o: Partial<GPObject>): GPObject => ({ slot: 0, what: 0, type: 'x', family: 'unknown', ...o });
+  /** Intervals from their ends: iv(0, 10, 20, 30) = [[0, 10], [20, 30]]. */
+  const iv = (...ends: number[]): [number, number][] => ends.flatMap((e, i) => (i % 2 ? [] : [[e, ends[i + 1]] as [number, number]]));
+
+  it('takes walls out of openings, keeping the gaps a glider fits through', () => {
+    expect(merge(iv(50, 60, 0, 20, 10, 30))).toEqual(iv(0, 30, 50, 60));
+    expect(subtract(iv(0, 322), iv(0, 100, 150, 160), 28)).toEqual(iv(100, 150, 160, 322));
+    expect(subtract(iv(0, 322), iv(0, 100, 150, 160), 60)).toEqual(iv(160, 322));
+    expect(subtract(iv(16, 340), iv(0, 400), 28)).toEqual([]);
+  });
+
+  it('finds the walls a house builds of invisible obstacles along the edges', () => {
+    const wall = ob({ type: 'invisObstacle', bounds: { top: 0, left: 0, bottom: 322, right: 16 } });
+    const ground = ob({ type: 'invisBounce', bounds: { top: 300, left: 100, bottom: 322, right: 300 } });
+    const ledge = ob({ type: 'invisObstacle', bounds: { top: 150, left: 200, bottom: 160, right: 300 } });
+    expect(obstacleWalls({ objects: [wall, ground, ledge] })).toEqual({ left: iv(0, 322), right: [], up: iv(0, 16), down: iv(0, 16, 100, 300) });
+  });
+
+  it('follows a trigger to the switch it fires', () => {
+    const blower = ob({ slot: 3, type: 'invisBlower', family: 'blower' });
+    const guitar = ob({ slot: 4, type: 'guitar', family: 'appliance' });
+    const sw = ob({ slot: 1, type: 'invisSwitch', family: 'switch', who: 3 });
+    const links: Record<number, GPObject> = { 1: sw, 3: blower, 4: guitar };
+    const link = (o: GPObject) => (typeof o.who === 'number' && links[o.who] ? { room: null, key: '0,0', target: links[o.who] } : null);
+    expect(flipped(sw, link)?.target).toBe(blower);
+    expect(flipped(ob({ type: 'trigger', family: 'switch', who: 1 }), link)?.target).toBe(blower);
+    // a trigger linked to anything but a switch sets it off (here it goes off by itself): it flips nothing
+    expect(flipped(ob({ type: 'lgTrigger', family: 'switch', who: 4 }), link)).toBeNull();
+    expect(flipped(ob({ type: 'lightSwitch', family: 'switch' }), link)).toBeNull();
   });
 });
 

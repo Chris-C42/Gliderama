@@ -5,13 +5,13 @@
  *
  * Each flight is a beam search over short stretches of stick input. Flights are steered towards a target, room by
  * room along the house's map (side openings, floor and ceiling openings, stairs, transports): the nearest star
- * still to find, or, when the way to every star is shut, a switch that opens one (Glider PRO houses switch
- * transports on and off). A flight that dies leaves its checkpoint behind, and the next sheet is thrown from the
- * most promising checkpoint any flight reached; when no flight gets anywhere new, the bot tries another target.
- * Flights that stop getting anywhere (circling in an updraft) are given up. Things that move (balloons, darts, a
- * leaping fish...) are flown alongside, as they go from the moment the plane comes into their room (or a sheet is
- * thrown there: the play lab's autopilot makes the room afresh before each throw), and touching one ends the flight.
- * If the bot finds a way through, a player with the same controls can.
+ * still to find, or, when the way to it is shut or needs air that is switched off, a switch that opens it (Glider
+ * PRO houses switch transports and blowers on and off). A flight that dies leaves its checkpoint behind, and the
+ * next sheet is thrown from the most promising checkpoint any flight reached; when no flight gets anywhere new, the
+ * bot tries another target. Flights that stop getting anywhere (circling in an updraft) are given up. Things that
+ * move (balloons, darts, a leaping fish...) are flown alongside, as they go from the moment the plane comes into
+ * their room (or a sheet is thrown there: the play lab's autopilot makes the room afresh before each throw), and
+ * touching one ends the flight. If the bot finds a way through, a player with the same controls can.
  */
 
 import { analyzeDesign } from '../../src/paper/aero';
@@ -214,15 +214,16 @@ export function houseMap(level: LevelDef): Map<string, Way[]> {
 }
 
 /**
- * Rising air up to the top of a room somewhere between x0 and x1 (what it takes to leave through the ceiling): true
- * when some always blows there, else the switch groups of what blows there only when switched (none: no lift).
+ * Rising air up to `top` (by default the top of the room: what it takes to leave through the ceiling) somewhere
+ * between x0 and x1: true when some always blows there, else the switch groups of what blows there only when
+ * switched (none: no lift).
  */
-function liftUnder(room: RoomDef, x0: number, x1: number): true | string[] {
+function liftUnder(room: RoomDef, x0: number, x1: number, top = 30): true | string[] {
   const gated: string[] = [];
   for (const it of room.items) {
     const w = Number(it.w ?? 60);
     if (it.x > x1 || it.x + w < x0) continue;
-    const up = it.t === 'floorVent' ? Number(it.reach ?? LAYOUT.floor) <= 30 : it.t === 'current' && (it.dir ?? 'up') === 'up' && it.y <= 30;
+    const up = it.t === 'floorVent' ? Number(it.reach ?? LAYOUT.floor) <= top : it.t === 'current' && (it.dir ?? 'up') === 'up' && it.y <= top;
     if (!up) continue;
     if (typeof it.group !== 'string') return true;
     gated.push(it.group);
@@ -302,6 +303,12 @@ export interface HouseSolveOptions {
   onReplay?: (n: { key: string; plane: Plane; t: number }, over: boolean) => void;
   /** Every game tick of the search (debugging). */
   onTick?: (p: Plane, wind: { x: number; y: number }, colliders: number) => void;
+  /**
+   * When to go for a switch: 'early' (the default) as soon as the way to the nearest star needs one (it is shut, or
+   * needs air that is switched off); 'late' only once every star still to find has got nowhere from here (the bot
+   * tries the star itself first: a plane can often climb where the original's glider needed the air).
+   */
+  switches?: 'early' | 'late';
 }
 
 export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOptions = {}): HouseSolveResult {
@@ -352,9 +359,21 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       if (w.gate) gates.add(w.gate.replace(/^!/, ''));
       for (const g of w.liftGates ?? []) gates.add(g.replace(/^!/, ''));
     }
+  // a star high up over rising air that only blows when switched: the switches count as gates of the way to it, and
+  // while the air is off the star counts as far off
+  const starGates = new Map<string, string[]>();
+  for (const [k, r] of Object.entries(level.rooms))
+    for (const it of r.items) {
+      if (it.t !== 'star' || !it.goal || typeof it.id !== 'string') continue;
+      stars.set(it.id, { key: it.id, kind: 'star', room: k, x: it.x, y: it.y });
+      const lift = it.y < 200 ? liftUnder(r, it.x, it.x, it.y + 20) : true;
+      if (lift === true || !lift.length) continue;
+      starGates.set(it.id, lift);
+      for (const g of lift) gates.add(g.replace(/^!/, ''));
+    }
+  const starCost = (t: Target, sw: Map<string, boolean>) => (starGates.get(t.key)?.some((g) => groupOn(g, sw)) === false ? NO_LIFT : 0);
   for (const [k, r] of Object.entries(level.rooms))
     r.items.forEach((it, i) => {
-      if (it.t === 'star' && it.goal && typeof it.id === 'string') stars.set(it.id, { key: it.id, kind: 'star', room: k, x: it.x, y: it.y });
       if (it.t === 'switch' && typeof it.group === 'string' && gates.has(it.group)) {
         const w = it.hidden ? Number(it.w ?? 16) : 10;
         const h = it.hidden ? Number(it.h ?? 16) : 16;
@@ -378,35 +397,45 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
   // up through ceiling openings): a ceiling opening without rising air counts as a long way round
   const distCache = new Map<string, Map<string, number>>();
   const open = (sw: Map<string, boolean>) => (w: Way) => !w.gate || groupOn(w.gate, sw);
-  const distTo = (room: string, sw: Map<string, boolean>) => {
-    const k = `${room}|${[...gates].map((g) => (groupOn(g, sw) ? 1 : 0)).join('')}`;
-    const cost = (w: Way) => wayCost(w, sw);
+  const distTo = (room: string, sw: Map<string, boolean>, plain = false) => {
+    const k = `${room}|${[...gates].map((g) => (groupOn(g, sw) ? 1 : 0)).join('')}${plain ? '|plain' : ''}`;
+    const cost = (w: Way) => (plain ? 1 : wayCost(w, sw));
     return distCache.get(k) ?? distCache.set(k, distancesTo(map, room, open(sw), cost)).get(k)!;
   };
   /**
-   * What to fly to from `room`: the nearest star still to find, or a switch on the way when flipping it makes the
-   * way to one shorter (or opens it at all). `skip`: targets that got nowhere from here.
+   * What to fly to from `room`: the nearest star still to find; when the way to it is shut, or needs air that is
+   * switched off (a climb out through a ceiling, a star high up), a switch on the way that makes the way to one
+   * shorter. `skip`: targets that got nowhere from here.
    */
+  const late = opts.switches === 'late';
   const chooseTarget = (room: string, sw: Map<string, boolean>, skip: Set<string>): Target | null => {
-    const left = goals.filter((id) => !got.has(id) && !skip.has(id)).map((id) => stars.get(id)!);
+    const toFind = goals.filter((id) => !got.has(id)).map((id) => stars.get(id)!);
+    const left = toFind.filter((t) => !skip.has(t.key));
+    const cost = (t: Target, state: Map<string, boolean>, from: string) => (distTo(t.room, state).get(from) ?? Infinity) + starCost(t, state);
     let best: Target | null = null;
     let bd = Infinity;
-    for (const s of left) {
-      const d = distTo(s.room, sw).get(room) ?? Infinity;
+    for (const t of left) {
+      const d = cost(t, sw, room);
       if (d < bd) {
         bd = d;
-        best = s;
+        best = t;
       }
     }
+    // the way to the nearest star is clear (no rising air missing on it), or the star itself is to be tried first
+    if (best && (late || bd <= (distTo(best.room, sw, true).get(room) ?? Infinity))) return best;
+    // a switch that opens the way to a star or makes it shorter (late: any star still to find, those that got
+    // nowhere from here too)
+    const after = late ? toFind : left;
+    if (late) bd = Math.min(...toFind.map((t) => cost(t, sw, room)), Infinity);
     for (const [group, list] of switchesOf) {
       const flipped = new Map(sw).set(group, !(sw.get(group) ?? true));
       for (const s of list) {
         if (skip.has(s.key)) continue;
         const toSwitch = distTo(s.room, sw).get(room) ?? Infinity;
         if (toSwitch === Infinity) continue;
-        const after = Math.min(...left.map((t) => distTo(t.room, flipped).get(s.room) ?? Infinity), Infinity);
-        if (after < Infinity && toSwitch + after < bd) {
-          bd = toSwitch + after;
+        const d = toSwitch + Math.min(...after.map((t) => cost(t, flipped, s.room)), Infinity);
+        if (d < bd) {
+          bd = d;
           best = s;
         }
       }
@@ -715,8 +744,14 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       target = chooseTarget(checkpoint.room, switchesNow, skip);
       if (!target || sheets > maxSheets) break;
       const k = cpKey(checkpoint, target);
-      tryNow = TRIES[tries.get(k) ?? 0];
-      tries.set(k, (tries.get(k) ?? 0) + 1);
+      const tried = tries.get(k) ?? 0;
+      if (tried >= TRIES.length) {
+        // thrown from here for it every way there is: another target
+        skip.add(target.key);
+        continue;
+      }
+      tryNow = TRIES[tried];
+      tries.set(k, tried + 1);
       flying = throwsFrom(checkpoint);
       if (sheets > 0 || got.size > 0)
         trace.push(`sheet ${sheets} from ${checkpoint.room} (${Math.round(checkpoint.x)},${Math.round(checkpoint.y)}) for ${target.key}`);

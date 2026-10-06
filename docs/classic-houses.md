@@ -40,7 +40,7 @@ CLASSIC_REPORT=all npx vitest run tests/classicReport.test.ts --silent=false    
 
 Each house JSON is a `LevelDef` plus `meta`: the original name and file, authors and credit, rooms, objects
 mapped and dropped (by type and reason), approximations, the missing art, conversion notes and the flight check's
-status. The houses add up to about 2.4 MB of JSON (about 300 KB gzipped), so they are kept out of the PWA's
+status. The houses add up to about 2.5 MB of JSON (about 330 KB gzipped), so they are kept out of the PWA's
 precache: the build puts each in `assets/houses/`, and the service worker caches a house the first time it is
 played (`vite.config.ts`). The catalog that the campaign card needs is part of the app.
 
@@ -192,7 +192,7 @@ the original stands on the floor; furniture and clutter are drawn over the origi
 | Cobweb | 86 | cobweb that catches the plane and holds it a moment |
 | Drip | 477 | drip |
 | Fireplace / wall window / rug | 33 / 195 / 81 | fireplace / window / rug |
-| Mirror / Ozma picture | 667 / 77 | wall mirror / picture frame (no art of its own) |
+| Mirror / Ozma picture | 667 / 77 | wall mirror / a picture frame (the Ozma picture has no art of its own) |
 | Calendar / bulletin board | 58 / 38 | wall calendar / cork board with notes |
 | Mouse hole / teddy bear / cloud / faucet | 174 / 169 / 1860 / 28 | mouse hole in the skirting / teddy bear / cloud / tap |
 | Flower, vase | 547, 158 | plant (no art of their own; a flower in a vase is part of the vase's plant) |
@@ -222,16 +222,42 @@ banner, the goal and the credit; the end card shows the house's trailer.
 
 The flight check (`tests/classicReport.test.ts`) flies every house with the bot pilot
 (`tests/helpers/houseSolver.ts`) in the Simple Glider: a beam search over stick input, room by room along the
-house's map, towards the nearest star still to find, or a switch on the way when flipping it opens a shorter way (a
-switched transport, switched air up through a ceiling opening). The menagerie flies alongside, from the moment the
-plane comes into its room (the game makes a room's things afresh then; the play lab's autopilot makes the room
-afresh before each throw, as the plans assume), and touching anything that hurts ends a flight; a star touched as
-the plane is lost still counts, as in the game. *Finished* means the bot collected every star, so a player with the
+house's map, towards the nearest star still to find; when the way there is shut or needs air that is switched off
+(a switched transport, a climb out through a ceiling, a star high up over a switched blower), towards the switch
+that opens it (a house it does not finish that way it flies again trying each star itself first, the switches only
+once the stars got nowhere; the better of the two counts). The menagerie flies alongside, from the moment the plane
+comes into its room (the game makes a room's things afresh then; the play lab's autopilot makes the room afresh
+before each throw, as the plans assume), and touching anything that hurts ends a flight; a star touched as the
+plane is lost still counts, as in the game. *Finished* means the bot collected every star, so a player with the
 same controls can. A house it does not finish may well be flyable: Glider PRO's tricks (hanging still in a column,
 quick switch timing, long detours for a switch) are hard for a paper plane and harder for a search; where it got
-stuck is given.
+stuck is given. The bot finishes 15 of the 21 houses that have stars (the Fun House has none); the Demo House and
+The Asylum Pro were also flown through to the end in the browser by the play lab's autopilot.
 
-<!-- status table: generated from the flight check -->
+| House | Authors | Rooms | Objects mapped / dropped | Stars | Flight check (bot pilot) | Par |
+|---|---|---:|---:|---:|---|---:|
+| Demo House | John Calhoun & Kim Money | 45 | 129 / 9 | 1 | **finished**: the star, through 13 rooms; 62 s of flying, no sheet lost | 90 s |
+| Sampler | — | 2 | 11 / 0 | 1 | **finished**: the star, through 1 room; 4 s of flying, no sheet lost | 15 s |
+| California or Bust! | — | 16 | 222 / 86 | 1 | **finished**: the star, through 14 rooms; 54 s of flying, no sheet lost | 80 s |
+| Fun House | — | 43 | 348 / 58 | 0 | no stars to find (free flight); the house has no stars, as in Glider PRO | — |
+| Castle o' the Air | John Calhoun | 85 | 611 / 9 | 4 | 2 of 4 stars, through 11 rooms; stuck in "Castletop" (64,-3), 3 rooms from the next star; 101 s of flying, 14 sheets lost | — |
+| Empty House | — | 35 | 78 / 0 | 1 | **finished**: the star, through 12 rooms; 40 s of flying, no sheet lost | 65 s |
+| Davis Station | Jonathan Chin (alias Paul Finn) & John Calhoun | 65 | 511 / 80 | 4 | 2 of 4 stars, through 35 rooms; stuck in "Is This a Silo?" (63,3), 3 rooms from the next star; 331 s of flying, 61 sheets lost | — |
+| In The Mirror | Jonathan Chin (alias Paul Finn) | 97 | 729 / 66 | 1 | **finished**: the star, through 26 rooms; 96 s of flying, 1 sheet lost | 145 s |
+| Art Museum | — | 109 | 476 / 93 | 6 | **finished**: all 6 stars, through 46 rooms; 209 s of flying, 5 sheets lost | 320 s |
+| Nemo's Market | Ward Hartenstein | 124 | 456 / 380 | 5 | **finished**: all 5 stars, through 34 rooms; 289 s of flying, 9 sheets lost | 455 s |
+| Metropolis | Jonathan Chin (alias Paul Finn) & John Calhoun | 127 | 730 / 79 | 4 | **finished**: all 4 stars, through 38 rooms; 348 s of flying, 58 sheets lost | 915 s |
+| The Asylum Pro | Steve Sullivan | 140 | 1019 / 77 | 1 | **finished**: the star, through 15 rooms; 87 s of flying, no sheet lost | 125 s |
+| Grand Prix | Jonathan Chin (alias Paul Finn) | 175 | 1232 / 49 | 3 | **finished**: all 3 stars, through 49 rooms; 308 s of flying, 2 sheets lost | 425 s |
+| CD Demo House | John Calhoun & Kim Money | 206 | 866 / 667 | 9 | **finished**: all 9 stars, through 50 rooms; 806 s of flying, 55 sheets lost | 1485 s |
+| Titanic | Jonathan Chin (alias Paul Finn) & John Calhoun | 208 | 1259 / 115 | 1 | **finished**: the star, through 26 rooms; 141 s of flying, 3 sheets lost | 215 s |
+| Rainbow's End | Ward Hartenstein | 223 | 1595 / 78 | 5 | 1 of 5 stars, through 16 rooms; stuck in "The Playground!" (71,-1), 2 rooms from the next star; 118 s of flying, 15 sheets lost | — |
+| ImagineHouse PRO II | Jonathan Chin (alias Paul Finn) | 279 | 1758 / 56 | 3 | **finished**: all 3 stars, through 38 rooms; 196 s of flying, 13 sheets lost | 365 s |
+| Land of Illusion | Ward Hartenstein | 303 | 1626 / 190 | 5 | 0 of 5 stars, through 13 rooms; stuck in "Honey, I Shrunk The House!" (75,-3), 1 room from the next star; 104 s of flying, 12 sheets lost | — |
+| Slumberland | John Calhoun (first house and top of fourth house), Jonathan Chin (second house), Steve Sullivan (third house), Ward Hartenstein (bottom of fourth house) | 383 | 2950 / 46 | 6 | 2 of 6 stars, through 21 rooms; stuck in "Give It Some Gas!" (72,-2), 21 rooms from the next star; 412 s of flying, 61 sheets lost | — |
+| SpacePods | Ward Hartenstein | 402 | 2962 / 2878 | 1 | not the star, through 3 rooms; stuck in "The Pod Connection" (118,-12), 1 room from the next star; 141 s of flying, 61 sheets lost | — |
+| Leviathan | Jonathan Chin (alias Paul Finn) | 472 | 3155 / 180 | 6 | **finished**: all 6 stars, through 95 rooms; 598 s of flying, 14 sheets lost | 895 s |
+| Teddy World | Shawn Brenneman | 531 | 2957 / 564 | 1 | **finished**: the star, through 7 rooms; 38 s of flying, 6 sheets lost | 105 s |
 
 ## Glider PRO objects without Gliderama art
 
