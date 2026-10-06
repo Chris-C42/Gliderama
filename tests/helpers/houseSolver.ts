@@ -1193,12 +1193,15 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       thrown: { ...f, wait: f.wait ?? 0, stepTicks: f.stepTicks ?? stepTicks },
       steps: null,
     };
+    let lost = null as Node | null;
     for (const s of f.steps) {
       const prev: Node = n!;
-      n = advance(prev, { dir: s.dir, pitch: s.pitch, boost: false }, null, () => {});
+      n = advance(prev, { dir: s.dir, pitch: s.pitch, boost: false }, null, (d) => (lost = d));
       opts.onReplay?.(n ?? prev, !n);
       if (!n) break;
     }
+    // (how the flight ended, lost or not: the switches it left as they are for the next)
+    const end = n ?? lost;
     return {
       solved: !!n,
       starsTotal: goals.length,
@@ -1206,9 +1209,10 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       sheetsUsed: 0,
       t: n?.t ?? 0,
       rooms: [],
-      trace: n?.trace ?? [],
+      trace: end?.trace ?? [],
       flights: [],
       stepTicks,
+      switches: end ? Object.fromEntries(end.switches) : undefined,
     };
   }
 

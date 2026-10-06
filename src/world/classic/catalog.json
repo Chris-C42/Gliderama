@@ -15,9 +15,9 @@
   "status": {
    "flyable": true,
    "reached": "the star, through 13 rooms",
-   "par": 90,
+   "par": 60,
    "lost": 0,
-   "note": "bot pilot: 62 s of flying, no sheet lost"
+   "note": "bot pilot: 36 s of flying, no sheet lost"
   }
  },
  {
@@ -35,7 +35,7 @@
    "reached": "the star, through 1 room",
    "par": 15,
    "lost": 0,
-   "note": "bot pilot: 4 s of flying, no sheet lost"
+   "note": "bot pilot: 2 s of flying, no sheet lost"
   }
  },
  {
@@ -53,7 +53,7 @@
    "reached": "the star, through 14 rooms",
    "par": 80,
    "lost": 0,
-   "note": "bot pilot: 54 s of flying, no sheet lost"
+   "note": "bot pilot: 55 s of flying, no sheet lost"
   }
  },
  {
@@ -85,10 +85,11 @@
   "goal": "stars",
   "blurb": null,
   "status": {
-   "flyable": false,
-   "reached": "2 of 4 stars, through 11 rooms; stuck in \"Castletop\" (64,-3), 3 rooms from the next star",
-   "lost": 14,
-   "note": "bot pilot: 101 s of flying, 14 sheets lost"
+   "flyable": true,
+   "reached": "all 4 stars, through 31 rooms",
+   "par": 280,
+   "lost": 3,
+   "note": "bot pilot: 189 s of flying, 3 sheets lost"
   }
  },
  {
@@ -104,9 +105,9 @@
   "status": {
    "flyable": true,
    "reached": "the star, through 12 rooms",
-   "par": 65,
+   "par": 60,
    "lost": 0,
-   "note": "bot pilot: 40 s of flying, no sheet lost"
+   "note": "bot pilot: 38 s of flying, no sheet lost"
   }
  },
  {
@@ -123,10 +124,11 @@
   "goal": "stars",
   "blurb": null,
   "status": {
-   "flyable": false,
-   "reached": "2 of 4 stars, through 35 rooms; stuck in \"Is This a Silo?\" (63,3), 3 rooms from the next star",
-   "lost": 61,
-   "note": "bot pilot: 331 s of flying, 61 sheets lost"
+   "flyable": true,
+   "reached": "all 4 stars, through 43 rooms",
+   "par": 405,
+   "lost": 12,
+   "note": "bot pilot: 232 s of flying, 12 sheets lost"
   }
  },
  {
@@ -143,10 +145,10 @@
   "blurb": null,
   "status": {
    "flyable": true,
-   "reached": "the star, through 26 rooms",
-   "par": 145,
+   "reached": "the star, through 24 rooms",
+   "par": 125,
    "lost": 1,
-   "note": "bot pilot: 96 s of flying, 1 sheet lost"
+   "note": "bot pilot: 82 s of flying, 1 sheet lost"
   }
  },
  {
@@ -161,10 +163,10 @@
   "blurb": null,
   "status": {
    "flyable": true,
-   "reached": "all 6 stars, through 46 rooms",
-   "par": 320,
-   "lost": 5,
-   "note": "bot pilot: 209 s of flying, 5 sheets lost"
+   "reached": "all 6 stars, through 48 rooms",
+   "par": 330,
+   "lost": 4,
+   "note": "bot pilot: 224 s of flying, 4 sheets lost"
   }
  },
  {
@@ -181,10 +183,10 @@
   "blurb": null,
   "status": {
    "flyable": true,
-   "reached": "all 5 stars, through 34 rooms",
-   "par": 455,
-   "lost": 9,
-   "note": "bot pilot: 289 s of flying, 9 sheets lost"
+   "reached": "all 5 stars, through 32 rooms",
+   "par": 355,
+   "lost": 8,
+   "note": "bot pilot: 219 s of flying, 8 sheets lost"
   }
  },
  {
@@ -202,10 +204,10 @@
   "blurb": "Home of a thousand drips, darts and ducts.",
   "status": {
    "flyable": true,
-   "reached": "all 4 stars, through 38 rooms",
-   "par": 915,
-   "lost": 58,
-   "note": "bot pilot: 348 s of flying, 58 sheets lost"
+   "reached": "all 4 stars, through 39 rooms",
+   "par": 320,
+   "lost": 6,
+   "note": "bot pilot: 202 s of flying, 6 sheets lost"
   }
  },
  {
@@ -223,9 +225,9 @@
   "status": {
    "flyable": true,
    "reached": "the star, through 15 rooms",
-   "par": 125,
-   "lost": 0,
-   "note": "bot pilot: 87 s of flying, no sheet lost"
+   "par": 95,
+   "lost": 1,
+   "note": "bot pilot: 60 s of flying, 1 sheet lost"
   }
  },
  {
@@ -243,9 +245,9 @@
   "status": {
    "flyable": true,
    "reached": "all 3 stars, through 49 rooms",
-   "par": 425,
+   "par": 310,
    "lost": 2,
-   "note": "bot pilot: 308 s of flying, 2 sheets lost"
+   "note": "bot pilot: 219 s of flying, 2 sheets lost"
   }
  },
  {
@@ -263,10 +265,10 @@
   "blurb": "Sample rooms from the CD houses.",
   "status": {
    "flyable": true,
-   "reached": "all 9 stars, through 50 rooms",
-   "par": 1485,
-   "lost": 55,
-   "note": "bot pilot: 806 s of flying, 55 sheets lost"
+   "reached": "all 9 stars, through 51 rooms",
+   "par": 1185,
+   "lost": 36,
+   "note": "bot pilot: 689 s of flying, 36 sheets lost"
   }
  },
  {
@@ -284,10 +286,10 @@
   "blurb": "Find the front of the ship.",
   "status": {
    "flyable": true,
-   "reached": "the star, through 26 rooms",
-   "par": 215,
-   "lost": 3,
-   "note": "bot pilot: 141 s of flying, 3 sheets lost"
+   "reached": "the star, through 21 rooms",
+   "par": 160,
+   "lost": 6,
+   "note": "bot pilot: 80 s of flying, 6 sheets lost"
   }
  },
  {
@@ -303,10 +305,11 @@
   "goal": "stars",
   "blurb": null,
   "status": {
-   "flyable": false,
-   "reached": "1 of 5 stars, through 16 rooms; stuck in \"The Playground!\" (71,-1), 2 rooms from the next star",
-   "lost": 15,
-   "note": "bot pilot: 118 s of flying, 15 sheets lost"
+   "flyable": true,
+   "reached": "all 5 stars, through 63 rooms",
+   "par": 590,
+   "lost": 8,
+   "note": "bot pilot: 400 s of flying, 8 sheets lost"
   }
  },
  {
@@ -323,10 +326,10 @@
   "blurb": null,
   "status": {
    "flyable": true,
-   "reached": "all 3 stars, through 38 rooms",
-   "par": 365,
-   "lost": 13,
-   "note": "bot pilot: 196 s of flying, 13 sheets lost"
+   "reached": "all 3 stars, through 39 rooms",
+   "par": 255,
+   "lost": 7,
+   "note": "bot pilot: 146 s of flying, 7 sheets lost"
   }
  },
  {
@@ -343,9 +346,9 @@
   "blurb": null,
   "status": {
    "flyable": false,
-   "reached": "0 of 5 stars, through 13 rooms; stuck in \"Honey, I Shrunk The House!\" (75,-3), 1 room from the next star",
-   "lost": 12,
-   "note": "bot pilot: 104 s of flying, 12 sheets lost"
+   "reached": "4 of 5 stars, through 65 rooms; stuck in \"Transformation\" (62,-9), 7 rooms from the next star",
+   "lost": 24,
+   "note": "bot pilot: 638 s of flying, 24 sheets lost; the last star is seven rooms up, a climb made on helium in Glider PRO, with no rising air here"
   }
  },
  {
@@ -364,10 +367,11 @@
   "goal": "stars",
   "blurb": null,
   "status": {
-   "flyable": false,
-   "reached": "2 of 6 stars, through 21 rooms; stuck in \"Give It Some Gas!\" (72,-2), 21 rooms from the next star",
-   "lost": 61,
-   "note": "bot pilot: 412 s of flying, 61 sheets lost"
+   "flyable": true,
+   "reached": "all 6 stars, through 124 rooms",
+   "par": 1080,
+   "lost": 33,
+   "note": "bot pilot: 626 s of flying, 33 sheets lost"
   }
  },
  {
@@ -383,10 +387,11 @@
   "goal": "stars",
   "blurb": null,
   "status": {
-   "flyable": false,
-   "reached": "not the star, through 3 rooms; stuck in \"The Pod Connection\" (118,-12), 1 room from the next star",
-   "lost": 61,
-   "note": "bot pilot: 141 s of flying, 61 sheets lost"
+   "flyable": true,
+   "reached": "the star, through 11 rooms",
+   "par": 130,
+   "lost": 5,
+   "note": "bot pilot: 61 s of flying, 5 sheets lost"
   }
  },
  {
@@ -403,10 +408,10 @@
   "blurb": null,
   "status": {
    "flyable": true,
-   "reached": "all 6 stars, through 95 rooms",
-   "par": 895,
-   "lost": 14,
-   "note": "bot pilot: 598 s of flying, 14 sheets lost"
+   "reached": "all 6 stars, through 150 rooms",
+   "par": 1470,
+   "lost": 27,
+   "note": "bot pilot: 963 s of flying, 27 sheets lost"
   }
  },
  {
@@ -424,9 +429,9 @@
   "status": {
    "flyable": true,
    "reached": "the star, through 7 rooms",
-   "par": 105,
-   "lost": 6,
-   "note": "bot pilot: 38 s of flying, 6 sheets lost"
+   "par": 40,
+   "lost": 0,
+   "note": "bot pilot: 23 s of flying, no sheet lost"
   }
  }
 ]
