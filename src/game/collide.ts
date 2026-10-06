@@ -121,13 +121,17 @@ export function polyVsBox(poly: V[], box: Collider): Contact | null {
     const c = bc.x * ax.x + bc.y * ax.y;
     const bmin = c - r;
     const bmax = c + r;
-    const overlap = Math.min(pmax, bmax) - Math.max(pmin, bmin);
-    if (overlap <= 0) return null;
+    if (Math.min(pmax, bmax) - Math.max(pmin, bmin) <= 0) return null;
+    // how far the polygon must move along the axis to be clear of the box, out of either side (where the polygon
+    // lies within the box along it, that is past the nearer side, not just its own thickness: a thin hull deep in a
+    // wall is pushed back out of the wall, not along it)
+    const up = bmax - pmin;
+    const down = pmax - bmin;
+    const overlap = Math.min(up, down);
     if (overlap < best) {
       best = overlap;
       // normal points from box towards polygon
-      const pc = (pmin + pmax) / 2;
-      bn = pc >= c ? { x: ax.x, y: ax.y } : { x: -ax.x, y: -ax.y };
+      bn = up <= down ? { x: ax.x, y: ax.y } : { x: -ax.x, y: -ax.y };
     }
   }
   // deepest point of the polygon against the normal

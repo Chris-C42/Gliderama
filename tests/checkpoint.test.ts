@@ -44,4 +44,20 @@ describe('relaunch checkpoints', () => {
   it('dropping in through the ceiling still starts just under it', () => {
     expect(entryCheckpoint(level([]), '1,0', 'up', 320, 2, 1).y).toBe(60);
   });
+
+  it('up or down a shaft, it is thrown from inside the shaft, clear of its walls', () => {
+    // the opening in the floor is a shaft x 280..380 between blocks: a plane that came up it close to one wall is
+    // thrown from just off that wall
+    const shaft: ItemDef[] = [
+      { t: 'solid', x: 0, y: 0, w: 280, h: 360 },
+      { t: 'solid', x: 380, y: 0, w: 260, h: 360 },
+    ];
+    const up = entryCheckpoint(level(shaft), '1,0', 'down', 375, 355, 1);
+    expect(up.x).toBeGreaterThanOrEqual(350);
+    expect(up.x).toBeLessThanOrEqual(358);
+    expect(up.y).toBe(110);
+    const down = entryCheckpoint(level(shaft), '1,0', 'up', 284, 2, -1);
+    expect(down.x).toBeGreaterThanOrEqual(302);
+    expect(down.x).toBeLessThanOrEqual(310);
+  });
 });
