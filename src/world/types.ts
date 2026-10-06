@@ -96,6 +96,9 @@ export interface Rect {
 }
 
 export interface Collider extends Rect {
-  /** What the surface is made of / does on contact. */
-  kind?: 'solid' | 'soft' | 'water' | 'fire' | 'sticky' | 'sharp';
+  /**
+   * What the surface is made of / does on contact. 'slick': spilt grease, landed on from above only, that the plane
+   * skates along without friction or harm (Glider PRO's grease).
+   */
+  kind?: 'solid' | 'soft' | 'water' | 'fire' | 'sticky' | 'sharp' | 'slick';
 }

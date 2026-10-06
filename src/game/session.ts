@@ -788,6 +788,13 @@ export class Session {
         },
         water: () => this.sfx('splash'),
         fire: () => this.sfx('burn'),
+        slide: () => {
+          this.sfx('skid');
+          if (Math.random() < 0.3) {
+            const q = planePx(this.plane);
+            this.renderer.particles.spawn({ x: q.x - this.plane.facing * 8, y: q.y + 4, vx: -this.plane.vx * 20, vy: -20 - Math.random() * 20, grav: 300, life: 0.35, max: 0.35, ...rgb(R.ink[2]), a: 1 });
+          }
+        },
       },
     );
 

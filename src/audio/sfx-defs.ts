@@ -227,6 +227,14 @@ export const SFX_DEFS = {
     layers: [{ wave: 'sine', freq: 2890, duration: 1, vol: 0.06, env: { a: 0.002, d: 0.6, s: 0, r: 0.2 }, arp: { steps: [0, 7, 4, 12, 9], interval: 0.13, mode: 'once', retrigger: true } }],
     cooldown: 0.8, maxVoices: 2,
   },
+  /** Skating along spilt grease: a soft, slippery swish. */
+  skid: {
+    gain: 1,
+    wave: 'noise', freq: 9000, duration: 0.22, vol: 0.18,
+    env: { a: 0.03, d: 0.15, s: 0, r: 0.04 },
+    filter: { type: 'bandpass', freq: 1800, endFreq: 1200, time: 0.2, q: 2.5 },
+    cooldown: 0.2, maxVoices: 1,
+  },
   /** Toaster pop: a springy "boing" with a clunk. */
   toast: {
     wave: 'triangle', freq: 180, path: [[0.05, 330], [0.1, 250], [0.15, 380], [0.22, 260], [0.3, 300], [0.4, 240]],

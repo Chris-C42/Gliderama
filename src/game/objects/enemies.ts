@@ -691,12 +691,14 @@ export const shredder: ObjFactory = (def, id) => {
 };
 
 // ---------------------------------------------------------------------------------------------
-// Grease can (Glider PRO 32 × 27): clip it and it tips over, spilling a slick along the shelf the way it faces
-// (`spilled`: it lies there spilt already).
+// Grease can (Glider PRO 32 × 27, Sources/Grease.c): clip it and it tips over, and a line of grease runs out along the
+// shelf the way it faces. The spilt grease is a slick ('slick' collider): a plane that comes down onto it skates its
+// length at the shelf's height, unharmed, as the glider slides in Glider PRO. `spilled`: it lies there spilt already;
+// `group`: a switch (Glider PRO's trigger) spills it from afar. `reach`: how far the grease runs (px from the can).
 
-function paintCan(px: Px, dir: 1 | -1, tipped: boolean) {
+/** The can upright, spout to the right, on a 40 × 40 canvas: body x 10..28, its foot on the bottom edge. */
+function canPicture(): Px {
   const c = Px.create(40, 40);
-  // drawn upright, spout to the right, on a 40 × 40 canvas with its foot at the bottom
   c.rect(10, 18, 18, 22, R.steel[2]);
   c.rect(11, 19, 16, 20, R.steel[4]);
   c.vline(12, 19, 20, R.steel[5]);
@@ -709,49 +711,93 @@ function paintCan(px: Px, dir: 1 | -1, tipped: boolean) {
   c.rect(5, 21, 5, 2, R.steel[2]);
   c.rect(5, 21, 2, 12, R.steel[2]);
   c.rect(5, 31, 5, 2, R.steel[2]);
+  return c;
+}
+
+/** The can tipped `angle` (0 upright .. π/2 on its side) over its front foot, which is at (PIVOT.x, PIVOT.y) of the sprite. */
+const CAN = { w: 72, h: 48, pivotX: 34, pivotY: 47 };
+function paintCan(px: Px, can: Px, dir: 1 | -1, angle: number) {
   const ctx = px.ctx;
   ctx.save();
-  ctx.translate(24, 24);
-  if (dir < 0) ctx.scale(-1, 1);
-  // tipped: lying on its side, spout to the floor ahead
-  if (tipped) ctx.rotate(Math.PI / 2);
-  ctx.drawImage(c.canvas, tipped ? -24 : -20, tipped ? -20 : -24);
+  ctx.translate(CAN.pivotX, CAN.pivotY);
+  ctx.scale(dir, 1);
+  ctx.rotate(angle);
+  ctx.drawImage(can.canvas, -28, -40);
   ctx.restore();
 }
 
 export const grease: ObjFactory = (def, id, gfx) => {
   const dir: 1 | -1 = num(def.dir, 1) >= 0 ? 1 : -1;
-  const reach = num(def.reach, 70);
-  // the can is 40 wide and stands on the surface at its box's bottom
+  const reach = Math.max(24, num(def.reach, 70));
+  // the can (40 wide) stands on the surface at its box's bottom; it tips over its front foot
   const foot = def.y + num(def.h, 29);
-  const can = spriteOf(gfx, 48, 48, 0, 7);
-  const slick = spriteOf(gfx, Math.max(8, Math.round(reach)), 4, 0, 6);
-  let tipped = def.spilled === true;
-  let spread = tipped ? reach : 0;
+  const pivot = dir > 0 ? def.x + 28 : def.x + 12;
+  // the grease runs from the can's mouth (once it lies on its side) to `reach` from where it stood
+  const x0 = dir > 0 ? pivot + 24 : def.x + 8 - reach;
+  const x1 = dir > 0 ? def.x + 32 + reach : pivot - 24;
+  const len = Math.max(8, x1 - x0);
+  const picture = gfx ? canPicture() : null;
+  const can = spriteOf(gfx, CAN.w, CAN.h, 0, 7);
+  const slick = spriteOf(gfx, Math.round(len), 4, 0, 6);
+  let state: 'up' | 'tipping' | 'running' | 'spilt' = def.spilled === true ? 'spilt' : 'up';
+  let tip = state === 'spilt' ? 1 : 0;
+  let spread = state === 'spilt' ? len : 0;
+  let wasOn: boolean | null = null;
+  const spill = (ctx: ObjCtx) => {
+    if (state !== 'up') return;
+    state = 'tipping';
+    ctx.api.sfx('bump', { vol: 0.3, pitch: 6 });
+    ctx.api.sfx('splash', { vol: 0.25, pitch: -9 });
+  };
   const show = () => {
-    can.show(tipped ? 'tipped' : 'up', (px) => paintCan(px, dir, tipped), def.x - 4, foot - 48 + (tipped ? 4 : 0));
+    const f = Math.round(tip * 3);
+    const shift = Math.round(dir * 10 * tip);
+    if (picture) can.show(`c${f}`, (px) => paintCan(px, picture, dir, (f / 3) * (Math.PI / 2)), pivot + shift - CAN.pivotX, foot - CAN.pivotY);
     if (spread > 0) {
       const w = Math.round(spread);
-      slick.show(`s${w}`, (px) => {
-        px.rect(dir > 0 ? 0 : reach - w, 1, w, 3, R.ink[1]);
-        px.hline(dir > 0 ? 1 : reach - w + 1, 1, Math.max(0, w - 2), R.steel[3]);
-      }, dir > 0 ? def.x + 20 : def.x + 20 - reach, foot - 4);
+      slick.show(
+        `s${w}`,
+        (px) => {
+          const sx = dir > 0 ? 0 : len - w;
+          px.rect(sx, 1, w, 3, R.ink[1]);
+          px.hline(sx + 1, 1, Math.max(0, w - 2), R.steel[3]);
+          for (let k = sx + 3; k < sx + w - 2; k += 7) px.px(k, 2, R.steel[4]);
+        },
+        x0,
+        foot - 4,
+      );
     }
   };
   return {
     id,
     def,
     update(ctx) {
-      if (tipped && spread < reach) spread = Math.min(reach, spread + ctx.dt * 120);
+      // Glider PRO: a trigger wired to the can spills it
+      if (typeof def.group === 'string') {
+        const on = ctx.api.switchOn(def.group);
+        if (wasOn !== null && on !== wasOn) spill(ctx);
+        wasOn = on;
+      }
+      if (state === 'tipping') {
+        // four frames at 30 a second
+        tip = Math.min(1, tip + ctx.dt / 0.13);
+        if (tip >= 1) state = 'running';
+      } else if (state === 'running') {
+        spread = Math.min(len, spread + ctx.dt * 75);
+        if (spread >= len) state = 'spilt';
+      }
       show();
     },
     trigger() {
-      return tipped ? null : { x: def.x + 6, y: foot - 30, w: 28, h: 30 };
+      return state === 'up' ? { x: def.x + 6, y: foot - 30, w: 28, h: 30 } : null;
     },
     onTouch(ctx) {
-      tipped = true;
-      ctx.api.sfx('bump', { vol: 0.3, pitch: 6 });
-      ctx.api.sfx('splash', { vol: 0.25, pitch: -9 });
+      spill(ctx);
+    },
+    colliders() {
+      if (spread < 2) return [];
+      const w = spread;
+      return [{ x: dir > 0 ? x0 : x1 - w, y: foot - 3, w, h: 3, kind: 'slick' }];
     },
     dispose() {
       can.dispose();

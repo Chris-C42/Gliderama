@@ -103,7 +103,7 @@ const OFFICE: RoomDef = {
   name: 'Back Office',
   wall: { pattern: 'pinstripe', base: 'cream', accent: 'teal', wainscot: 'walnut', trim: 'cream' },
   floor: { kind: 'carpet', ramp: 'plum' },
-  exits: { left: { from: 70, to: 340 }, right: { from: 96, to: 330, exit: true } },
+  exits: { left: { from: 70, to: 340 }, right: { from: 70, to: 340 } },
   seed: 19,
   items: [
     { t: 'tubeLight', x: 100, y: 14, w: 100 },
@@ -123,11 +123,25 @@ const OFFICE: RoomDef = {
   ],
 };
 
+const GREASED: RoomDef = {
+  id: 'lab-greased',
+  name: 'Greased Counter',
+  wall: { pattern: 'tile', base: 'cream', accent: 'stone', wainscot: null, trim: 'oak' },
+  floor: { kind: 'checker', ramp: 'stone', accent: 'red' },
+  exits: { left: { from: 70, to: 340 }, right: { from: 96, to: 330, exit: true } },
+  seed: 23,
+  items: [
+    { t: 'counter', x: 40, y: 250, w: 560 },
+    { t: 'grease', x: 50, y: 221, dir: 1, reach: 500 },
+    { t: 'floorVent', x: 300, y: 336, w: 56 },
+  ],
+};
+
 export const MENAGERIE: LevelDef = {
   id: 'lab-menagerie',
   name: 'Menagerie',
   place: 'home',
-  rooms: { '0,0': AIRBORNE, '1,0': INDOORS, '2,0': KITCHEN, '3,0': GARDEN, '4,0': OFFICE },
+  rooms: { '0,0': AIRBORNE, '1,0': INDOORS, '2,0': KITCHEN, '3,0': GARDEN, '4,0': OFFICE, '5,0': GREASED },
   start: { room: '0,0', x: 60, y: 120, facing: 1 },
   sheets: 9,
   par: 60,

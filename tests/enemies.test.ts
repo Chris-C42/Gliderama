@@ -192,15 +192,58 @@ describe('enemies', () => {
 });
 
 describe('clutter', () => {
-  it('a grease can tips over once, and does the plane no harm', () => {
+  it('a grease can tips over once and its grease runs out into a slick along the surface', () => {
     const { calls, ctx } = harness();
-    const g = make({ t: 'grease', x: 300, y: 243, dir: -1 });
+    const g = make({ t: 'grease', x: 300, y: 243, dir: -1, reach: 120 });
     run(g, ctx, 0.1);
     expect(g.trigger!()).not.toBeNull();
+    expect(g.colliders!()).toHaveLength(0);
     g.onTouch!(ctx);
-    run(g, ctx, 1);
+    run(g, ctx, 0.5);
     expect(g.trigger!()).toBeNull();
+    const mid = g.colliders!()[0];
+    run(g, ctx, 2);
+    const full = g.colliders!()[0];
+    expect(full.kind).toBe('slick');
+    expect(full.w).toBeGreaterThan(mid.w);
+    // to the left of the can, lying on the surface the can stood on (y 243 + 29)
+    expect(full.x + full.w).toBeLessThanOrEqual(300);
+    expect(full.y + full.h).toBe(272);
     expect(calls.strike).toHaveLength(0);
+    // one that starts spilt has its slick from the start; a switch can spill another from afar
+    expect(make({ t: 'grease', x: 300, y: 243, dir: 1, spilled: true }).colliders!()[0].w).toBeGreaterThan(40);
+    const sw: Record<string, boolean> = { trap: true };
+    const remote = harness(sw);
+    const r = make({ t: 'grease', x: 300, y: 243, dir: 1, group: 'trap' });
+    run(r, remote.ctx, 0.2);
+    expect(r.colliders!()).toHaveLength(0);
+    sw.trap = false;
+    run(r, remote.ctx, 2);
+    expect(r.colliders!()[0].w).toBeGreaterThan(40);
+  });
+
+  it('a plane that comes down onto spilt grease skates its length unharmed', () => {
+    const { build, aero } = analyzeDesign(RECIPES.find((r) => r.id === 'glider')!.make());
+    const mesh = buildMesh(build, aero.cg);
+    const room = (items: ItemDef[]): RoomDef =>
+      ({
+        id: 'test',
+        name: 'Test',
+        wall: { pattern: 'plain', base: 'cream', accent: 'cream', wainscot: null, trim: 'cream' },
+        floor: { kind: 'planks', ramp: 'oak' },
+        exits: { right: { from: 0, to: 340 } },
+        seed: 1,
+        items: [{ t: 'counter', x: 60, y: 250, w: 420 }, ...items],
+      }) as RoomDef;
+    const start = { x: 130, y: 238, vx: 2.4, vy: -0.4, theta: -0.1, facing: 1 as const };
+    const greased = simulateRoom(buildSimRoom(room([{ t: 'grease', x: 70, y: 221, dir: 1, reach: 380, spilled: true }])), aero, mesh, start, undefined, { maxT: 3 });
+    const dry = simulateRoom(buildSimRoom(room([])), aero, mesh, start, undefined, { maxT: 3 });
+    // on the grease: no harm, and on along the counter at its height; on the bare counter it scrapes to a stop
+    expect(greased.damage).toBe(0);
+    const along = greased.path.filter((q) => q.x > 200 && q.x < 420);
+    expect(along.length).toBeGreaterThan(3);
+    for (const q of along) expect(q.y).toBeGreaterThan(232);
+    expect(Math.max(...greased.path.map((q) => q.x))).toBeGreaterThan(Math.max(...dry.path.map((q) => q.x)) + 60);
   });
 
   it('a guitar strums and chimes ring once each time the plane comes through', () => {
