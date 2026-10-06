@@ -17,6 +17,7 @@ import type { ActiveLight, GameRenderer, SpriteHandle } from '../render/GameRend
 import { rgb } from '../render/particles';
 import { Px } from '../render/pixel';
 import { R } from '../render/palette';
+import { Slingshot, pulledBack } from '../render/slingshot';
 import { OBJECTS } from './objects';
 import { TRANSPORT_REST } from './objects/classic';
 import type { AirFlow, GameObject, ObjCtx, SessionApi, WindOut } from './objects/types';
@@ -246,6 +247,9 @@ export class Session {
   private snagAt = { x: 0, y: 0 };
   /** Rubber bands in flight (room px, px/s). */
   private bands: { x: number; y: number; vx: number; vy: number; t: number; s: SpriteHandle }[] = [];
+  /** The slingshot drawn at the launch point while aiming, and what the throw input was doing this frame. */
+  private sling: Slingshot;
+  private pulling = { aiming: false, power: 0, dt: 0 };
 
   constructor(
     readonly renderer: GameRenderer,
@@ -254,6 +258,7 @@ export class Session {
     readonly opts: SessionOptions,
     readonly cb: SessionCallbacks = {},
   ) {
+    this.sling = new Slingshot(renderer);
     this.sheets = level.sheets + (opts.bonusSheets ?? 0);
     this.starsTotal = countStars(level);
     this.goalStars = new Set(level.goal === 'stars' ? goalStarIds(level) : []);
@@ -304,6 +309,7 @@ export class Session {
     if (this.room) {
       this.room.dispose();
       this.renderer.clearSprites();
+      this.sling.reset();
       this.logRoom();
     }
     const def = this.level.rooms[key];
@@ -517,6 +523,7 @@ export class Session {
   throwNow(angle: number, power: number): void {
     if (this.phase !== 'aim') return;
     const cp = this.checkpoint;
+    this.sling.release();
     launch(this.plane, cp.x, cp.y, angle, power);
     this.phase = 'fly';
     this.tick.groundT = 0;
@@ -634,6 +641,7 @@ export class Session {
     for (const o of this.room.objects) o.update?.(ctx);
     updateSpills(this.room.spills, ctx);
 
+    this.pulling = { aiming: thr.aiming, power: thr.power, dt };
     if (this.phase === 'aim') {
       this.time += dt;
       if (thr.aiming || thr.released) {
@@ -1014,9 +1022,14 @@ export class Session {
       const a = this.aim.angle;
       const facing: 1 | -1 = Math.cos(a) >= 0 ? 1 : -1;
       const theta = Math.atan2(Math.sin(a), Math.abs(Math.cos(a)));
-      r.plane.pose({ x: pos.x, y: pos.y, theta, facing, turn: null, bank: 0, roll: 0, righting: 0, visible: true });
+      // the slingshot at the launch point: the plane sits in its band, drawn back as far as the player pulls
+      const pull = this.pulling.aiming ? this.pulling.power : 0;
+      const back = pulledBack(a, pull);
+      this.sling.aim(pos.x, pos.y, a, pull, !this.pulling.aiming, this.tick.halfLen * 0.85, this.pulling.dt);
+      r.plane.pose({ x: pos.x + back.dx, y: pos.y + back.dy, theta, facing, turn: null, bank: 0, roll: 0, righting: 0, visible: true });
       this.previewTrajectory();
     } else {
+      this.sling.update(this.pulling.dt);
       const visible = this.phase === 'fly' || this.phase === 'workbench' || this.phase === 'complete' || (this.phase === 'down' && this.downT < 0.15);
       r.setGuide([]);
       r.plane.pose({
