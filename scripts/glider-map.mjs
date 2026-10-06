@@ -713,13 +713,30 @@ const fixed =
     c.emit({ t: kind, x, y, ...(typeof extra === 'function' ? extra(ob, c) : extra) });
   };
 
+/** How far past a room's edge a block at that edge carries on (as the room's own walls do, see src/world/colliders). */
+export const EDGE = 40;
+
 /**
  * Invisible obstacles stand for things drawn into the original's pictures (walls, pipes, ledges): without the
- * picture they are drawn as plain blocks in its colour there, so that nothing in a room is solid unseen.
+ * picture they are drawn as plain blocks in its colour there, so that nothing in a room is solid unseen. One that
+ * reaches an edge of the room (up past the ceiling line or down past the floor line too: the glider could not get
+ * between it and the edge there) carries on past it, like a wall: a block in the room above or next door meets it
+ * there, with no seam between the rooms to slip along.
  */
 function obstacle(ob, c) {
   const r = rectOf(ob.bounds);
   if (r.w <= 0 || r.h <= 0) return c.drop(ob.type, 'empty rectangle');
+  const b = ob.bounds;
+  if (b.top <= GP.ceiling) {
+    r.h += r.y + EDGE;
+    r.y = -EDGE;
+  }
+  if (b.bottom >= GP.floor) r.h = GR.roomH + EDGE - r.y;
+  if (b.left <= 0) {
+    r.w += r.x + EDGE;
+    r.x = -EDGE;
+  }
+  if (b.right >= GP.roomW) r.w = GR.roomW + EDGE - r.x;
   c.emit({ t: 'solid', ...r, ramp: c.solidRamp(ob) });
 }
 
@@ -817,20 +834,25 @@ export const TRIGGERS = ['trigger', 'lgTrigger'];
 /**
  * What a switch flips: the object it is linked to ({ room, key, target }, see the converter's link), or null. A
  * trigger flips nothing itself: it fires what it is linked to a moment later (Sources/Triggers.c FireTrigger), and
- * when that is another switch, it is as if the glider had flown through that one.
+ * when that is another switch, it is as if the glider had flown through that one; a grease can it spills.
  */
 export function flipped(ob, link) {
   const l = link(ob);
   if (!l?.target) return null;
   if (!TRIGGERS.includes(ob.type)) return l;
   const t = l.target;
+  if (GREASE.includes(t.type)) return l;
   if (t.family !== 'switch' || TRIGGERS.includes(t.type) || t.type === 'soundTrigger') return null;
   const l2 = link(t);
   return l2?.target ? l2 : null;
 }
 
-/** Things Gliderama can switch on and off besides the lights (their `group`): air, switched transports, the menagerie. */
-const SWITCHABLE = new Set('deluxeTrans balloon copterLf copterRt dartLf dartRt ball fish outlet shredder'.split(' '));
+const GREASE = ['greaseRt', 'greaseLf'];
+/**
+ * Things Gliderama can switch on and off besides the lights (their `group`): air, switched transports, the menagerie,
+ * and grease cans, which a switch spills (Sources/Interactions.c, Triggers.c).
+ */
+const SWITCHABLE = new Set(['deluxeTrans', 'balloon', 'copterLf', 'copterRt', 'dartLf', 'dartRt', 'ball', 'fish', 'outlet', 'shredder', ...GREASE]);
 /** Things Glider PRO's switches cannot change either (Sources/Objects.c SetObjectState). */
 const UNSWITCHABLE = new Set('taper candle stubby tiki bbq cinderBlock flowerBox cds customPict guitar cobweb slider invisTrans'.split(' '));
 
@@ -871,7 +893,7 @@ function switchObj(ob, c) {
     c.emit({ t: 'switch', x, y, ...look, group: c.groupName(c.room, ob.slot) });
     return c.approx(ob.type, idleSwitch(ob, c));
   } else return c.drop(ob.type, idleSwitch(ob, c), true);
-  if (TRIGGERS.includes(ob.type)) c.approx(ob.type, 'fires its switch as the plane goes through (no delay)');
+  if (TRIGGERS.includes(ob.type)) c.approx(ob.type, `${GREASE.includes(t.type) ? 'spills its grease' : 'fires its switch'} as the plane goes through (no delay)`);
 }
 
 function light(ob, c) {
@@ -949,12 +971,16 @@ function shredder(ob, c) {
   c.emit({ t: 'shredder', x: r1(X(left + 36.5) - 45), y: (onFloor(top + 22) ? GR.floor : r1(Y(top + 22))) - 24, ...poweredBy(ob, c) });
 }
 
-/** A grease can (its foot where the original's is) tips over when clipped, spilling a slick `length` long (or lies spilt). */
+/**
+ * A grease can (its foot where the original's is) tips over when clipped, spilling a slick `length` long (or lies
+ * spilt); a switch or trigger wired to it spills it too (its `group`).
+ */
 function grease(ob, c) {
   const { h: left, v: top } = ob.topLeft;
   const reach = ob.length > 5 ? { reach: r1(X(ob.length)) } : {};
   const y = onFloor(top + 27) ? GR.floor - 29 : r1(Y(top));
-  c.emit({ t: 'grease', x: r1(X(left)), y, h: 29, dir: ob.type === 'greaseRt' ? 1 : -1, ...reach, ...(ob.initial ? {} : { spilled: true }) });
+  const state = ob.initial ? c.group(ob, true) : { spilled: true };
+  c.emit({ t: 'grease', x: r1(X(left)), y, h: 29, dir: ob.type === 'greaseRt' ? 1 : -1, ...reach, ...state });
 }
 
 function plantFrom(ob, c) {

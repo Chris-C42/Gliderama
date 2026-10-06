@@ -72,6 +72,8 @@ A Glider PRO room is 512 × 322 px, the floor line at y 312 and the ceiling at 8
 with the plane's floor at 340 and ceiling at 16. x scales by 1.25; y maps floor line to floor line and ceiling
 to ceiling (× 1.066), so every height in the original has its height here. Furniture whose bottom is within
 28 px of the floor stands on Gliderama's floor. Room keys are `"suite,-floor"` (Gliderama's y grows downward).
+Blocks at a room's edge (invisible obstacles there, the walls between two openings) carry on 40 px past it, as
+the room's own walls do: no slit is left between a block and the edge, and no seam where two rooms meet.
 
 ### Rooms and the ways between them
 
@@ -129,11 +131,11 @@ and strong enough for that, and their tops stay where the original's end. All in
 |---|---|
 | Floor vent, floor blower, sewer grate, Greco vent, sewer blower (on the floor) | `floorVent`, power 3.2 + distance / 260 m/s (≤ 4.6), spread 0.12, reach = the column's top |
 | The same standing on furniture | its grille there (`grille`), invisible rising `current` from it |
-| A column that reaches the ceiling under an opening | carries on into the room above (reach −40 / to the top edge) |
+| A column that reaches the ceiling under an opening | carries on into the room above (a vent's reach is −40; an invisible column starts 40 px above the room, so it is at full strength up to the opening) |
 | Ceiling vent, ceiling blower | `ceilingVent`, 2.6 m/s down to the column's end |
 | Left / right fan | `fan`, 3.4 m/s, reach = the original's distance |
 | Candle, taper, stubby candle, tiki torch, barbecue | `candle`, `tiki`, `bbq` (each burns with a candle's flame) and, where the original's heat column is 64 px or more, rising air above the flame's deadly part |
-| Invisible blower (up / down / left / right) | invisible `current`: columns 140 px wide (the original's are 4 px, but the glider is 48 wide), bands 46 px high |
+| Invisible blower (up / down / left / right) | invisible `current`: columns 140 px wide (the original's are 4 px, but the glider is 48 wide), bands 46 px high, centred where the original's are (a column at a wall reaches past it) |
 | Lift area | invisible `current` over its rectangle (at least 140 px wide, or 46 px high for sideways air); rising air up to the ceiling carries on through an opening there |
 | Blowers that start off | off until their switch is flipped (switch group `!g`); ones no switch turns on are left out |
 
@@ -163,16 +165,16 @@ the original stands on the floor; furniture and clutter are drawn over the origi
 | Battery / helium balloon | 119 / 50 | battery (the helium balloon has no art of its own) |
 | Rubber bands | 150 | bands |
 | Foil | 83 | tape (no art of its own) |
-| Grease (left / right) | 143 / 195 | grease can that tips over when clipped and spills a slick its original length (harmless); the 104 that start spilt in the original lie spilt |
+| Grease (left / right) | 143 / 195 | grease can that tips over when clipped and spills a slick its original length (harmless), or when a switch or trigger wired to it goes; the 104 that start spilt in the original lie spilt |
 | Sparkle | 486 | a glint that twinkles every second or two |
 | Slider | 354 | dropped (an invisible slippery surface) |
 | Up / down stairs | 163 / 163 | stairs |
 | Doors, windows (inside / outside, left / right) | 167 | openings |
 | Mailbox (left / right) | 44 / 34 | a mailbox on its post, its door open on the side it faces, and the transport in it |
 | Floor / ceiling transport, invisible transport, deluxe transport | 244 / 465 / 385 / 61 | transport (unlinked ones are the far ends, or dropped when nothing leads to them) |
-| Light switch, machine switch, thermostat, power switch, knife switch | 113 / 79 / 108 / 78 / 230 | switch, drawn as the original (toggle, rocker, dial, button, knife switch). It works a room's lights (any room's), a blower, a deluxe transport, an enemy, an outlet or a shredder; a switch for anything else flips but does nothing here |
+| Light switch, machine switch, thermostat, power switch, knife switch | 113 / 79 / 108 / 78 / 230 | switch, drawn as the original (toggle, rocker, dial, button, knife switch). It works a room's lights (any room's), a blower, a deluxe transport, an enemy, an outlet or a shredder, and spills a grease can; a switch for anything else flips but does nothing here |
 | Invisible switch | 635 | invisible switch, where it works one of those; else dropped |
-| Trigger, large trigger | 239 / 81 | a trigger fires what it is linked to a moment later. Linked to a switch: an invisible switch that does that switch's job (at once). Linked to an enemy, an outlet, a guitar, grease, a toaster or a drip: dropped (they go off by themselves here) |
+| Trigger, large trigger | 239 / 81 | a trigger fires what it is linked to a moment later. Linked to a switch: an invisible switch that does that switch's job (at once); linked to a grease can, one that spills it (at once). Linked to an enemy, an outlet, a guitar, a toaster or a drip: dropped (they go off by themselves here) |
 | Sound trigger | 122 | dropped |
 | Ceiling light / light bulb / table lamp | 160 / 252 / 70 | pendant lamp / pendant on a cord / desk lamp |
 | Fluorescent / track light | 115 / 81 | fluorescent tube / track of spotlights under the ceiling |
@@ -181,9 +183,9 @@ the original stands on the floor; furniture and clutter are drawn over the origi
 | Toaster | 140 | toaster (its toast does not pop) |
 | Mac Plus / TV / microwave / VCR / stereo / coffee maker / CD rack | 74 / 80 / 56 / 26 / 36 / 38 / 63 | computer / television (their screens lit when the original's start on) / microwave / VCR / stereo / coffee maker / CD rack, solid |
 | Cinder block / flower box | 43 / 35 | cinder block / window box of flowers |
-| Shredder | 50 | paper shredder: flying low over its slot while it is on shreds the plane |
+| Shredder | 50 | paper shredder: flying low over its slot while it is on shreds the plane; as in Glider PRO it is nothing to bump into (switched off, the plane flies through it: Land of Illusion's shaft of four) |
 | Outlet | 100 | wall outlet sparking for a second every `delay`: it hurts |
-| Guitar / wind chimes | 29 / 54 | guitar that strums, wind chimes that ring when the plane brushes them |
+| Guitar / wind chimes | 29 / 54 | guitar that strums, wind chimes that ring when the plane brushes them; as in Glider PRO, the plane flies through a guitar (Slumberland's way on goes past one) |
 | Balloon | 500 | balloon rising from the floor to the ceiling, again after `delay` |
 | Helicopter (left / right) | 259 / 155 | toy helicopter flying down across the room from under the ceiling |
 | Dart (left / right) | 151 / 117 | paper dart sailing across from the wall behind it at the original's height |
@@ -289,8 +291,9 @@ Not drawn at all: the houses' own pictures (`customPict`, 4782 of them), which G
 - **Looks** come from the pictures' colours; the pictures themselves (and the rooms' own pictures,
   `customPict`) are not shown.
 - **Enemies and hazards** move as in the original and hurt the Gliderama way (a knock crumples the plane, the
-  shredder shreds it, a cobweb holds it a moment). Triggers set nothing off: what they were linked to goes off on
-  its own timer, and triggers that fire a switch do so at once rather than after their delay. The toaster's toast
+  shredder shreds it, a cobweb holds it a moment). Triggers set off only switches and grease: what else they were
+  linked to goes off on its own timer, and a trigger fires its switch, or spills its grease, at once rather than
+  after its delay. The toaster's toast
   doesn't pop, the microwave doesn't take gadgets away, and switches for appliances (TV, stereo, microwave,
   toaster...) flip without effect. Bonuses that an invisible switch took away in the original stay. The slider and
   sound triggers are left out.

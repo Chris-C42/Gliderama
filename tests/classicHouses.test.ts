@@ -81,10 +81,14 @@ describe('Classic Houses data', () => {
         for (const [key, room] of Object.entries(level.rooms))
           for (const it of room.items) {
             expect(KINDS[it.t] || OBJECTS[it.t], `${key}: kind ${it.t}`).toBeTruthy();
-            expect(it.x, `${key} ${it.t} x`).toBeGreaterThanOrEqual(0);
+            // (a block at an edge carries on 40 px past it, as the room's own walls do; a column of air at a wall is
+            // partly past it, and rising air carries on through a ceiling opening)
+            const mx = it.t === 'solid' ? 40 : it.t === 'current' ? 70 : 0;
+            const my = it.t === 'solid' || it.t === 'current' ? 40 : 0;
+            expect(it.x, `${key} ${it.t} x`).toBeGreaterThanOrEqual(-mx);
             expect(it.x, `${key} ${it.t} x`).toBeLessThanOrEqual(640);
             if (typeof it.y === 'number') {
-              expect(it.y, `${key} ${it.t} y`).toBeGreaterThanOrEqual(0);
+              expect(it.y, `${key} ${it.t} y`).toBeGreaterThanOrEqual(-my);
               expect(it.y, `${key} ${it.t} y`).toBeLessThanOrEqual(360);
             }
             // a transport leads to a room; one without `to` is the far end of another, drawn as a duct

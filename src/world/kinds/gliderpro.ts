@@ -122,7 +122,11 @@ export const outletKind: KindDef = {
   },
 };
 
-/** An office paper shredder: a slot across its lid and a grille down its front. */
+/**
+ * An office paper shredder: a slot across its lid and a grille down its front. Nothing to bump into: in Glider PRO a
+ * shredder only shreds (Sources/ObjectRects.c: the strip over its slot, while it is on), and a house can stack them
+ * in a shaft that is the way on once they are switched off.
+ */
 export const shredderKind: KindDef = {
   z: 2,
   paint(px, it) {
@@ -145,9 +149,6 @@ export const shredderKind: KindDef = {
     px.rect(x + w - 20, y + 9, 12, 6, R.cream[4]);
     px.hline(x + w - 18, y + 11, 8, R.steel[2]);
     px.rect(x + w - 15, y + 17, 2, 2, R.moss[5]);
-  },
-  colliders(it) {
-    return [{ x: it.x, y: it.y + 2, w: SHREDDER.w, h: SHREDDER.h - 2 }];
   },
 };
 
@@ -380,7 +381,11 @@ export const counterKind: KindDef = {
   },
 };
 
-/** An acoustic guitar standing on its end (Glider PRO 64 × 172). The `guitar` object strums it. */
+/**
+ * An acoustic guitar standing on its end (Glider PRO 64 × 172). The `guitar` object strums it. Nothing to bump into:
+ * the glider flies through a guitar in Glider PRO (Sources/ObjectRects.c: its strings, nothing solid), and houses
+ * have their way on past one.
+ */
 export const guitarKind: KindDef = {
   z: 1,
   paint(px, it) {
@@ -415,14 +420,6 @@ export const guitarKind: KindDef = {
     px.rect(cx - w * 0.17, lower.y + lower.r * 0.35, w * 0.34, 4, R.walnut[1]);
     // the strings
     for (const dx of [-1, 1]) px.line(cx + dx, y + 20, cx + dx, lower.y + lower.r * 0.37, R.steel[5]);
-  },
-  colliders(it) {
-    const w = W(it, 80);
-    const h = H(it, 183);
-    return [
-      { x: it.x + w * 0.08, y: it.y + h - w * 1.2, w: w * 0.84, h: w * 1.2, kind: 'soft' },
-      { x: it.x + w * 0.4, y: it.y, w: w * 0.2, h: h - w * 1.2 },
-    ];
   },
 };
 
