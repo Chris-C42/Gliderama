@@ -155,6 +155,8 @@ function drive() {
     const cp = session.checkpoint;
     const planned = f.from ? `${f.from.room} (${Math.round(f.from.x)},${Math.round(f.from.y)})` : '?';
     w.__pilotLog.push(`flight ${p.i} from ${cp.room} (${Math.round(cp.x)},${Math.round(cp.y)}), planned from ${planned}`);
+    // the plan has the room's balloons and darts set off as the sheet is thrown
+    session.restartRoom();
     thr.released = true;
     thr.angle = f.angle;
     thr.power = f.power;

@@ -905,6 +905,14 @@ export class Session {
     };
   }
 
+  /**
+   * Make the current room afresh, its objects as when the plane flies in (balloons waiting to rise...): the play
+   * lab's autopilot throws into a fresh room, as the bot pilot's plans assume.
+   */
+  restartRoom(): void {
+    this.enterRoom(this.room.key);
+  }
+
   /** Swap in edited rooms (sandbox builder): clears cached art and rebuilds the current room. */
   reloadRooms(rooms: LevelDef['rooms']): void {
     (this.level as { rooms: LevelDef['rooms'] }).rooms = rooms;

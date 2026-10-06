@@ -23,6 +23,7 @@ import { colourStats, decodePict } from './glider/pict.mjs';
 import { parseRez } from './glider/rez.mjs';
 import {
   DROPPED,
+  GONE_WHEN_OFF,
   GR,
   HOUSES,
   BUILTIN,
@@ -34,8 +35,12 @@ import {
   STATUS,
   X,
   Y,
+  flipped,
   floorSpan,
   hull,
+  MIN_GAP,
+  obstacleWalls,
+  subtract,
   objectOpenings,
   shellOpenings,
   sideSpan,
@@ -171,8 +176,8 @@ export function convertHouse(name, house, rsrc, file = '', pictures = null) {
   for (const r of live)
     for (const ob of r.objects) {
       if (ob.family !== 'switch') continue;
-      const l = linkOf(ob);
-      if (l?.target) switched.add(`${l.room.index}.${l.target.slot}`);
+      const l = flipped(ob, linkOf);
+      if (l) switched.add(`${l.room.index}.${l.target.slot}`);
     }
   const groupName = (room, slot) => `gp${room.index}.${slot}`;
   // the far ends of transports (the objects a transport takes the glider to)
@@ -190,8 +195,15 @@ export function convertHouse(name, house, rsrc, file = '', pictures = null) {
   const sides = new Map(live.map((r) => [r, { left: null, right: null, up: null, down: null }]));
   // the solid parts between openings merged into one (Gliderama has one opening per side): drawn as blocks
   const gapBlocks = new Map(live.map((r) => [r, []]));
+  // the walls of invisible obstacles at the rooms' edges close (or narrow) those openings
+  const walls = new Map(live.map((r) => [r, obstacleWalls(r)]));
   let multi = 0;
   let oneWay = 0;
+  const walled = { closed: 0, narrowed: 0 };
+  const wallsCount = (before, after) => {
+    if (before && !after) walled.closed++;
+    else if (before && (after.from !== before.from || after.to !== before.to)) walled.narrowed++;
+  };
   for (const a of live) {
     const oa = open.get(a);
     // left → right neighbours: either wall being open lets the glider through (Interactions.c CheckEscapeLeft/Right)
@@ -200,14 +212,17 @@ export function convertHouse(name, house, rsrc, file = '', pictures = null) {
       const ob_ = open.get(b);
       const ra = oa.shell.right ? [FULL_SIDE] : oa.objs.right;
       const lb = ob_.shell.left ? [FULL_SIDE] : ob_.objs.left;
-      const h = hull([...ra, ...lb]);
+      const blocked = [...walls.get(a).right, ...walls.get(b).left];
+      const h = hull(subtract([...ra, ...lb], blocked, MIN_GAP.side));
+      wallsCount(hull([...ra, ...lb]), h);
       if (h) {
         if (h.gaps.length) multi++;
         if (!ra.length || !lb.length) oneWay++;
         const span = sideSpan(h);
         sides.get(a).right = span;
         sides.get(b).left = { ...span };
-        for (const [g0, g1] of h.gaps) {
+        // (the obstacles are drawn already)
+        for (const [g0, g1] of subtract(h.gaps, blocked)) {
           const y = Math.round(Y(g0));
           const hh = Math.round(Y(g1)) - y;
           gapBlocks.get(a).push({ t: 'solid', x: GR.roomW - GR.sideWall, y, w: GR.sideWall, h: hh });
@@ -220,13 +235,15 @@ export function convertHouse(name, house, rsrc, file = '', pictures = null) {
     const below = roomAt(a.floor - 1, a.suite);
     if (below) {
       const down = oa.shell.bottom ? [FULL_WIDTH] : [...oa.shell.down, ...oa.objs.down];
-      const h = hull(down);
+      const blocked = [...walls.get(a).down, ...walls.get(below).up];
+      const h = hull(subtract(down, blocked, MIN_GAP.floor));
+      wallsCount(hull(down), h);
       if (h) {
         if (h.gaps.length) multi++;
         const span = floorSpan(h);
         sides.get(a).down = span;
         sides.get(below).up = { ...span };
-        for (const [g0, g1] of h.gaps) {
+        for (const [g0, g1] of subtract(h.gaps, blocked)) {
           const x = Math.round(X(g0));
           const w = Math.round(X(g1)) - x;
           gapBlocks.get(a).push({ t: 'solid', x, y: GR.floor, w, h: GR.roomH - GR.floor });
@@ -238,6 +255,8 @@ export function convertHouse(name, house, rsrc, file = '', pictures = null) {
   if (multi)
     notes.push(`${multi} walls or floors with two openings: one opening here, the wall between them drawn as a block (Gliderama has one opening per side)`);
   if (oneWay) notes.push(`${oneWay} doorways were one-way in the original (open on one side only); here they open both ways`);
+  if (walled.closed || walled.narrowed)
+    notes.push(`${walled.closed} openings closed and ${walled.narrowed} narrowed by walls of invisible obstacles at the rooms' edges`);
 
   // the start (Sources/House.c WhereDoesGliderBegin): the glider's top-left in the first room
   const first = house.rooms[house.firstRoom] && !house.rooms[house.firstRoom].deleted ? house.rooms[house.firstRoom] : live[0];
@@ -280,6 +299,10 @@ export function convertHouse(name, house, rsrc, file = '', pictures = null) {
         inc(approximated, `${type}: ${how}`);
         inc(missingArt, type);
       },
+      /** Converted, but not quite as the original works. */
+      approx(type, how) {
+        inc(approximated, `${type}: ${how}`);
+      },
       link: linkOf,
       groupName,
       /** The far end of some transport. */
@@ -319,8 +342,8 @@ export function convertHouse(name, house, rsrc, file = '', pictures = null) {
         ctx.drop(ob.type, DROPPED[ob.type] ?? 'no equivalent');
         continue;
       }
-      // blowers that start switched off and that no switch ever turns on do nothing
-      if (ob.family === 'blower' && !ob.initial && !switched.has(`${r.index}.${ob.slot}`)) {
+      // blowers (and things that come and go) that start switched off and that no switch ever turns on do nothing
+      if ((ob.family === 'blower' || GONE_WHEN_OFF.includes(ob.type)) && !ob.initial && !switched.has(`${r.index}.${ob.slot}`)) {
         ctx.drop(ob.type, 'switched off and never switched on', true);
         continue;
       }

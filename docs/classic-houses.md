@@ -8,7 +8,11 @@ Gliderama has, or is left out (and listed). Every house is open from the start, 
 is finished by collecting all of its stars. The authors are credited on each house's card, in its intro and in
 `CREDITS.md`.
 
-No new art was drawn: what Gliderama has no picture for is approximated or dropped, and listed at the end
+Glider PRO's own pieces are drawn the Gliderama way: its enemies and hazards (balloons, helicopters, darts,
+the bouncing ball, the goldfish, cobwebs, outlets, the shredder: `src/game/objects/enemies.ts`, still parts in
+`src/world/kinds/gliderpro.ts`), its appliances, furniture, clutter and fittings (`src/world/kinds/appliances.ts`,
+`furnishings.ts`, `fixtures.ts`, `outdoor.ts`, `gliderpro.ts`). The few things still without art of their own are
+drawn as the nearest thing Gliderama has, and listed at the end
 ([missing art](#glider-pro-objects-without-gliderama-art)).
 
 ## Pipeline
@@ -77,6 +81,7 @@ to ceiling (× 1.066), so every height in the original has its height here. Furn
 | Doors and windows (`doorIn/Ex`, `windowIn/Ex`) | Openings in the side wall at their hot spots (240 px of a door, 44 px of a window, in the original's pixels) |
 | Open floors: sky backgrounds, dirt tunnels (tiles 2–3 down, 5–6 up), manholes | Floor / ceiling exits over those x ranges |
 | Two openings in one wall or floor | One exit spanning both, the wall between them a block |
+| Invisible obstacles along an open edge (houses wall off their sky rooms with them) | The opening is closed there: what is left of it (a gap the glider fits through) is the exit, or there is none |
 | Stairs (`upStairs`, `downStairs`) | Gliderama's stairs (fly into the doorway at the top-left of the flight, or down the stairwell) |
 | Transports (`floorTrans`, `ceilingTrans`, `mailboxLf/Rt`, `invisTrans`, `deluxeTrans`) | `transport`: fly into the original's trigger area, come out where the original puts the glider, gliding level (a new checkpoint); for 0.6 s after, no transport takes the plane (linked ones often face each other). Ducts draw a vent grille; mail slots and invisible transports shimmer faintly. The far end of a transport is drawn too. Deluxe transports follow their switch |
 | Roofs (built-in roof background) | Red blocks under the roof's surface line, sloped parts as 16-px steps |
@@ -123,62 +128,82 @@ and strong enough for that, and their tops stay where the original's end. All in
 | Glider PRO | Gliderama |
 |---|---|
 | Floor vent, floor blower, sewer grate, Greco vent, sewer blower (on the floor) | `floorVent`, power 3.2 + distance / 260 m/s (≤ 4.6), spread 0.12, reach = the column's top |
-| The same standing on furniture | invisible rising `current` from its grille |
+| The same standing on furniture | its grille there (`grille`), invisible rising `current` from it |
 | A column that reaches the ceiling under an opening | carries on into the room above (reach −40 / to the top edge) |
 | Ceiling vent, ceiling blower | `ceilingVent`, 2.6 m/s down to the column's end |
 | Left / right fan | `fan`, 3.4 m/s, reach = the original's distance |
-| Candle, taper, stubby candle, tiki torch, barbecue | `candle` (the flame burns) and, where the original's heat column is 64 px or more, rising air above the flame's deadly part |
+| Candle, taper, stubby candle, tiki torch, barbecue | `candle`, `tiki`, `bbq` (each burns with a candle's flame) and, where the original's heat column is 64 px or more, rising air above the flame's deadly part |
 | Invisible blower (up / down / left / right) | invisible `current`: columns 140 px wide (the original's are 4 px, but the glider is 48 wide), bands 46 px high |
 | Lift area | invisible `current` over its rectangle (at least 140 px wide, or 46 px high for sideways air); rising air up to the ceiling carries on through an opening there |
 | Blowers that start off | off until their switch is flipped (switch group `!g`); ones no switch turns on are left out |
 
 ### Objects
 
-Counts are over all 22 houses.
+Counts are over all 22 houses. Things of a fixed size stand where the original's stand, on the floor line when
+the original stands on the floor; furniture and clutter are drawn over the original's rectangle.
 
 | Glider PRO object | Count | Gliderama |
 |---|---:|---|
-| Floor vent / floor blower / sewer grate / Greco vent / sewer blower | 1458 / 83 / 507 / 116 / 191 | floor vent (see Air) |
-| Ceiling vent / ceiling blower | 28 / 12 | ceiling vent |
+| Floor vent / floor blower / sewer grate / Greco vent / sewer blower | 1458 / 83 / 507 / 116 / 191 | floor vent with the original's kind of grille (a register, a blower unit, an iron grate, a brass Greco register); see Air |
+| Ceiling vent / ceiling blower | 28 / 12 | ceiling vent (the blower has no art of its own) |
 | Left fan / right fan | 45 / 54 | fan |
-| Taper / candle / stubby / tiki / barbecue | 90 / 180 / 127 / 58 / 43 | candle (+ rising air) |
+| Taper / candle / stubby | 90 / 180 / 127 | candle (+ rising air) |
+| Tiki torch / barbecue | 58 / 43 | bamboo torch, its pole down to the ground / kettle barbecue, each with a candle's flame (+ rising air) |
 | Invisible blower / lift area | 2336 / 716 | invisible current |
-| Table / deck table / stool | 170 / 30 / 91 | side table, its top where the original's is |
-| Shelf | 389 | shelf |
-| Cabinet | 457 | dresser (standing) or bookshelf (on the wall) |
-| Filing cabinet / counter / dresser | 107 / 287 / 122 | dresser |
-| Waste basket / milk crate / trunk | 103 / 252 / 101 | toy box |
-| Books | 210 | stacks of books |
+| Table / deck table / stool | 170 / 30 / 91 | pedestal table (a slatted top for the deck table) / stool: the original's rectangle is the top, the pedestal goes down to the floor as it does there |
+| Shelf / books | 389 / 210 | shelf / stacks of books |
+| Cabinet / filing cabinet / counter / dresser | 457 / 107 / 287 / 122 | cupboard / steel filing cabinet / kitchen counter / dresser |
+| Waste basket / milk crate / trunk | 103 / 252 / 101 | waste basket / milk crate / steamer trunk |
 | Invisible obstacle / invisible bounce | 666 / 1670 | solid block, drawn in the colour the original picture has there (they stood for walls, pipes and ledges drawn in it) |
 | Manhole | 40 | opening in the floor |
-| Cinder block | 43 | stone block |
 | Star | 69 | goal star (all of them finish the house) |
-| Red / blue / yellow clock, cuckoo clock, invisible bonus | 140 / 163 / 330 / 100 / 327 | star (points; the All Stars medal counts them) |
+| Red / blue / yellow clock, cuckoo clock | 140 / 163 / 330 / 100 | alarm clocks in the three colours and a cuckoo clock, collected like stars (points; the All Stars medal counts them) |
+| Invisible bonus | 327 | star (points) |
 | Paper | 283 | sheet (an extra throw) |
-| Battery / helium balloon | 119 / 50 | battery |
+| Battery / helium balloon | 119 / 50 | battery (the helium balloon has no art of its own) |
 | Rubber bands | 150 | bands |
-| Foil | 83 | tape |
-| Grease (left / right), sparkle, slider | 143 / 195 / 486 / 354 | dropped |
+| Foil | 83 | tape (no art of its own) |
+| Grease (left / right) | 143 / 195 | grease can that tips over when clipped and spills a slick its original length (harmless); the 104 that start spilt in the original lie spilt |
+| Sparkle | 486 | a glint that twinkles every second or two |
+| Slider | 354 | dropped (an invisible slippery surface) |
 | Up / down stairs | 163 / 163 | stairs |
 | Doors, windows (inside / outside, left / right) | 167 | openings |
-| Mailbox (left / right), floor / ceiling transport, invisible transport, deluxe transport | 44 / 34 / 244 / 465 / 385 / 61 | transport (unlinked ones are the far ends, or dropped when nothing leads to them) |
-| Light switch, machine switch, thermostat, power switch, knife switch | 113 / 79 / 108 / 78 / 230 | switch: a light's switch works that room's lights (any room), a blower's or a deluxe transport's switches it; switches for things Gliderama doesn't have are a switch plate (drawn, nothing to switch) |
-| Invisible switch, trigger, large trigger | 635 / 239 / 81 | invisible switch where it switches something here; else dropped |
+| Mailbox (left / right) | 44 / 34 | a mailbox on its post, its door open on the side it faces, and the transport in it |
+| Floor / ceiling transport, invisible transport, deluxe transport | 244 / 465 / 385 / 61 | transport (unlinked ones are the far ends, or dropped when nothing leads to them) |
+| Light switch, machine switch, thermostat, power switch, knife switch | 113 / 79 / 108 / 78 / 230 | switch, drawn as the original (toggle, rocker, dial, button, knife switch). It works a room's lights (any room's), a blower, a deluxe transport, an enemy, an outlet or a shredder; a switch for anything else flips but does nothing here |
+| Invisible switch | 635 | invisible switch, where it works one of those; else dropped |
+| Trigger, large trigger | 239 / 81 | a trigger fires what it is linked to a moment later. Linked to a switch: an invisible switch that does that switch's job (at once). Linked to an enemy, an outlet, a guitar, grease, a toaster or a drip: dropped (they go off by themselves here) |
 | Sound trigger | 122 | dropped |
-| Ceiling light, fluorescent, track light / light bulb / table lamp | 160, 115, 81 / 252 / 70 | pendant lamp / pendant on a cord / desk lamp |
-| Hip lamp, deco lamp (floor lamps) | 26 / 62 | no art: they only light the room |
+| Ceiling light / light bulb / table lamp | 160 / 252 / 70 | pendant lamp / pendant on a cord / desk lamp |
+| Fluorescent / track light | 115 / 81 | fluorescent tube / track of spotlights under the ceiling |
+| Hip lamp / deco lamp | 26 / 62 | floor lamp: a torchiere / a fringed shade (on the room's light switch, like every lamp) |
 | Invisible light | 1764 | lights the room |
-| Toaster | 140 | toaster |
+| Toaster | 140 | toaster (its toast does not pop) |
+| Mac Plus / TV / microwave / VCR / stereo / coffee maker / CD rack | 74 / 80 / 56 / 26 / 36 / 38 / 63 | computer / television (their screens lit when the original's start on) / microwave / VCR / stereo / coffee maker / CD rack, solid |
+| Cinder block / flower box | 43 / 35 | cinder block / window box of flowers |
+| Shredder | 50 | paper shredder: flying low over its slot while it is on shreds the plane |
+| Outlet | 100 | wall outlet sparking for a second every `delay`: it hurts |
+| Guitar / wind chimes | 29 / 54 | guitar that strums, wind chimes that ring when the plane brushes them |
+| Balloon | 500 | balloon rising from the floor to the ceiling, again after `delay` |
+| Helicopter (left / right) | 259 / 155 | toy helicopter flying down across the room from under the ceiling |
+| Dart (left / right) | 151 / 117 | paper dart sailing across from the wall behind it at the original's height |
+| Ball | 212 | ball bouncing as high as the original's |
+| Fish | 120 | goldfish in its bowl, leaping as high as the original's every `delay` |
+| Cobweb | 86 | cobweb that catches the plane and holds it a moment |
 | Drip | 477 | drip |
-| Fireplace | 33 | fireplace |
-| Wall window | 195 | window |
-| Mirror, Ozma picture / calendar, bulletin board | 667, 77 / 58, 38 | picture frame / poster |
-| Flower, vase, flower box | 547, 158, 35 | plant (a flower in a vase is part of the vase's plant) |
-| Rug | 81 | rug |
-| Shredder, Mac Plus, guitar, TV, coffee maker, outlet, VCR, stereo, microwave, CD rack | 50, 74, 29, 80, 38, 100, 26, 36, 56, 63 | dropped (no art) |
-| Balloon, helicopters, darts, ball, fish, cobweb | 500, 414, 268, 212, 120, 86 | dropped (enemies; no art) |
-| Mouse hole, teddy bear, cloud, faucet, wind chimes | 174, 169, 1860, 28, 54 | dropped (no art; outdoor rooms draw their own clouds) |
+| Fireplace / wall window / rug | 33 / 195 / 81 | fireplace / window / rug |
+| Mirror / Ozma picture | 667 / 77 | wall mirror / picture frame (no art of its own) |
+| Calendar / bulletin board | 58 / 38 | wall calendar / cork board with notes |
+| Mouse hole / teddy bear / cloud / faucet | 174 / 169 / 1860 / 28 | mouse hole in the skirting / teddy bear / cloud / tap |
+| Flower, vase | 547, 158 | plant (no art of their own; a flower in a vase is part of the vase's plant) |
 | Custom picture (`customPict`) | 4782 | dropped (the house's own pictures; they colour the obstacles drawn where they were) |
+
+**What moves or sparks** (balloons, helicopters, darts, balls, fish, outlets) starts where Glider PRO's does, at
+its speed (`Sources/Dynamics*.c` scaled to Gliderama's rooms) and after its delay (the original counts tenths of a
+second), from the moment the plane comes into the room. Touching one crumples the plane (a second knock is
+usually the end of it); a rubber band brings a balloon, a helicopter or a dart down. As with the blowers, a thing
+that starts switched off follows its switch; balloons, helicopters, darts and drips that start off and that no
+switch turns on are left out (ball, fish, outlet and shredder stay, idle).
 
 ### Prizes and the goal
 
@@ -195,11 +220,36 @@ banner, the goal and the credit; the end card shows the house's trailer.
 
 ## Per-house status
 
+The flight check (`tests/classicReport.test.ts`) flies every house with the bot pilot
+(`tests/helpers/houseSolver.ts`) in the Simple Glider: a beam search over stick input, room by room along the
+house's map, towards the nearest star still to find, or a switch on the way when flipping it opens a shorter way (a
+switched transport, switched air up through a ceiling opening). The menagerie flies alongside, from the moment the
+plane comes into its room (the game makes a room's things afresh then; the play lab's autopilot makes the room
+afresh before each throw, as the plans assume), and touching anything that hurts ends a flight; a star touched as
+the plane is lost still counts, as in the game. *Finished* means the bot collected every star, so a player with the
+same controls can. A house it does not finish may well be flyable: Glider PRO's tricks (hanging still in a column,
+quick switch timing, long detours for a switch) are hard for a paper plane and harder for a search; where it got
+stuck is given.
+
 <!-- status table: generated from the flight check -->
 
 ## Glider PRO objects without Gliderama art
 
-<!-- missing art table: generated from the houses' meta.missingArt -->
+Everything else Glider PRO places in its rooms has Gliderama art of its own (or is invisible: invisible obstacles,
+blowers, switches, lights, bonuses). These are still drawn as something else, over all 22 houses (from each
+house's `meta.missingArt`):
+
+| Glider PRO object | Count | Here | Houses (count) |
+|---|---:|---|---|
+| `flower` | 547 | drawn as plant (455); in a vase: part of the vase plant (92) | Rainbow's End 117, Slumberland 86, Teddy World 75, Davis Station 55, CD Demo House 34, Leviathan 33, California or Bust! 25, The Asylum Pro 24, ImagineHouse PRO II 19, Demo House 16, Art Museum 15, Land of Illusion 14, Titanic 12, In The Mirror 7, Grand Prix 7, Castle o' the Air 4, Metropolis 4 |
+| `vase2` | 86 | drawn as plant | Leviathan 18, The Asylum Pro 10, Rainbow's End 10, ImagineHouse PRO II 10, Slumberland 9, Teddy World 8, Titanic 4, California or Bust! 3, Art Museum 3, Davis Station 2, Metropolis 2, Grand Prix 2, CD Demo House 2, Demo House 1, Castle o' the Air 1, In The Mirror 1 |
+| `foil` | 83 | drawn as tape | In The Mirror 37, Slumberland 8, Leviathan 8, Teddy World 7, ImagineHouse PRO II 6, Art Museum 4, Titanic 3, Fun House 2, Nemo's Market 2, Rainbow's End 2, California or Bust! 1, Castle o' the Air 1, Metropolis 1, The Asylum Pro 1 |
+| `ozma` | 77 | drawn as frame | Slumberland 17, Teddy World 16, Leviathan 12, ImagineHouse PRO II 9, CD Demo House 5, Land of Illusion 4, Fun House 3, The Asylum Pro 3, California or Bust! 2, In The Mirror 2, Titanic 2, Davis Station 1, Art Museum 1 |
+| `vase1` | 72 | drawn as plant | Leviathan 15, Rainbow's End 14, Teddy World 13, Titanic 6, Slumberland 6, In The Mirror 4, Fun House 2, Davis Station 2, Art Museum 2, ImagineHouse PRO II 2, Demo House 1, California or Bust! 1, Castle o' the Air 1, The Asylum Pro 1, Grand Prix 1, CD Demo House 1 |
+| `helium` | 50 | drawn as battery | Land of Illusion 14, Leviathan 6, In The Mirror 5, ImagineHouse PRO II 5, Metropolis 4, SpacePods 4, Grand Prix 3, CD Demo House 2, Titanic 2, Rainbow's End 2, Davis Station 1, Art Museum 1, Nemo's Market 1 |
+| `ceilingBlower` | 12 | drawn as a ceiling vent | Leviathan 3, Grand Prix 2, ImagineHouse PRO II 2, In The Mirror 1, Metropolis 1, CD Demo House 1, Rainbow's End 1, Slumberland 1 |
+
+Not drawn at all: the houses' own pictures (`customPict`, 4782 of them), which Gliderama does not show.
 
 ## Approximations and known differences
 
@@ -212,14 +262,18 @@ banner, the goal and the credit; the end card shows the house's trailer.
   without the picture they are drawn as plain blocks in its colour there.
 - **Looks** come from the pictures' colours; the pictures themselves (and the rooms' own pictures,
   `customPict`) are not shown.
-- **Enemies and appliances** are left out: balloons, helicopters, darts, balls, fish, the shredder, toasters
-  that pop, outlets, the microwave... (the toaster is kept as a plain toaster). So are grease, sparkles, the
-  slider and sound triggers. Switches that only worked those are switch plates.
+- **Enemies and hazards** move as in the original and hurt the Gliderama way (a knock crumples the plane, the
+  shredder shreds it, a cobweb holds it a moment). Triggers set nothing off: what they were linked to goes off on
+  its own timer, and triggers that fire a switch do so at once rather than after their delay. The toaster's toast
+  doesn't pop, the microwave doesn't take gadgets away, and switches for appliances (TV, stereo, microwave,
+  toaster...) flip without effect. Bonuses that an invisible switch took away in the original stay. The slider and
+  sound triggers are left out.
+- **Switches** flip once each time the plane goes through them (as the original's).
 - **Clocks and the invisible bonus** are stars that count for points (the All Stars medal), not the goal.
 - **Transports** put the plane down gliding level where the original puts the glider; deluxe transports keep
   their on/off state and switch.
 - **Lights**: a switch can work another room's lights; darkness follows the original's rule, but rooms are
-  lit or dark as a whole.
+  lit or dark as a whole (every lamp in a room is on its light switch).
 - **Roofs** are stepped blocks, not slopes.
 - **Fireplaces** add Gliderama's fire and its updraft.
 

@@ -330,6 +330,53 @@ export function objectOpenings(room) {
   return o;
 }
 
+/**
+ * Walls of invisible obstacles: Glider PRO houses close a room's open sides (sky rooms, mostly) with invisible
+ * obstacles, which the glider cannot get past. The y ranges they cover at the left and right edges, and the x ranges
+ * at the floor and the ceiling (GP px): an obstacle within WALL_REACH of an edge blocks it there.
+ */
+export const WALL_REACH = 24;
+/** The least gap a glider gets through: its height (and a little) through a side, its width through a floor or ceiling. */
+export const MIN_GAP = { side: 28, floor: 48 };
+
+export function obstacleWalls(room) {
+  const o = { left: [], right: [], up: [], down: [] };
+  for (const ob of room.objects) {
+    if (ob.type !== 'invisObstacle' && ob.type !== 'invisBounce') continue;
+    const b = ob.bounds;
+    if (b.right <= b.left || b.bottom <= b.top) continue;
+    if (b.left < WALL_REACH) o.left.push([b.top, b.bottom]);
+    if (b.right > GP.roomW - WALL_REACH) o.right.push([b.top, b.bottom]);
+    if (b.top < GP.ceiling + WALL_REACH / 2) o.up.push([b.left, b.right]);
+    if (b.bottom > GP.floor - WALL_REACH / 2) o.down.push([b.left, b.right]);
+  }
+  return o;
+}
+
+/** Overlapping or touching intervals merged, in order. */
+export function merge(intervals) {
+  const out = [];
+  for (const [a, b] of intervals.filter(([p, q]) => q > p).sort((p, q) => p[0] - q[0])) {
+    const last = out[out.length - 1];
+    if (last && a <= last[1]) last[1] = Math.max(last[1], b);
+    else out.push([a, b]);
+  }
+  return out;
+}
+
+/** What is left of `intervals` once `cuts` are taken out, the pieces at least `min` long. */
+export function subtract(intervals, cuts, min = 0) {
+  let out = merge(intervals);
+  for (const [c0, c1] of cuts)
+    out = out.flatMap(([a, b]) => {
+      if (c1 <= a || c0 >= b) return [[a, b]];
+      const below = [a, Math.min(b, c0)];
+      const above = [Math.max(a, c1), b];
+      return [below, above].filter(([p, q]) => q > p);
+    });
+  return out.filter(([a, b]) => b - a >= min);
+}
+
 /** Merge intervals: their hull (from, to), and the gaps between the merged pieces. */
 export function hull(intervals) {
   if (!intervals.length) return null;
@@ -484,12 +531,39 @@ export function objectRect(ob) {
 
 const center = (b) => ({ x: (b.left + b.right) / 2, y: (b.top + b.bottom) / 2 });
 
+/** A GP bottom this low stands on the floor (fixed-size art is moved down onto the Gliderama floor line). */
+const onFloor = (bottom) => bottom >= FLOOR_SNAP;
+
+/**
+ * Where fixed-size art goes (Gliderama's kinds default to the Glider PRO size scaled): its left edge where the
+ * original's is, its top where the original's is, or standing on the floor line when the original stands on the floor.
+ */
+function placed(ob) {
+  const [w, h] = SRC[ob.type];
+  const { h: left, v: top } = ob.topLeft;
+  const hh = r1(h * SY);
+  return { x: r1(X(left)), y: onFloor(top + h) ? GR.floor - hh : r1(Y(top)), w: r1(X(w)), h: hh };
+}
+
+/** Glider PRO's delays count 3 frames at 30 a second: tenths of a second (Sources/Dynamics3.c AddDynamicObject). */
+const seconds = (delay) => r2(delay / 10);
+
+/** On a switch group when some switch turns it on and off, otherwise on or off for good as the house starts it. */
+function poweredBy(ob, c) {
+  const g = c.group(ob);
+  return g.group ? g : ob.initial ? {} : { on: false };
+}
+
+/** The look of each blower's grille (paintVentGrille in src/world/kinds/home.ts); plain vents have the default. */
+const VENT_LOOK = { sewerGrate: 'grate', sewerBlower: 'grate', floorBlower: 'blower', grecoVent: 'greco' };
+
 /** Floor-standing blowers (vents, grates). */
 function floorBlower(ob, c) {
-  const [w] = SRC[ob.type];
+  const [w, h] = SRC[ob.type];
   const top = ob.topLeft.v - ob.distance;
   const cx = ob.topLeft.h + w / 2;
   const group = c.group(ob);
+  const look = VENT_LOOK[ob.type] ? { look: VENT_LOOK[ob.type] } : {};
   if (ob.topLeft.v >= FLOOR_SNAP) {
     let reach = Y(top);
     if (top <= GP.ceiling + 16 && c.opensUpAt(cx)) reach = -AIR.carryOn;
@@ -501,13 +575,14 @@ function floorBlower(ob, c) {
       power: AIR.ventPower(ob.distance),
       reach: r1(reach),
       spread: AIR.ventSpread,
+      ...look,
       ...group,
     });
-    if (ob.type !== 'floorVent' && ob.type !== 'floorBlower') c.missing(ob.type, 'drawn as a floor vent');
   } else {
-    // a vent standing on furniture: invisible rising air from its grille
+    // a vent standing on furniture: its grille there (the top of what it stands on 6 px below the grille's top), and
+    // invisible rising air from it
+    c.emit({ t: 'grille', x: r1(X(ob.topLeft.h)), y: r1(Y(ob.topLeft.v + h) - 6), w: r1(X(w)), ...look });
     c.emit(current('up', cx, ob.topLeft.v, top, AIR.ventPower(ob.distance), group, c));
-    c.missing(ob.type, 'vent above the floor (no art: invisible air)');
   }
 }
 
@@ -526,16 +601,22 @@ function band(dir, x0, x1, cy, power, group = {}) {
   return { t: 'current', dir, x: r1(gx0), y: r1(Y(cy) - AIR.bandH / 2), w: r1(Math.max(12, gx1 - gx0)), h: AIR.bandH, power, ...group };
 }
 
-/** Candles, tapers, tiki torches, barbecues: a flame (hazard + small thermal) and the lift above it. */
+/**
+ * Candles, tapers, tiki torches, barbecues: a flame (hazard + small thermal) and the lift above it. The deadly 24 px
+ * above the object's top are the flame (Sources/ObjectRects.c); a tiki torch's pole goes down to the ground
+ * (ObjectDraw.c DrawTiki), a barbecue stands on its legs.
+ */
 function flame(ob, c) {
   const [w, h] = SRC[ob.type];
-  const cx = ob.topLeft.h + w / 2 - (ob.type === 'candle' ? 2 : ob.type === 'stubby' ? 1 : 0);
-  const fy = Y(ob.topLeft.v);
-  const wax = Math.max(8, r1(Y(ob.topLeft.v + h) - fy - 8));
-  c.emit({ t: 'candle', x: r1(X(cx) - 3), y: r1(fy), wax });
+  const { h: left, v: top } = ob.topLeft;
+  const cx = left + w / 2 - (ob.type === 'candle' ? 2 : ob.type === 'stubby' ? 1 : 0);
+  const fy = r1(Y(top));
+  // (the candle object's x is 3 px left of its flame)
+  if (ob.type === 'tiki') c.emit({ t: 'tiki', x: r1(X(cx) - 3), y: fy, wax: GR.floor - 8 - fy });
+  else if (ob.type === 'bbq') c.emit({ t: 'bbq', x: r1(X(cx) - 3), y: fy, wax: Math.max(20, r1((onFloor(top + h) ? GR.floor : Y(top + h)) - fy - 6)) });
+  else c.emit({ t: 'candle', x: r1(X(cx) - 3), y: fy, wax: Math.max(8, r1(Y(top + h) - fy - 8)) });
   // above the 24 deadly pixels over the flame the column lifts the glider (a few pixels of it are not worth having)
-  if (ob.distance >= 64) c.emit(current('up', cx, ob.topLeft.v - 24, ob.topLeft.v - ob.distance, AIR.upPower(ob.distance), {}, c));
-  if (ob.type === 'tiki' || ob.type === 'bbq') c.missing(ob.type, 'drawn as a candle');
+  if (ob.distance >= 64) c.emit(current('up', cx, top - 24, top - ob.distance, AIR.upPower(ob.distance), {}, c));
 }
 
 function fan(ob, c) {
@@ -604,26 +685,32 @@ function ceilingBlower(ob, c) {
   if (ob.type === 'ceilingBlower') c.missing(ob.type, 'drawn as a ceiling vent');
 }
 
-/** Furniture that stands on the floor, drawn by `kind` stretched over the original rect. */
+/** Furniture and clutter drawn by `kind` over the original's rect (standing on the floor when the original does). */
 const standing =
   (kind, extra = {}) =>
   (ob, c) => {
-    const r = rectOf(ob.bounds, true);
+    const r = rectOf(objectRect(ob), true);
     c.emit({ t: kind, ...r, ...extra });
   };
 
-function table(ob, c, v = 0) {
-  // a table top on a pedestal: Gliderama's side table, its top where the original's is, legs to the floor
-  const top = rectOf(ob.bounds);
-  c.emit({ t: 'sideTable', x: top.x, y: top.y, w: Math.max(40, top.w), h: Math.max(30, GR.floor - top.y), v });
-}
+/**
+ * A table top on a pedestal, the bounds being the top (Sources/ObjectDraw.c DrawTable: the pedestal goes down to
+ * the floor); a stool is its seat on a pole down to the floor (DrawStool).
+ */
+const pedestal =
+  (kind, extra = {}) =>
+  (ob, c) => {
+    const top = rectOf(ob.bounds);
+    c.emit({ t: kind, x: top.x, y: top.y, w: top.w, h: Math.max(top.h, GR.floor - top.y), ...extra });
+  };
 
-function cabinet(ob, c) {
-  const r = rectOf(ob.bounds, true);
-  // standing cupboards become dressers; wall cupboards a wall-hung bookcase
-  if (ob.bounds.bottom >= FLOOR_SNAP) c.emit({ t: 'dresser', ...r, v: 1 });
-  else c.emit({ t: 'bookshelf', ...r, v: 1 });
-}
+/** Fixed-size art (appliances, the guitar...) where the original stands. */
+const fixed =
+  (kind, extra = {}) =>
+  (ob, c) => {
+    const { x, y } = placed(ob);
+    c.emit({ t: kind, x, y, ...(typeof extra === 'function' ? extra(ob, c) : extra) });
+  };
 
 /**
  * Invisible obstacles stand for things drawn into the original's pictures (walls, pipes, ledges): without the
@@ -703,11 +790,14 @@ function transport(ob, c) {
   const link = c.link(ob);
   const r = rectOf(transportTrigger(ob));
   const look = ob.type === 'floorTrans' ? 'floorDuct' : ob.type === 'ceilingTrans' ? 'ceilingDuct' : undefined;
+  // a mailbox is drawn whichever end of the journey it is (the plane goes in and comes out of its open door)
+  const mailbox = ob.type === 'mailboxLf' || ob.type === 'mailboxRt';
+  const box = () => (mailbox ? c.emit({ t: 'mailbox', ...placed(ob), dir: ob.type === 'mailboxLf' ? -1 : 1 }) : null);
   if (!link || !link.target) {
     // the far end of another transport: the glider only comes out of it (a duct is still drawn)
     if (c.isArrival(ob)) {
       if (look) c.emit({ t: 'transport', ...r, look });
-      if (ob.type === 'mailboxLf' || ob.type === 'mailboxRt') c.missing(ob.type, 'no mailbox art (the far end of a transport)');
+      box();
       return;
     }
     return c.drop(ob.type, link ? 'linked to a missing room or object' : 'not linked to another transport');
@@ -715,35 +805,72 @@ function transport(ob, c) {
   const a = transportArrival(link.target);
   // deluxe transports carry their on/off state in the low nibble of `wide` (initial state in the high nibble)
   const off = ob.type === 'deluxeTrans' && !((ob.wide >> 4) & 0x0f);
+  box();
   c.emit({ t: 'transport', ...r, to: link.key, ax: a.x, ay: a.y, facing: a.facing, ...(look ? { look } : {}), ...c.group(ob, !off) });
-  if (ob.type === 'mailboxLf' || ob.type === 'mailboxRt') c.missing(ob.type, 'no mailbox art (an invisible transport)');
 }
 
-const SWITCH_LOOK = ['lightSwitch', 'machineSwitch', 'thermostat', 'powerSwitch', 'knifeSwitch'];
+/** The switches the glider can see, and how each is drawn (the `switch` object's looks; a light switch is the default). */
+export const SWITCH_LOOKS = { lightSwitch: null, machineSwitch: 'machine', thermostat: 'thermostat', powerSwitch: 'power', knifeSwitch: 'knife' };
+export const TRIGGERS = ['trigger', 'lgTrigger'];
+
+/**
+ * What a switch flips: the object it is linked to ({ room, key, target }, see the converter's link), or null. A
+ * trigger flips nothing itself: it fires what it is linked to a moment later (Sources/Triggers.c FireTrigger), and
+ * when that is another switch, it is as if the glider had flown through that one.
+ */
+export function flipped(ob, link) {
+  const l = link(ob);
+  if (!l?.target) return null;
+  if (!TRIGGERS.includes(ob.type)) return l;
+  const t = l.target;
+  if (t.family !== 'switch' || TRIGGERS.includes(t.type) || t.type === 'soundTrigger') return null;
+  const l2 = link(t);
+  return l2?.target ? l2 : null;
+}
+
+/** Things Gliderama can switch on and off besides the lights (their `group`): air, switched transports, the menagerie. */
+const SWITCHABLE = new Set('deluxeTrans balloon copterLf copterRt dartLf dartRt ball fish outlet shredder'.split(' '));
+/** Things Glider PRO's switches cannot change either (Sources/Objects.c SetObjectState). */
+const UNSWITCHABLE = new Set('taper candle stubby tiki bbq cinderBlock flowerBox cds customPict guitar cobweb slider invisTrans'.split(' '));
+
+/** Why a switch has nothing to switch here. */
+function idleSwitch(ob, c) {
+  const l = c.link(ob);
+  const t = l?.target;
+  if (!l) return 'not linked to anything';
+  if (!t) return 'linked to a missing object';
+  const what = (f) => {
+    if (f.family === 'bonus') return `takes the ${f.type} away (it stays here)`;
+    if (UNSWITCHABLE.has(f.type) || ['furniture', 'clutter', 'switch'].includes(f.family) || (f.family === 'transport' && f.type !== 'deluxeTrans'))
+      return `switches the ${f.type} (which does nothing, as in Glider PRO)`;
+    return `switches the ${f.type} on and off (no effect here)`;
+  };
+  if (!TRIGGERS.includes(ob.type)) return what(t);
+  if (t.family !== 'switch') return `sets off the ${t.type} (it goes off by itself here)`;
+  const f = flipped(ob, c.link)?.target;
+  return f ? `fires the ${t.type}, which ${what(f)}` : `fires the ${t.type} (which does nothing)`;
+}
 
 function switchObj(ob, c) {
-  const visible = SWITCH_LOOK.includes(ob.type);
-  const link = c.link(ob);
-  const x = r1(X(ob.topLeft.h + (SRC[ob.type][0] - 12) / 2));
+  const visible = ob.type in SWITCH_LOOKS;
+  const [w, h] = SRC[ob.type];
+  const x = r1(X(ob.topLeft.h + (w - 12) / 2));
   const y = r1(Y(ob.topLeft.v + 2));
-  const plate = () => (visible ? c.emit({ t: 'switchPlate', x, y }) : null);
-  if (!link?.target) {
-    plate();
-    return c.drop(ob.type, link ? 'linked to a missing object' : 'not linked to anything', !visible);
-  }
-  const fam = link.target.family;
-  const hidden = visible ? {} : { hidden: true, w: r1(X(SRC[ob.type][0])), h: r1(SY * SRC[ob.type][1]) };
-  if (fam === 'light') {
+  const look = SWITCH_LOOKS[ob.type] ? { look: SWITCH_LOOKS[ob.type] } : {};
+  const hidden = visible ? {} : { hidden: true, w: r1(X(w)), h: r1(SY * h) };
+  const l = flipped(ob, c.link);
+  const t = l?.target;
+  if (t?.family === 'light') {
     // a light switch: the lights of the room the light is in
-    c.emit({ t: 'switch', x, y, ...(link.key !== c.key ? { room: link.key } : {}), ...hidden });
-    return;
-  }
-  if (fam === 'blower' || link.target.type === 'deluxeTrans') {
-    c.emit({ t: 'switch', x, y, group: c.groupName(link.room, link.target.slot), ...hidden });
-    return;
-  }
-  plate();
-  c.drop(ob.type, `switches ${link.target.type} (not in Gliderama)`, !visible);
+    c.emit({ t: 'switch', x, y, ...look, ...(l.key !== c.key ? { room: l.key } : {}), ...hidden });
+  } else if (t && (t.family === 'blower' || SWITCHABLE.has(t.type))) {
+    c.emit({ t: 'switch', x, y, ...look, group: c.groupName(l.room, t.slot), ...hidden });
+  } else if (visible) {
+    // nothing here for it to switch: it still flips (a group of its own, that nothing listens to)
+    c.emit({ t: 'switch', x, y, ...look, group: c.groupName(c.room, ob.slot) });
+    return c.approx(ob.type, idleSwitch(ob, c));
+  } else return c.drop(ob.type, idleSwitch(ob, c), true);
+  if (TRIGGERS.includes(ob.type)) c.approx(ob.type, 'fires its switch as the plane goes through (no delay)');
 }
 
 function light(ob, c) {
@@ -751,10 +878,11 @@ function light(ob, c) {
   const cx = r1(X((b.left + b.right) / 2));
   switch (ob.type) {
     case 'ceilingLight':
+      c.emit({ t: 'pendant', x: cx, len: 6, v: 2 });
+      return;
     case 'flourescent':
     case 'trackLight':
-      c.emit({ t: 'pendant', x: cx, len: 6, v: 2 });
-      if (ob.type !== 'ceilingLight') c.missing(ob.type, 'drawn as a ceiling lamp');
+      c.emit({ t: ob.type === 'flourescent' ? 'tubeLight' : 'trackLight', x: r1(X(b.left)), y: r1(Y(b.top)), w: r1(X(b.right) - X(b.left)) });
       return;
     case 'lightBulb':
       c.emit({ t: 'pendant', x: cx, len: Math.max(6, r1(Y(b.top) - GR.ceiling)), v: 2 });
@@ -762,10 +890,10 @@ function light(ob, c) {
     case 'tableLamp':
       c.emit({ t: 'deskLamp', x: r1(X(b.left + 4)), y: r1(Y(b.bottom) - 48), v: c.seed % 3 });
       return;
-    case 'invisLight':
-      return;
-    default:
-      c.missing(ob.type, 'floor lamp: no art');
+    case 'hipLamp':
+    case 'decoLamp':
+      // floor lamps: a torchiere bowl (hip lamp) or a fringed shade (deco lamp)
+      c.emit({ t: 'floorLamp', ...placed(ob), v: ob.type === 'hipLamp' ? 1 : 0 });
   }
 }
 
@@ -781,6 +909,51 @@ function clutterAs(kind, extra = {}) {
     const r = rectOf(ob.bounds);
     c.emit({ t: kind, ...r, ...extra });
   };
+}
+
+// The menagerie (src/game/objects/enemies.ts): what moves starts where Glider PRO's does (Sources/Dynamics3.c
+// AddDynamicObject), centred where the art is a different size, and keeps its delay; a switch turns it on and off.
+
+/** A balloon rises from the floor (x is its left: the original's centre less half its 26 px). */
+function balloon(ob, c) {
+  c.emit({ t: 'balloon', x: r1(X(ob.topLeft.h + 12) - 13), y: GR.floor, delay: seconds(ob.delay), v: 0, ...poweredBy(ob, c) });
+}
+
+/** Toy helicopters set off from under the ceiling, paper darts from the wall behind them at the original's height. */
+const flier = (t, dir) => (ob, c) =>
+  c.emit({ t, x: r1(X(ob.topLeft.h)), y: t === 'copter' ? GR.ceiling : r1(Y(ob.topLeft.v)), dir, delay: seconds(ob.delay), ...poweredBy(ob, c) });
+
+/** A ball bounces `height` up from where its bottom is. */
+function ball(ob, c) {
+  const { h: left, v: top } = ob.topLeft;
+  c.emit({ t: 'ball', x: r1(X(left + 16) - 17), y: onFloor(top + 32) ? GR.floor : r1(Y(top + 32)), height: r1(ob.length * SY), v: 0, ...poweredBy(ob, c) });
+}
+
+/** A goldfish in its bowl (46 × 36 here, centred on the original's, standing where it stands) leaps `height` out of it. */
+function fish(ob, c) {
+  const { h: left, v: top } = ob.topLeft;
+  const bottom = onFloor(top + 33) ? GR.floor : r1(Y(top + 33));
+  c.emit({ t: 'fish', x: r1(X(left + 18) - 23), y: bottom - 36, height: r1(ob.length * SY), delay: seconds(ob.delay), ...poweredBy(ob, c) });
+}
+
+/** An electric outlet (an 18 × 24 plate on the original's centre) sparks every `delay`. */
+function outlet(ob, c) {
+  const { h: left, v: top } = ob.topLeft;
+  c.emit({ t: 'outlet', x: r1(X(left + 8) - 9), y: r1(Y(top + 12) - 12), delay: seconds(ob.delay), ...poweredBy(ob, c) });
+}
+
+/** A paper shredder (90 × 24, centred on the original, on what it stands on): deadly while it is on. */
+function shredder(ob, c) {
+  const { h: left, v: top } = ob.topLeft;
+  c.emit({ t: 'shredder', x: r1(X(left + 36.5) - 45), y: (onFloor(top + 22) ? GR.floor : r1(Y(top + 22))) - 24, ...poweredBy(ob, c) });
+}
+
+/** A grease can (its foot where the original's is) tips over when clipped, spilling a slick `length` long (or lies spilt). */
+function grease(ob, c) {
+  const { h: left, v: top } = ob.topLeft;
+  const reach = ob.length > 5 ? { reach: r1(X(ob.length)) } : {};
+  const y = onFloor(top + 27) ? GR.floor - 29 : r1(Y(top));
+  c.emit({ t: 'grease', x: r1(X(left)), y, h: 29, dir: ob.type === 'greaseRt' ? 1 : -1, ...reach, ...(ob.initial ? {} : { spilled: true }) });
 }
 
 function plantFrom(ob, c) {
@@ -818,26 +991,27 @@ export const OBJECT_MAP = {
   invisBlower,
   liftArea,
 
-  table: (ob, c) => table(ob, c, 0),
-  deckTable: (ob, c) => table(ob, c, 2),
-  stool: (ob, c) => table(ob, c, 1),
+  table: pedestal('table', { v: 0 }),
+  deckTable: pedestal('table', { v: 2 }),
+  stool: pedestal('stool'),
   shelf: (ob, c) => c.emit({ t: 'shelf', x: r1(X(ob.bounds.left)), y: r1(Y(ob.bounds.top)), w: r1(X(ob.bounds.right - ob.bounds.left)), v: c.seed % 3 }),
-  cabinet,
-  filingCabinet: standing('dresser', { v: 2 }),
-  counter: standing('dresser', { v: 0 }),
+  cabinet: standing('cabinet'),
+  filingCabinet: standing('filingCabinet'),
+  counter: standing('counter'),
   dresser: standing('dresser', { v: 1 }),
-  wasteBasket: standing('toyBox'),
-  milkCrate: standing('toyBox'),
-  trunk: standing('toyBox'),
+  wasteBasket: standing('wasteBasket'),
+  milkCrate: standing('milkCrate'),
+  trunk: standing('trunk'),
   books,
   invisObstacle: obstacle,
   invisBounce: obstacle,
   manhole: () => {}, // an opening in the floor (objectOpenings)
 
-  redClock: prize('star'),
-  blueClock: prize('star'),
-  yellowClock: prize('star'),
-  cuckoo: prize('star'),
+  // bonus clocks are collected like stars (not the goal stars)
+  redClock: prize('star', { look: 'clock', v: 0 }),
+  blueClock: prize('star', { look: 'clock', v: 1 }),
+  yellowClock: prize('star', { look: 'clock', v: 2 }),
+  cuckoo: prize('star', { look: 'cuckoo' }),
   invisBonus: prize('star'),
   star: prize('star', { goal: true }),
   paper: prize('sheet'),
@@ -845,9 +1019,9 @@ export const OBJECT_MAP = {
   helium: prize('battery'),
   bands: prize('bands'),
   foil: prize('tape'),
-  greaseRt: null,
-  greaseLf: null,
-  sparkle: null,
+  greaseRt: grease,
+  greaseLf: grease,
+  sparkle: (ob, c) => c.emit({ t: 'sparkle', x: r1(X(ob.topLeft.h + 10)), y: r1(Y(ob.topLeft.v + 9.5)) }),
   slider: null,
 
   upStairs: stairsUp,
@@ -885,96 +1059,75 @@ export const OBJECT_MAP = {
   decoLamp: light,
   flourescent: light,
   trackLight: light,
-  invisLight: light,
+  invisLight: () => {}, // lighting only (startsDark)
 
+  shredder,
   toaster: (ob, c) => c.emit({ t: 'toaster', x: r1(X(ob.topLeft.h + 4)), y: r1(Y(ob.topLeft.v + 27) - 24) }),
-  cinderBlock: (ob, c) => c.emit({ t: 'solid', ...rectOf(objectRect(ob), true), ramp: 'stone' }),
-  flowerBox: (ob, c) => plantFrom({ bounds: objectRect(ob) }, c),
-  shredder: null,
-  macPlus: null,
-  guitar: null,
-  tv: null,
-  coffee: null,
-  outlet: null,
-  vcr: null,
-  stereo: null,
-  microwave: null,
-  cds: null,
+  macPlus: fixed('computer', (ob) => (ob.initial ? {} : { on: false })),
+  guitar: fixed('guitar', { w: 80, h: 183 }),
+  tv: fixed('tv', (ob) => (ob.initial ? {} : { on: false })),
+  coffee: fixed('coffee'),
+  outlet,
+  vcr: fixed('vcr'),
+  stereo: fixed('stereo'),
+  microwave: fixed('microwave'),
+  cinderBlock: fixed('cinderBlock'),
+  flowerBox: fixed('flowerBox'),
+  cds: fixed('cds'),
   customPict: null,
 
+  balloon,
+  copterLf: flier('copter', -1),
+  copterRt: flier('copter', 1),
+  dartLf: flier('dart', -1),
+  dartRt: flier('dart', 1),
+  ball,
   drip,
-  balloon: null,
-  copterLf: null,
-  copterRt: null,
-  dartLf: null,
-  dartRt: null,
-  ball: null,
-  fish: null,
-  cobweb: null,
+  fish,
+  cobweb: (ob, c) => c.emit({ t: 'cobweb', x: r1(X(ob.topLeft.h)), y: r1(Y(ob.topLeft.v)), w: r1(X(54)), h: r1(45 * SY) }),
 
   ozma: clutterAs('frame', { v: 1 }),
-  mirror: clutterAs('frame', { v: 0 }),
-  calendar: clutterAs('poster', { v: 2 }),
-  bulletin: clutterAs('poster', { v: 2 }),
-  wallWindow: clutterAs('window'),
+  mirror: clutterAs('mirror', { v: 0 }),
+  // a mouse hole is in the skirting, its foot where the wall meets the floor
+  mousehole: (ob, c) => {
+    const r = rectOf(ob.bounds);
+    c.emit({ t: 'mousehole', x: r.x, y: GR.wallBase - r.h, w: r.w, h: r.h });
+  },
   fireplace: (ob, c) => {
     const r = rectOf(ob.bounds);
     c.emit({ t: 'fireplace', x: r.x, y: r.y, w: Math.max(120, r.w), h: GR.floor - r.y });
   },
   flower: plantFrom,
+  wallWindow: clutterAs('window'),
+  bear: standing('bear'),
+  calendar: clutterAs('calendar'),
   vase1: plantFrom,
   vase2: plantFrom,
+  bulletin: clutterAs('bulletin'),
+  cloud: clutterAs('cloud'),
+  faucet: clutterAs('faucet'),
   rug: (ob, c) => c.emit({ t: 'rug', x: r1(X(ob.bounds.left)), y: GR.floor - 12, w: r1(X(ob.bounds.right - ob.bounds.left)), v: c.seed % 4 }),
-  mousehole: null,
-  bear: null,
-  cloud: null,
-  faucet: null,
-  chimes: null,
-};
-
-/** Why each dropped type is dropped (and whether it is missing Gliderama art). */
-export const DROPPED = {
-  greaseRt: 'grease can (spills a slick): no equivalent',
-  greaseLf: 'grease can (spills a slick): no equivalent',
-  sparkle: 'decorative sparkle',
-  slider: 'invisible sliding surface (Gliderama surfaces are solid anyway)',
-  soundTrigger: 'plays a sound only',
-  shredder: 'shredder (hazard): no art',
-  macPlus: 'Macintosh Plus (obstacle on furniture): no art',
-  guitar: 'guitar (strummed by the glider): no art',
-  tv: 'television (obstacle on furniture): no art',
-  coffee: 'coffee maker (obstacle on furniture): no art',
-  outlet: 'electric outlet (sparks hazard): no art',
-  vcr: 'VCR (obstacle on furniture): no art',
-  stereo: 'stereo (obstacle on furniture): no art',
-  microwave: 'microwave (kills gadgets): no art',
-  cds: 'CD rack: no art',
-  customPict: "a picture from the house's own resources: not converted",
-  balloon: 'balloon (enemy): no art',
-  copterLf: 'toy helicopter (enemy): no art',
-  copterRt: 'toy helicopter (enemy): no art',
-  dartLf: 'paper dart (enemy): no art',
-  dartRt: 'paper dart (enemy): no art',
-  ball: 'bouncing ball (enemy): no art',
-  fish: 'jumping fish (enemy): no art',
-  cobweb: 'cobweb (traps the glider): no art',
-  mousehole: 'mouse hole: no art',
-  bear: 'teddy bear: no art',
-  cloud: 'cloud: no art (outdoor rooms draw their own sky)',
-  faucet: 'faucet: no art',
-  chimes: 'wind chimes: no art',
+  chimes: clutterAs('chimes'),
 };
 
 /**
- * Types whose art Gliderama is missing (for the art list): dropped for want of art, or drawn with the art of
- * something else (a filing cabinet as a dresser, a clock as a star). Invisible objects and custom pictures aside.
+ * Things that do nothing to be seen while switched off (Sources/Play.c SetObjectsToDefaults starts each as its
+ * `initial` says): dropped when they start off and no switch ever turns them on, like the blowers.
  */
-export const MISSING_ART = new Set([
-  ...Object.keys(DROPPED).filter((k) => !['slider', 'soundTrigger', 'customPict'].includes(k)),
-  ...'tiki bbq hipLamp decoLamp flourescent trackLight mailboxLf mailboxRt sewerGrate grecoVent sewerBlower floorBlower ceilingBlower'.split(' '),
-  ...'redClock blueClock yellowClock cuckoo foil helium mirror calendar bulletin ozma filingCabinet counter cabinet wasteBasket'.split(' '),
-  ...'milkCrate trunk stool table deckTable cinderBlock flowerBox vase1 vase2 flower machineSwitch thermostat powerSwitch knifeSwitch'.split(' '),
-]);
+export const GONE_WHEN_OFF = ['balloon', 'copterLf', 'copterRt', 'dartLf', 'dartRt', 'drip', 'sparkle'];
+
+/** Why each dropped type is dropped. */
+export const DROPPED = {
+  slider: 'invisible sliding surface (Gliderama surfaces are solid anyway)',
+  soundTrigger: 'plays a sound only',
+  customPict: "a picture from the house's own resources: not converted",
+};
+
+/**
+ * Types whose art Gliderama is missing (for the art list): drawn with the art of something else (a ceiling blower
+ * as a ceiling vent, foil as tape). Invisible objects and custom pictures aside.
+ */
+export const MISSING_ART = new Set('ceilingBlower helium foil ozma flower vase1 vase2'.split(' '));
 
 // ---------------------------------------------------------------------------------------------
 // Houses: credits and per-house settings. Authors are as credited in the Glider PRO release (README.md), or
