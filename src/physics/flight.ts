@@ -203,10 +203,10 @@ function substep(p: Plane, input: FlightInput, wind: WindFn, dt: number): void {
   const w = wind(p.x, p.y);
   updraftExit(p, w.y, dt);
 
-  // Elevator servo with a gentle expo curve on the command.
+  // Elevator servo with a gentle expo curve on the command; an agile design answers the stick quicker.
   const cmd = Math.sign(input.pitch) * Math.pow(Math.abs(input.pitch), 1.35);
   const target = p.trimCtrl + cmd * CONTROL_MAX;
-  const maxD = PHYS.servoRate * dt;
+  const maxD = PHYS.servoRate * Math.max(0.5, 1 + (a.friendly.agility - 5) * PHYS.agilityServo) * dt;
   p.ctrl += Math.max(-maxD, Math.min(maxD, target - p.ctrl));
 
   let fx: number;

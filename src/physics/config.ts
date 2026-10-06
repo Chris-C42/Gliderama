@@ -13,13 +13,15 @@ export const PHYS = {
   /** Fixed physics substeps per 120 Hz game tick. */
   substeps: 3,
   /** Pitch inertia multiplier (>1 = lazier pitch response). */
-  inertiaMul: 1.6,
+  inertiaMul: 1.2,
   /** Extra pitch damping on top of Cmq (game feel). */
   extraDamping: 1.5,
-  /** Elevator servo rate (rad of deflection per sim second). */
-  servoRate: 1.4,
+  /** Elevator servo rate (rad of deflection per sim second) for a design of middling agility (see `agilityServo`). */
+  servoRate: 3.6,
+  /** How much the design's agility (0..10) speeds up or slows down the elevator: × (1 + (agility - 5) × this). */
+  agilityServo: 0.08,
   /** Turnaround duration multiplier on the design's turn time. */
-  turnMul: 0.45,
+  turnMul: 0.38,
   /** Fraction of airspeed kept through a turnaround (before drag). */
   turnSpeedKeep: 0.92,
   /** Pitch beyond which a plane that isn't actively looping rolls upright (rad). */
