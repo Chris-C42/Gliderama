@@ -92,6 +92,7 @@ const noopApi = (plane: () => Plane, switches = new Map<string, boolean>()): Ses
   openWorkbench() {},
   teleport() {},
   takeStairs() {},
+  transport() {},
   sfx() {},
   shake() {},
   plane: () => {

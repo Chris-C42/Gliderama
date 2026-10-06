@@ -1,5 +1,6 @@
 import type { ObjFactory } from './types';
-import { ceilingVent, deskFan, draft, floorVent, radiator } from './air';
+import { ceilingVent, current, deskFan, draft, floorVent, radiator } from './air';
+import { transport } from './classic';
 import { cat, cuckooClock, fireplace, grandfatherClock, kettle, stove } from './cottage';
 import { stairsDown, stairsUp } from './stairs';
 import { ball, balloon, chimes, cobweb, copter, dart, fish, grease, guitar, outlet, shredder, sparkle } from './enemies';
@@ -32,6 +33,8 @@ export const OBJECTS: Record<string, ObjFactory> = {
   stove,
   stairsUp,
   stairsDown,
+  current,
+  transport,
   balloon,
   copter,
   dart,

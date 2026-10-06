@@ -15,6 +15,7 @@ import { Px } from '../../render/pixel';
 import { rgb } from '../../render/particles';
 import { BOWL, SHREDDER } from '../../world/gliderpro';
 import { LAYOUT, type ItemDef, type Rect } from '../../world/types';
+import { groupOn } from './air';
 import type { Gfx, ObjCtx, ObjFactory } from './types';
 
 const num = (v: unknown, d: number) => (typeof v === 'number' ? v : d);
@@ -29,8 +30,8 @@ const G = 480;
 const FLOOR = LAYOUT.floor;
 const CEILING = LAYOUT.ceiling + 2;
 
-/** A switch group can turn a thing on and off; without one it is always on. */
-const isOn = (def: ItemDef, ctx: ObjCtx) => (typeof def.group === 'string' ? ctx.api.switchOn(def.group) : def.on !== false);
+/** A switch group can turn a thing on and off ('!g': on while g is switched off); without one it is on unless `on: false`. */
+const isOn = (def: ItemDef, ctx: ObjCtx) => (typeof def.group === 'string' ? groupOn(ctx.api, def.group) : def.on !== false);
 
 /** A sprite repainted only when what it shows changes. */
 function spriteOf(gfx: Gfx | null, w: number, h: number, emissive = 0, z = 8) {
@@ -690,7 +691,8 @@ export const shredder: ObjFactory = (def, id) => {
 };
 
 // ---------------------------------------------------------------------------------------------
-// Grease can (Glider PRO 32 × 27): clip it and it tips over, spilling a slick along the shelf the way it faces.
+// Grease can (Glider PRO 32 × 27): clip it and it tips over, spilling a slick along the shelf the way it faces
+// (`spilled`: it lies there spilt already).
 
 function paintCan(px: Px, dir: 1 | -1, tipped: boolean) {
   const c = Px.create(40, 40);
@@ -724,8 +726,8 @@ export const grease: ObjFactory = (def, id, gfx) => {
   const foot = def.y + num(def.h, 29);
   const can = spriteOf(gfx, 48, 48, 0, 7);
   const slick = spriteOf(gfx, Math.max(8, Math.round(reach)), 4, 0, 6);
-  let tipped = false;
-  let spread = 0;
+  let tipped = def.spilled === true;
+  let spread = tipped ? reach : 0;
   const show = () => {
     can.show(tipped ? 'tipped' : 'up', (px) => paintCan(px, dir, tipped), def.x - 4, foot - 48 + (tipped ? 4 : 0));
     if (spread > 0) {

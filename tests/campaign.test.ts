@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allLevels } from '../src/world/campaign';
+import { journeyLevels } from '../src/world/campaign';
 import { RECIPES } from '../src/paper/recipes';
 import { solveLevel } from './helpers/solver';
 
@@ -8,7 +8,7 @@ import { solveLevel } from './helpers/solver';
  * with the player's controls (turn or not, pitch). A level that fails here needs a layout fix, not a better pilot.
  */
 describe('campaign levels are passable', () => {
-  for (const cl of allLevels()) {
+  for (const cl of journeyLevels()) {
     it(cl.id, () => {
       const results = [];
       for (const id of ['glider', 'dart']) {

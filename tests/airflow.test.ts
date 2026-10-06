@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { OBJECTS } from '../src/game/objects';
 import type { GameObject } from '../src/game/objects/types';
 import { CHALLENGES } from '../src/modes/challenges';
-import { allLevels } from '../src/world/campaign';
+import { journeyLevels } from '../src/world/campaign';
 import { generateFloor, themeForFloor } from '../src/world/procgen';
 import { spillFlows, spillsFor, spillWind } from '../src/game/roomAir';
 import type { ItemDef, RoomDef } from '../src/world/types';
@@ -54,7 +54,7 @@ function checkObject(o: GameObject, label: string): number {
   return lines;
 }
 
-const AIR = ['floorVent', 'ceilingVent', 'fan', 'radiator', 'draft', 'candle', 'fireplace', 'kettle', 'stove'];
+const AIR = ['floorVent', 'ceilingVent', 'fan', 'radiator', 'draft', 'candle', 'fireplace', 'kettle', 'stove', 'current'];
 
 function airItems(rooms: Record<string, RoomDef>): { key: string; it: ItemDef }[] {
   const out: { key: string; it: ItemDef }[] = [];
@@ -76,6 +76,11 @@ describe('air-current lines', () => {
       { t: 'radiator', x: 200, y: 284, w: 120 },
       { t: 'draft', x: 380, y: 340, w: 160, top: -40 },
       { t: 'draft', x: 380, y: 372, w: 160, top: 120 },
+      { t: 'current', x: 200, y: 60, w: 72, h: 280 },
+      { t: 'current', x: 200, y: -40, w: 72, h: 390, dir: 'up' },
+      { t: 'current', x: 200, y: 20, w: 72, h: 200, dir: 'down' },
+      { t: 'current', x: 100, y: 160, w: 300, h: 46, dir: 'left' },
+      { t: 'current', x: 100, y: 160, w: 300, h: 46, dir: 'right' },
       { t: 'candle', x: 140, y: 240 },
       { t: 'fireplace', x: 190, y: 190 },
       { t: 'kettle', x: 300, y: 222 },
@@ -87,14 +92,14 @@ describe('air-current lines', () => {
 
   it('campaign and challenge rooms', () => {
     let n = 0;
-    for (const l of allLevels()) for (const { key, it } of airItems(l.build().rooms)) n += checkObject(make(it), `${l.id} ${key} ${it.t}`);
+    for (const l of journeyLevels()) for (const { key, it } of airItems(l.build().rooms)) n += checkObject(make(it), `${l.id} ${key} ${it.t}`);
     for (const c of CHALLENGES) for (const { key, it } of airItems(c.level().rooms)) n += checkObject(make(it), `${c.id} ${key} ${it.t}`);
     expect(n).toBeGreaterThan(40);
   });
 
   it('air carried through floor and ceiling openings', () => {
     let n = 0;
-    const levels = [...allLevels().map((l) => l.build())];
+    const levels = [...journeyLevels().map((l) => l.build())];
     for (let seed = 1; seed <= 12; seed++) levels.push(generateFloor({ seed, floor: seed % 9, theme: themeForFloor(seed % 9) }));
     for (const level of levels)
       for (const key of Object.keys(level.rooms)) {

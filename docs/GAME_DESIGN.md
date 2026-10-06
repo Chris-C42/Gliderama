@@ -152,6 +152,10 @@ puzzles: narrow duct, gale-force fan, long dark hallway). Goal: escape through t
 **Escape**, **All Stars**, **Pristine** (low damage), **Swift** (par time). Unlocks: folds &
 recipes, paper stock, gadgets & add-ons, cosmetics.
 
+Outside the journey, **Classic Houses** holds the houses that came with Glider PRO (GPL v2), converted
+from the original files: all open from the start, credited to their authors, finished by collecting
+every star as in the original (no unlocks). See `classic-houses.md`.
+
 ### Endless roguelike — "Paper Trail" (draft-to-build)
 Runs through procedurally generated floors (6–8 rooms + a workbench room). Start: plain printer
 sheet, basic folds, 3 spare sheets. Between floors pick **1 of 3 offers**: fold techniques, paper

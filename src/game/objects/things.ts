@@ -135,14 +135,21 @@ function paintSwitch(px: Px, look: string, on: boolean) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Light switch: fly into it to flip the room lights (or a named group, e.g. a fan).
+// Light switch: fly into it to flip the room lights (or a named group, e.g. a fan). `room` wires it to another
+// room's lights; `hidden` makes it an invisible trigger of size w × h (Glider PRO's invisible switches). It flips once
+// each time the plane comes through (lingering in a big trigger does not flip it back).
 
 export const lightSwitch: ObjFactory = (def, id, gfx) => {
   const group = str(def.group, 'lights');
-  const sprite = gfx?.createSprite(10, 16, 0, 6) ?? null;
+  const room = typeof def.room === 'string' ? def.room : undefined;
+  const hidden = !!def.hidden;
+  const sprite = hidden ? null : (gfx?.createSprite(10, 16, 0, 6) ?? null);
   const px = sprite ? new Px(sprite.canvas, 2) : null;
   let state: boolean | null = null;
   let cooldown = 0;
+  // touched this tick / the tick before
+  let over = false;
+  let wasOver = false;
   const draw = (on: boolean) => {
     if (!px || !sprite) return;
     px.ctx.clearRect(0, 0, 10, 16);
@@ -155,19 +162,22 @@ export const lightSwitch: ObjFactory = (def, id, gfx) => {
     def,
     update(ctx) {
       cooldown = Math.max(0, cooldown - ctx.dt);
-      const on = group === 'lights' ? ctx.api.lightsOn() : ctx.api.switchOn(group);
+      wasOver = over;
+      over = false;
+      const on = group === 'lights' ? ctx.api.lightsOn(room) : ctx.api.switchOn(group);
       if (on !== state) {
         state = on;
         draw(on);
       }
     },
     trigger() {
-      return { x: def.x - 4, y: def.y - 4, w: 18, h: 24 };
+      return hidden ? { x: def.x, y: def.y, w: def.w ?? 16, h: def.h ?? 16 } : { x: def.x - 4, y: def.y - 4, w: 18, h: 24 };
     },
     onTouch(ctx) {
-      if (cooldown > 0) return;
+      over = true;
+      if (wasOver || cooldown > 0) return;
       cooldown = 0.8;
-      if (group === 'lights') ctx.api.toggleLights();
+      if (group === 'lights') ctx.api.toggleLights(room);
       else ctx.api.setSwitch(group, !ctx.api.switchOn(group));
       ctx.api.sfx('switch');
     },

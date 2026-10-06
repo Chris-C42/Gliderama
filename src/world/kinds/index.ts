@@ -3,6 +3,7 @@ import * as home from './home';
 import * as hangar from './hangar';
 import * as cottage from './cottage';
 import * as stairs from './stairs';
+import * as classic from './classic';
 import * as gliderpro from './gliderpro';
 import * as appliances from './appliances';
 import * as outdoor from './outdoor';
@@ -67,6 +68,8 @@ export const KINDS: Record<string, KindDef> = {
   oilLamp: cottage.oilLampKind,
   beam: cottage.beamKind,
   herbs: cottage.herbsKind,
+  solid: classic.solidKind,
+  transport: classic.transportKind,
   fish: gliderpro.fishBowlKind,
   cobweb: gliderpro.cobwebKind,
   outlet: gliderpro.outletKind,

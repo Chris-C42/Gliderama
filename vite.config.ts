@@ -19,6 +19,16 @@ export default defineConfig({
       workbox: {
         // Precache every build asset (code, styles, images, fonts, the static manifest) so the game runs offline.
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,avif,jpg,jpeg,gif,woff,woff2,ttf,otf,json,webmanifest,wasm,ogg,mp3,wav,m4a}'],
+        // ...except the Classic Houses: their rooms add up to ~2.4 MB, so each is cached when it is first played
+        globIgnores: ['**/assets/houses/**'],
+        runtimeCaching: [
+          {
+            // content-hashed file names: a cached house never goes stale
+            urlPattern: ({ url }) => url.pathname.includes('/assets/houses/'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'classic-houses', expiration: { maxEntries: 60 } },
+          },
+        ],
         // three.js and the game code are big single chunks; never silently drop one from the precache.
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         // Resolved against the service worker's own URL (<base>/sw.js), so this is <base>/index.html under any
@@ -31,6 +41,12 @@ export default defineConfig({
     target: 'es2022',
     sourcemap: true,
     chunkSizeWarningLimit: 1500,
+    rollupOptions: {
+      output: {
+        // the Classic Houses (src/world/classic/houses/*.json, loaded on demand) get a folder of their own
+        chunkFileNames: (chunk) => (chunk.facadeModuleId?.includes('/world/classic/houses/') ? 'assets/houses/[name]-[hash].js' : 'assets/[name]-[hash].js'),
+      },
+    },
   },
   server: { host: true },
   test: {

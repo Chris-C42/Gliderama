@@ -337,6 +337,7 @@ function EndCard(props: { spec: PlaySpec; end: EndState; onRetry: () => void; on
           <span>{r.sheetsUsed}</span>
         </div>
       )}
+      {won && lvl.outro && <p class="small endcard__outro">{lvl.outro}</p>}
       {props.spec.mode === 'campaign' && (
         <div class="row endcard__medals">
           {medals.map((m) => (

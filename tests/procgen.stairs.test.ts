@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createRng } from '../src/core/rng';
 import { neighbour, type LevelDef } from '../src/game/level';
 import { roomColliders } from '../src/world/colliders';
-import { allLevels } from '../src/world/campaign';
+import { journeyLevels } from '../src/world/campaign';
 import { KINDS } from '../src/world/kinds';
 import { stairsUpGeom } from '../src/world/stairs';
 import { LAYOUT, type ItemDef, type RoomDef } from '../src/world/types';
@@ -181,7 +181,9 @@ describe('stairs pairs are consistent', () => {
   });
 
   it('works on hand-built levels too: Knitting by Lamplight climbs its stairs to the attic', () => {
-    const level = allLevels().find((l) => l.id === 'cottage-2')!.build();
+    const level = journeyLevels()
+      .find((l) => l.id === 'cottage-2')!
+      .build();
     const steps = traceRoute(level);
     expect(steps.map((q) => q.key)).toEqual(['0,0', '1,0', '1,-1']);
     expect(steps.map((q) => [q.from, q.to, q.link])).toEqual([

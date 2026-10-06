@@ -14,7 +14,8 @@ export interface SessionApi {
   addSheet(): void;
   repair(amount: number): void;
   addCharge(kind: 'boost' | 'bands' | 'helium', n: number): void;
-  toggleLights(group?: string): void;
+  /** Flip the lights of the current room (or of `room`, for a switch wired to another room's lights). */
+  toggleLights(room?: string): void;
   setSwitch(group: string, on: boolean): void;
   switchOn(group: string): boolean;
   soak(amount: number): void;
@@ -33,11 +34,13 @@ export interface SessionApi {
   teleport(toRoom: string, x: number, y: number, facing?: 1 | -1): void;
   /** Take the stairs up or down: on to the matching stairs in the room above / below, gliding level again. */
   takeStairs(way: 'up' | 'down'): void;
+  /** A transport (duct, mail slot): out at (x, y) in `toRoom`, gliding level again; that's the new checkpoint. */
+  transport(toRoom: string, x: number, y: number, facing: 1 | -1): void;
   sfx(name: string, opts?: { vol?: number; pitch?: number }): void;
   shake(amount: number): void;
   plane(): { x: number; y: number; vx: number; vy: number; alive: boolean };
   isCollected(id: string): boolean;
-  lightsOn(): boolean;
+  lightsOn(room?: string): boolean;
   /** Report a goal event (hoops, targets) to the mode. */
   goal?(kind: string, id: string): void;
 }
