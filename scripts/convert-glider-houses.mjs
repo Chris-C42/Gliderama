@@ -59,6 +59,24 @@ const CATALOG = path.join(ROOT, 'src/world/classic/catalog.json');
 const keyOf = (room) => `${room.suite},${-room.floor || 0}`;
 const inc = (o, k, n = 1) => (o[k] = (o[k] ?? 0) + n);
 
+/** An e-mail address in a house's text. */
+const EMAIL = /[\w.+-]+@[\w-]+\.[\w.]+/;
+
+/**
+ * A house's banner or trailer without the sentences asking players to write to its author: a 1990s address that is
+ * no use to anyone now. Text without an address is kept exactly as it was (line breaks and all).
+ */
+function withoutContacts(text) {
+  if (!EMAIL.test(text)) return text;
+  return text
+    // (an address often ends its sentence without a full stop)
+    .replace(new RegExp(`(${EMAIL.source})\\s+(?=[A-Z])`, 'g'), '$1. ')
+    .split(/(?<=[.!?])\s+/)
+    .filter((sentence) => !EMAIL.test(sentence))
+    .join(' ')
+    .trim();
+}
+
 // ---------------------------------------------------------------------------------------------
 // The original pictures, in a few numbers
 
@@ -399,7 +417,7 @@ export function convertHouse(name, house, rsrc, file = '', pictures = null) {
   const authors = info.authors;
   const credit = info.credit ?? (authors.length ? authors.join(' & ') : null);
   const status = STATUS[name] ?? { flyable: false, note: 'not checked yet' };
-  const banner = house.banner.replace(/\r+/g, ' ').replace(/\s+/g, ' ').trim();
+  const banner = withoutContacts(house.banner.replace(/\r+/g, ' ').replace(/\s+/g, ' ').trim());
   const goal =
     goalStars > 0
       ? `Find the ${goalStars === 1 ? 'star' : `${goalStars} stars`} to finish the house.`
@@ -415,7 +433,7 @@ export function convertHouse(name, house, rsrc, file = '', pictures = null) {
     sheets: Math.max(Math.max(6, Math.min(25, Math.round(6 + live.length / 12))), status.lost ? Math.ceil(status.lost * 1.5) + 3 : 0),
     par: status.par ?? 0,
     intro: [banner || info.blurb || '', goal, by].filter(Boolean).join(' '),
-    outro: house.trailer.replace(/\r+/g, '\n').trim(),
+    outro: withoutContacts(house.trailer.replace(/\r+/g, '\n').trim()),
     goal: goalStars > 0 ? 'stars' : 'none',
     meta: {
       original: name,
