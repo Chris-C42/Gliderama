@@ -7,6 +7,10 @@ const COARSE = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse
 /** Throws seen this app session: the how-to-throw hint is only for the first few. */
 let throwsSeen = 0;
 let lastPhase = '';
+/** Helium hints shown this app session (on the first canisters picked up), and until when the current one shows. */
+let gasHints = 0;
+let gasHintUntil = 0;
+let hadGas = false;
 
 export function Hud(props: { hud: HudState; onPause: () => void; flightData: boolean }) {
   const h = props.hud;
@@ -15,6 +19,13 @@ export function Hud(props: { hud: HudState; onPause: () => void; flightData: boo
   if (lastPhase === 'aim' && h.phase === 'fly') throwsSeen++;
   lastPhase = h.phase;
   const showHint = throwsSeen < 3 && !(h.message && /throw/i.test(h.message));
+  const gas = h.charges.gas > 0;
+  if (gas && !hadGas && gasHints < 2) {
+    gasHints++;
+    gasHintUntil = performance.now() + 5000;
+  }
+  hadGas = gas;
+  const gasHint = gas && h.phase === 'fly' && !h.message && performance.now() < gasHintUntil;
   return (
     <div class="hud safe">
       <div class="hud__top">
@@ -85,6 +96,13 @@ export function Hud(props: { hud: HudState; onPause: () => void; flightData: boo
       {h.message && (
         <div class="hud__msg">
           <span class="card card--plain">{h.message}</span>
+        </div>
+      )}
+      {gasHint && (
+        <div class="hud__msg">
+          <span class="card card--plain">
+            <Icon name="balloon" /> Helium! {COARSE ? 'Hold the gadget button' : 'Hold Space'} to float up
+          </span>
         </div>
       )}
       {h.phase === 'aim' && (
