@@ -247,8 +247,8 @@ are hard for a paper plane and harder for a search; where it got stuck is given.
 houses that have stars (the Fun House has none); Land of Illusion's last star is out of reach here (see **Helium**
 below). The play lab's autopilot also flew, in the real game in the browser, the stretches the bot once got stuck
 on in Castle o' the Air (Castletop), Davis Station (the silo), Rainbow's End (the way to its second star), Land of
-Illusion (the dollhouse) and Slumberland (the way to its third star), and SpacePods, the Demo House and The
-Asylum Pro from start to finish.
+Illusion (the dollhouse) and Slumberland (the way to its third star), and SpacePods, Nemo's Market, the Demo
+House and The Asylum Pro from start to finish.
 
 | House | Authors | Rooms | Objects mapped / dropped | Stars | Flight check (bot pilot) | Par |
 |---|---|---:|---:|---:|---|---:|
