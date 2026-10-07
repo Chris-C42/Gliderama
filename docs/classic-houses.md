@@ -192,7 +192,7 @@ the original stands on the floor; furniture and clutter are drawn over the origi
 | Ball | 212 | ball bouncing as high as the original's |
 | Fish | 120 | goldfish in its bowl, leaping as high as the original's every `delay` |
 | Cobweb | 86 | cobweb that catches the plane and holds it a moment |
-| Drip | 477 | drip |
+| Drip | 477 | drip: a drop every so often, the first a whole period after the plane comes in (as the original's); a drop that meets the plane soaks it (Glider PRO's drop is the end of the glider) |
 | Fireplace / wall window / rug | 33 / 195 / 81 | fireplace / window / rug |
 | Mirror / Ozma picture | 667 / 77 | wall mirror / a picture frame (the Ozma picture has no art of its own) |
 | Calendar / bulletin board | 58 / 38 | wall calendar / cork board with notes |

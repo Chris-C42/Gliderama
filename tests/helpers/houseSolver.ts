@@ -176,8 +176,9 @@ function quietApi(switches: Map<string, boolean>): SessionApi {
 const MOVER_PAD = 3;
 
 /**
- * Where a room's moving hazards are, tick by tick after the plane comes in (the game makes a room's objects afresh
- * then): fresh copies flown with the switches as they were then, their trigger rects recorded (padded) as needed.
+ * Where a room's moving hazards (and falling drops) are, tick by tick after the plane comes in (the game makes a
+ * room's objects afresh then): fresh copies flown with the switches as they were then, their trigger rects recorded
+ * (padded) as needed.
  */
 class MoverTrack {
   private readonly objs: GameObject[];
@@ -686,14 +687,20 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
   const DETOUR = 1.5;
   const rooms = new Map<string, SimRoom>();
   const roomOf = (k: string) => rooms.get(k) ?? rooms.set(k, buildSimRoom(level.rooms[k], { level, key: k })).get(k)!;
-  // moving hazards: one track per room and state of the switches they go by
+  // what moves about and must be missed: the moving hazards, and drops of water falling (a drop only soaks the plane
+  // in the game, but a plan through them would not fly the same twice)
+  const moving = new Map<string, GameObject[]>();
+  const moversOf = (k: string) => moving.get(k) ?? moving.set(k, [...(roomOf(k).movers ?? []), ...roomOf(k).objects.filter((o) => o.def.t === 'drip')]).get(k)!;
+  // one track of them per room and state of the switches they go by
   const tracks = new Map<string, MoverTrack | null>();
   const sigOf = (k: string, sw: Map<string, boolean>) =>
-    (roomOf(k).movers ?? []).map((o) => (typeof o.def.group === 'string' ? (groupOn(o.def.group, sw) ? 1 : 0) : '-')).join('');
+    moversOf(k)
+      .map((o) => (typeof o.def.group === 'string' ? (groupOn(o.def.group, sw) ? 1 : 0) : '-'))
+      .join('');
   const trackOf = (k: string, sig: string): MoverTrack | null => {
     const tk = `${k}|${sig}`;
     if (tracks.has(tk)) return tracks.get(tk)!;
-    const defs = (roomOf(k).movers ?? []).map((o) => o.def);
+    const defs = moversOf(k).map((o) => o.def);
     // (the switches they go by, as the signature has them)
     const sw = new Map<string, boolean>();
     defs.forEach((d, i) => typeof d.group === 'string' && sw.set(d.group.replace(/^!/, ''), (sig[i] === '1') !== d.group.startsWith('!')));

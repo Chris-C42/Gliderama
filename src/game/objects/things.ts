@@ -404,7 +404,8 @@ export const batteryPickup = pickup('battery');
 export const bandsPickup = pickup('bands');
 
 // ---------------------------------------------------------------------------------------------
-// Drip: water drops fall from (x, y) every `every` seconds.
+// Drip: water drops fall from (x, y) every `every` seconds, the first a whole `every` after the plane comes in (the
+// same each time the room is flown, as Glider PRO's); a drop that meets the plane soaks it.
 
 export const drip: ObjFactory = (def, id, gfx) => {
   const every = num(def.every, 1.4);
@@ -429,7 +430,13 @@ export const drip: ObjFactory = (def, id, gfx) => {
     }
     drops.push({ y: 0, vy: 0, s, live: false });
   }
-  let timer = Math.random() * every;
+  let timer = every;
+  /** The drop falling lowest (the one a plane under the drip meets first). */
+  const lowest = () => {
+    let low: Drop | null = null;
+    for (const d of drops) if (d.live && (!low || d.y > low.y)) low = d;
+    return low;
+  };
   return {
     id,
     def,
@@ -456,16 +463,21 @@ export const drip: ObjFactory = (def, id, gfx) => {
           continue;
         }
         d.s?.set(def.x - 1, d.y - 2, true);
-        const p = ctx.api.plane();
-        if (p.alive && Math.abs(p.x - def.x) < 16 && Math.abs(p.y - d.y) < 10) {
-          d.live = false;
-          d.s?.set(0, 0, false);
-          ctx.api.soak(0.18);
-          ctx.api.sfx('splash');
-          for (let k = 0; k < 6; k++)
-            ctx.particles.spawn({ x: def.x, y: d.y, vx: (Math.random() - 0.5) * 80, vy: -30 - Math.random() * 40, grav: 300, life: 0.4, max: 0.4, ...rgb('#a9d4f0'), a: 0.9 });
-        }
       }
+    },
+    trigger() {
+      const d = lowest();
+      return d ? { x: def.x - 2, y: d.y - 3, w: 4, h: 6 } : null;
+    },
+    onTouch(ctx) {
+      const d = lowest();
+      if (!d) return;
+      d.live = false;
+      d.s?.set(0, 0, false);
+      ctx.api.soak(0.18);
+      ctx.api.sfx('splash');
+      for (let k = 0; k < 6; k++)
+        ctx.particles.spawn({ x: def.x, y: d.y, vx: (Math.random() - 0.5) * 80, vy: -30 - Math.random() * 40, grav: 300, life: 0.4, max: 0.4, ...rgb('#a9d4f0'), a: 0.9 });
     },
     dispose() {
       for (const d of drops) d.s?.dispose();
