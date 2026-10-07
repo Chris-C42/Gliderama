@@ -184,6 +184,10 @@ function drive() {
     if (s) {
       ctl.dir = s.dir;
       ctl.pitch = s.pitch;
+    } else if (pilot!.flights[p.i + 1]) {
+      // the plan gave this flight up here (getting nowhere) and throws the next sheet from where it was
+      w.__pilotLog.push(`flight ${p.i} given up in ${session.room.key} after ${(p.tick / 120).toFixed(1)}s, as planned`);
+      session.giveUp();
     }
     p.tick++;
   } else if (p.thrown && session.phase !== 'fly') {

@@ -927,6 +927,14 @@ export class Session {
   }
 
   /**
+   * Put the plane down where it is (the play lab's autopilot, where the bot pilot's plan gave up a flight that was
+   * getting nowhere: a player would fly it into the floor there).
+   */
+  giveUp(): void {
+    this.flightOver('crashed');
+  }
+
+  /**
    * Make the current room afresh, its objects as when the plane flies in (balloons waiting to rise...): the play
    * lab's autopilot throws into a fresh room, as the bot pilot's plans assume.
    */

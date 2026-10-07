@@ -235,7 +235,8 @@ way) and flies to the first of them; a switch it went for stays as it left it (a
 given up), and a star with no way on from it to the others (a room with no way out) is left for last. A house it
 does not finish that way it flies again trying each star itself first, the switches only once the stars got
 nowhere; the better of the two counts. It throws as a player can: level, up, or steeply down (aiming with the
-mouse), and where things move about it may wait a second or two to time a throw past them. The menagerie flies
+mouse), and where things move about it may wait a second or two to time a throw past them; a flight getting
+nowhere it gives up, as a player would put the plane down there (and so does the play lab's autopilot). The menagerie flies
 alongside, from the moment the plane comes into its room (the game makes a room's things afresh then; the play lab's
 autopilot makes the room afresh before each throw, and waits as long as the plan does, as the plans assume), and
 touching anything that hurts ends a flight (a cobweb or a drip's drop too, though in the game one only holds the

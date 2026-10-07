@@ -1045,7 +1045,9 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
     const die = (why: string) => {
       const q = planePx(n.plane);
       n.trace = [...n.trace, `lost (${why}) in ${n.key} @${Math.round(q.x)},${Math.round(q.y)}`];
-      onDeath(n);
+      // (a flight the bot gives up as one of its own rules has it, the plane still flying in the game, a switch it
+      // went for flipped back: no way on, the next sheet would not be thrown from there)
+      if (why !== 'switched back' && why !== 'too long') onDeath(n);
       return null;
     };
     /** Flip a switch group; false when that flips back a switch the bot went for (the flight is given up). */
