@@ -112,7 +112,8 @@ export const balloon: ObjFactory = (def, id, gfx) => {
   let state: 'wait' | 'rise' | 'drop' = 'wait';
   let timer = delay;
   let y = FLOOR - H;
-  let t = Math.random() * 6;
+  // (where in its sway it starts: the same each time the room is flown, but not the same for every balloon)
+  let t = (Math.abs(def.x * 7 + def.y * 3) % 60) / 10;
   const sway = () => (state === 'rise' ? Math.round(Math.sin(t * 1.7) * 2.5) : 0);
   const body = (): Rect => ({ x: def.x + sway() + 2, y: y + 1, w: W - 4, h: 30 });
   const vanish = (ctx: ObjCtx) => {

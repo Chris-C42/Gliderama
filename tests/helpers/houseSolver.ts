@@ -172,7 +172,7 @@ function quietApi(switches: Map<string, boolean>): SessionApi {
   return new Proxy(api as SessionApi, { get: (t, k: string) => t[k as keyof SessionApi] ?? (() => {}) });
 }
 
-/** How far round a moving hazard the plane keeps (px): a balloon sways a couple of pixels at random. */
+/** How far round a moving hazard the plane keeps (px): a margin for a near miss to stay one in the game. */
 const MOVER_PAD = 3;
 
 /**
