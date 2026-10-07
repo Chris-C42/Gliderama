@@ -292,6 +292,7 @@ export function convertHouse(name, house, rsrc, file = '', pictures = null) {
   const rooms = {};
   let goalStars = 0;
   let pickups = 0;
+  let chained = 0;
   for (const r of live) {
     const key = keyOf(r);
     if (rooms[key]) {
@@ -326,6 +327,12 @@ export function convertHouse(name, house, rsrc, file = '', pictures = null) {
         inc(approximated, `${type}: ${how}`);
       },
       link: linkOf,
+      /** Whether some switch turns this object (in that room) on and off. */
+      switchedAt: (room, ob) => switched.has(`${room.index}.${ob.slot}`),
+      /** A transport that puts the glider down inside another one, which takes it straight on (see transportChain). */
+      chained() {
+        chained++;
+      },
       groupName,
       /** The far end of some transport. */
       isArrival: (ob) => arrivals.has(`${r.index}.${ob.slot}`),
@@ -409,6 +416,11 @@ export function convertHouse(name, house, rsrc, file = '', pictures = null) {
     rooms[key] = def;
   }
 
+  if (chained)
+    notes.push(
+      `${chained} transports put the glider down inside another one, which takes it straight on (as in Glider PRO): here they take the plane to the end of the chain`,
+    );
+
   // per-room fixes
   for (const [key, fix] of Object.entries(OVERRIDES[slug] ?? {})) {
     const def = rooms[key];
@@ -435,8 +447,9 @@ export function convertHouse(name, house, rsrc, file = '', pictures = null) {
     place: 'classic',
     rooms,
     start,
-    // a sheet per dozen rooms, 6 to 25, but half as many again as the bot pilot lost on its way, and a few
-    sheets: Math.max(Math.max(6, Math.min(25, Math.round(6 + live.length / 12))), status.lost ? Math.ceil(status.lost * 1.5) + 3 : 0),
+    // a sheet per dozen rooms, 6 to 25, but half as many again as the bot pilot lost on its way, and a few (and at
+    // least the house's own floor, where a player is likely to lose more than the bot)
+    sheets: Math.max(Math.max(6, Math.min(25, Math.round(6 + live.length / 12))), status.lost ? Math.ceil(status.lost * 1.5) + 3 : 0, status.minSheets ?? 0),
     par: status.par ?? 0,
     intro: [banner || info.blurb || '', goal, by].filter(Boolean).join(' '),
     outro: withoutContacts(house.trailer.replace(/\r+/g, '\n').trim()),

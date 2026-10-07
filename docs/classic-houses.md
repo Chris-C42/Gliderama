@@ -218,7 +218,9 @@ House has no stars (it could not be finished in Glider PRO either): it is free f
 ### Start, sheets, par, texts
 
 The plane starts where the glider does, facing right. A house gives a sheet per dozen rooms (6 to 25), but at
-least half as many again as the bot pilot lost on its way, and a few; paper prizes add more. Par (the Swift
+least half as many again as the bot pilot lost on its way, and a few, and never fewer than its `minSheets` in STATUS
+where the bot's way is luckier than a player's is likely to be (Davis Station keeps 23: a player who misses the
+helium in "Faulty Wiring" faces the stretch where the bot lost 13 without it); paper prizes add more. Par (the Swift
 medal) is the bot pilot's time with a few seconds per throw and 30 % to spare. The intro is the house's
 banner, the goal and the credit; the end card shows the house's trailer.
 
@@ -325,10 +327,13 @@ Not drawn at all: the houses' own pictures (`customPict`, 4782 of them), which G
   takes the battery's place). Let go, the plane flies on.
 - **Transports** put the plane down gliding level where the original puts the glider; deluxe transports keep
   their on/off state and switch. In Glider PRO a glider put down wholly inside another linked transport goes straight
-  on through it (Land of Illusion's vortex sends it back and forth between two rooms, past the helium canisters, until
-  it comes out of the one mouth linked to nothing); here a transport doesn't take the plane in the 0.6 s after the
-  last one, so it comes out at the first stop (where those canisters are) and goes on only if it is still in a mouth
-  after that: holding the helium, it rises clear.
+  on through it, and so on to where the chain ends: Fun House's maze and Rainbow's End's tanning booths send it round
+  to their one way out, Land of Illusion's vortex back and forth between two rooms to the one mouth in
+  "Transformation" linked to nothing. Here the converter follows the chain, and a transport takes the plane straight
+  to its end. It stops where something touches the glider on the way (a prize, a switch, something that hurts: the
+  plane comes out there, as by the vortex's four helium canisters, and goes on through its own transport from there)
+  and where the moment decides (a transport switched on and off, a mailbox, stairs). The houses' notes count the
+  transports it changed.
 - **Lights**: a switch can work another room's lights; darkness follows the original's rule, but rooms are
   lit or dark as a whole (every lamp in a room is on its light switch).
 - **Roofs** are stepped blocks, not slopes.

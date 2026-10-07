@@ -59,6 +59,8 @@ describe.skipIf(!which)('Classic Houses flight check', () => {
             reached: `${n === 1 ? 'the star' : `all ${n} stars`}, through ${rooms}`,
             par: parFor(r.t, r.sheetsUsed),
             lost: r.sheetsUsed,
+            // (a house's floor on its sheets stays: see STATUS)
+            ...(level.meta.status.minSheets ? { minSheets: level.meta.status.minSheets } : {}),
             note: `bot pilot: ${secs} s of flying, ${lost}`,
           };
         else {
@@ -68,6 +70,7 @@ describe.skipIf(!which)('Classic Houses flight check', () => {
             flyable: false,
             reached: `${n === 1 ? 'not the star' : `${r.stars.length} of ${n} stars`}, through ${rooms}; stuck in "${level.rooms[key]?.name}" (${key}), ${short} room${short === 1 ? '' : 's'} from the next star`,
             lost: r.sheetsUsed,
+            ...(level.meta.status.minSheets ? { minSheets: level.meta.status.minSheets } : {}),
             note: `bot pilot: ${secs} s of flying, ${lost}`,
           };
         }

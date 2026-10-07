@@ -804,6 +804,74 @@ export function transportArrival(dest) {
   }
 }
 
+/**
+ * What touches a glider coming out of a transport in Glider PRO before it goes on (Sources/ObjectRects.c,
+ * Interactions.c): a prize, a switch, something that hurts. (Air, walls it bounces off, lights and pictures do nothing
+ * to a glider fading in and out.)
+ */
+function touchedOnTheWay(ob) {
+  if (ob.family === 'bonus') return ob.type !== 'sparkle' && ob.type !== 'slider';
+  if (ob.family === 'switch') return ob.type !== 'soundTrigger';
+  if (ob.family === 'enemy') return true;
+  if (ob.family === 'furniture') return ob.type !== 'invisBounce' && ob.type !== 'manhole';
+  if (ob.family === 'appliance') return ob.type !== 'guitar' && ob.type !== 'customPict';
+  return ['taper', 'candle', 'stubby', 'tiki', 'bbq'].includes(ob.type);
+}
+
+/** The transports a glider goes straight on through when it is put down wholly inside one (mailboxes take it only facing the right way). */
+const CHAINED = ['invisTrans', 'deluxeTrans', 'floorTrans', 'ceilingTrans'];
+
+/** A transport's (or stairs') hot spot when it has one: it takes a glider wholly inside it (Sources/ObjectRects.c). */
+function takingRect(ob) {
+  const { h, v } = ob.topLeft ?? {};
+  if (ob.type === 'upStairs') return { top: v, left: h, bottom: v + 32, right: h + 112 };
+  if (ob.type === 'downStairs') return { top: v + 114, left: h + 80, bottom: v + 170, right: h + 160 };
+  if (![...CHAINED, 'mailboxLf', 'mailboxRt'].includes(ob.type) || ob.who === undefined || ob.who === 255) return null;
+  return transportTrigger(ob);
+}
+
+/**
+ * Where a transport takes the glider in Glider PRO: put down wholly inside another linked transport, it goes straight
+ * on through that one (Sources/Transit.c centres it in the far end, and Interactions.c finds it inside the next one's
+ * hot spot as it fades in), and so on: Land of Illusion's vortex, Fun House's maze. The chain stops where something
+ * touches the glider on the way (the plane comes out there, as it does by the four canisters in Land of Illusion's
+ * "Transformation", and goes on from there through its own transport), and where the moment decides what takes it
+ * next (a transport switched on and off, a mailbox, stairs); an endless loop is left as it is. `c.link(ob)`, and
+ * `c.switchedAt(room, ob)`: whether some switch turns that one on and off. Returns the far end's link and the
+ * transports the glider goes straight through.
+ */
+export function transportChain(link, c) {
+  const hops = [];
+  const seen = new Set();
+  let at = link;
+  for (;;) {
+    const b = at.target;
+    // (out of a mailbox or a ceiling duct the glider comes out moving, under its own steam)
+    if (['mailboxLf', 'mailboxRt', 'ceilingTrans'].includes(b.type)) break;
+    const r = objectRect(b);
+    const left = r.left + Math.trunc((r.right - r.left - 48) / 2);
+    const top = r.top + Math.trunc((r.bottom - r.top - 20) / 2);
+    const g = { left, top, right: left + 48, bottom: top + 20 };
+    const objs = at.room.objects;
+    const touching = (q) => !(q.bottom < g.top || q.top > g.bottom || q.right < g.left || q.left > g.right);
+    if (objs.some((o) => touchedOnTheWay(o) && touching(objectRect(o)))) break;
+    const next = objs.find((o) => {
+      const q = takingRect(o);
+      if (!q || g.top < q.top || g.bottom > q.bottom || g.left < q.left || g.right > q.right) return false;
+      // (a deluxe transport takes it while on)
+      return o.type !== 'deluxeTrans' || c.switchedAt(at.room, o) || !!((o.wide >> 4) & 0x0f);
+    });
+    if (!next || !CHAINED.includes(next.type) || (next.type === 'deluxeTrans' && c.switchedAt(at.room, next))) break;
+    const l = c.link(next);
+    const k = `${at.room.index}.${next.slot}`;
+    if (!l?.target || seen.has(k)) return { end: link, hops: [] };
+    seen.add(k);
+    hops.push(next);
+    at = l;
+  }
+  return { end: at, hops };
+}
+
 function transport(ob, c) {
   const link = c.link(ob);
   const r = rectOf(transportTrigger(ob));
@@ -820,11 +888,14 @@ function transport(ob, c) {
     }
     return c.drop(ob.type, link ? 'linked to a missing room or object' : 'not linked to another transport');
   }
-  const a = transportArrival(link.target);
+  // (put down inside another transport, the glider goes straight on: the plane comes out at the far end)
+  const { end, hops } = transportChain(link, c);
+  if (hops.length) c.chained(ob, hops);
+  const a = transportArrival(end.target);
   // deluxe transports carry their on/off state in the low nibble of `wide` (initial state in the high nibble)
   const off = ob.type === 'deluxeTrans' && !((ob.wide >> 4) & 0x0f);
   box();
-  c.emit({ t: 'transport', ...r, to: link.key, ax: a.x, ay: a.y, facing: a.facing, ...(look ? { look } : {}), ...c.group(ob, !off) });
+  c.emit({ t: 'transport', ...r, to: end.key, ax: a.x, ay: a.y, facing: a.facing, ...(look ? { look } : {}), ...c.group(ob, !off) });
 }
 
 /** The switches the glider can see, and how each is drawn (the `switch` object's looks; a light switch is the default). */
@@ -1224,7 +1295,8 @@ export const OVERRIDES = {};
  * What the flight check (tests/classicReport.test.ts, see docs/classic-houses.md) found for each house:
  * { flyable: the bot pilot collected every star, reached: how far it got, par: seconds for the Swift medal (the
  * bot's time with some to spare), lost: sheets the bot lost on the way (the house gives half as many again, and
- * a few), note }.
+ * a few), note }, and minSheets where the house gives at least that many all the same (the bot's way luckier than a
+ * player's is likely to be; the flight check carries it over).
  */
 export const STATUS = {
   'Demo House': { flyable: true, reached: 'the star, through 13 rooms', par: 60, lost: 0, note: 'bot pilot: 36 s of flying, no sheet lost' },
@@ -1233,7 +1305,16 @@ export const STATUS = {
   'Fun House': { flyable: false, reached: 'no stars to find (free flight)', note: 'the house has no stars, as in Glider PRO' },
   "Castle o' the Air": { flyable: true, reached: 'all 4 stars, through 31 rooms', par: 345, lost: 4, note: 'bot pilot: 233 s of flying, 4 sheets lost' },
   'Empty House': { flyable: true, reached: 'the star, through 12 rooms', par: 60, lost: 0, note: 'bot pilot: 38 s of flying, no sheet lost' },
-  'Davis Station': { flyable: true, reached: 'all 4 stars, through 43 rooms', par: 335, lost: 5, note: 'bot pilot: 218 s of flying, 5 sheets lost' },
+  // (23 sheets all the same: a player who misses the helium canister in "Faulty Wiring", which floats the bot's first
+  // sheet on towards the first star, faces the stretch where the bot lost 13 without it)
+  'Davis Station': {
+    flyable: true,
+    reached: 'all 4 stars, through 43 rooms',
+    par: 335,
+    lost: 5,
+    minSheets: 23,
+    note: 'bot pilot: 218 s of flying, 5 sheets lost',
+  },
   'In The Mirror': { flyable: true, reached: 'the star, through 24 rooms', par: 115, lost: 1, note: 'bot pilot: 73 s of flying, 1 sheet lost' },
   'Art Museum': { flyable: true, reached: 'all 6 stars, through 46 rooms', par: 295, lost: 2, note: 'bot pilot: 206 s of flying, 2 sheets lost' },
   "Nemo's Market": { flyable: true, reached: 'all 5 stars, through 32 rooms', par: 290, lost: 6, note: 'bot pilot: 177 s of flying, 6 sheets lost' },
