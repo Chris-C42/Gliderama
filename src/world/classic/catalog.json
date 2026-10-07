@@ -87,9 +87,9 @@
   "status": {
    "flyable": true,
    "reached": "all 4 stars, through 31 rooms",
-   "par": 335,
-   "lost": 3,
-   "note": "bot pilot: 233 s of flying, 3 sheets lost"
+   "par": 345,
+   "lost": 4,
+   "note": "bot pilot: 233 s of flying, 4 sheets lost"
   }
  },
  {
@@ -126,9 +126,9 @@
   "status": {
    "flyable": true,
    "reached": "all 4 stars, through 43 rooms",
-   "par": 400,
-   "lost": 13,
-   "note": "bot pilot: 222 s of flying, 13 sheets lost"
+   "par": 385,
+   "lost": 12,
+   "note": "bot pilot: 218 s of flying, 12 sheets lost"
   }
  },
  {
@@ -265,10 +265,10 @@
   "blurb": "Sample rooms from the CD houses.",
   "status": {
    "flyable": true,
-   "reached": "all 9 stars, through 51 rooms",
-   "par": 1145,
-   "lost": 38,
-   "note": "bot pilot: 643 s of flying, 38 sheets lost"
+   "reached": "all 9 stars, through 50 rooms",
+   "par": 860,
+   "lost": 26,
+   "note": "bot pilot: 499 s of flying, 26 sheets lost"
   }
  },
  {
@@ -348,7 +348,7 @@
    "flyable": false,
    "reached": "4 of 5 stars, through 65 rooms; stuck in \"Transformation\" (62,-9), 7 rooms from the next star",
    "lost": 26,
-   "note": "bot pilot: 574 s of flying, 26 sheets lost; the last star is seven rooms up, a climb made on helium in Glider PRO, with no rising air here"
+   "note": "bot pilot: 579 s of flying, 26 sheets lost; the last star is seven rooms up, a climb made on helium in Glider PRO, with no rising air here"
   }
  },
  {
@@ -369,9 +369,9 @@
   "status": {
    "flyable": true,
    "reached": "all 6 stars, through 123 rooms",
-   "par": 1080,
-   "lost": 33,
-   "note": "bot pilot: 624 s of flying, 33 sheets lost"
+   "par": 1105,
+   "lost": 32,
+   "note": "bot pilot: 651 s of flying, 32 sheets lost"
   }
  },
  {
@@ -391,7 +391,7 @@
    "reached": "the star, through 11 rooms",
    "par": 130,
    "lost": 5,
-   "note": "bot pilot: 61 s of flying, 5 sheets lost"
+   "note": "bot pilot: 62 s of flying, 5 sheets lost"
   }
  },
  {
@@ -410,8 +410,8 @@
    "flyable": true,
    "reached": "all 6 stars, through 149 rooms",
    "par": 1315,
-   "lost": 26,
-   "note": "bot pilot: 848 s of flying, 26 sheets lost"
+   "lost": 27,
+   "note": "bot pilot: 843 s of flying, 27 sheets lost"
   }
  },
  {
