@@ -1321,7 +1321,16 @@ export const STATUS = {
   Metropolis: { flyable: true, reached: 'all 4 stars, through 39 rooms', par: 245, lost: 5, note: 'bot pilot: 149 s of flying, 5 sheets lost' },
   'The Asylum Pro': { flyable: true, reached: 'the star, through 15 rooms', par: 95, lost: 1, note: 'bot pilot: 60 s of flying, 1 sheet lost' },
   'Grand Prix': { flyable: true, reached: 'all 3 stars, through 49 rooms', par: 300, lost: 1, note: 'bot pilot: 219 s of flying, 1 sheet lost' },
-  'CD Demo House': { flyable: true, reached: 'all 9 stars, through 50 rooms', par: 1085, lost: 36, note: 'bot pilot: 612 s of flying, 36 sheets lost' },
+  // (69 sheets all the same, as before the bot happened on the helium canister in "Illusion House" (15,-2): a player
+  // who misses it faces what cost the bot 44 sheets)
+  'CD Demo House': {
+    flyable: true,
+    reached: 'all 9 stars, through 50 rooms',
+    par: 1085,
+    lost: 36,
+    minSheets: 69,
+    note: 'bot pilot: 612 s of flying, 36 sheets lost',
+  },
   Titanic: { flyable: true, reached: 'the star, through 21 rooms', par: 160, lost: 6, note: 'bot pilot: 80 s of flying, 6 sheets lost' },
   "Rainbow's End": { flyable: true, reached: 'all 5 stars, through 62 rooms', par: 590, lost: 8, note: 'bot pilot: 396 s of flying, 8 sheets lost' },
   'ImagineHouse PRO II': { flyable: true, reached: 'all 3 stars, through 39 rooms', par: 250, lost: 7, note: 'bot pilot: 142 s of flying, 7 sheets lost' },

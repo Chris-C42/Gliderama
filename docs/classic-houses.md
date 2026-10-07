@@ -220,7 +220,9 @@ House has no stars (it could not be finished in Glider PRO either): it is free f
 The plane starts where the glider does, facing right. A house gives a sheet per dozen rooms (6 to 25), but at
 least half as many again as the bot pilot lost on its way, and a few, and never fewer than its `minSheets` in STATUS
 where the bot's way is luckier than a player's is likely to be (Davis Station keeps 23: a player who misses the
-helium in "Faulty Wiring" faces the stretch where the bot lost 13 without it); paper prizes add more. Par (the Swift
+helium in "Faulty Wiring" faces the stretch where the bot lost 13 without it; CD Demo House 69, from before the bot
+happened on the helium in "Illusion House"); paper prizes add more. A plane that a chain of transports keeps putting
+back in the same place (Land of Illusion's vortex, without helium) is lost after the third time. Par (the Swift
 medal) is the bot pilot's time with a few seconds per throw and 30 % to spare. The intro is the house's
 banner, the goal and the credit; the end card shows the house's trailer.
 

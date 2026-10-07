@@ -253,6 +253,9 @@ export class Session {
   private hover: HoverPilot | null = null;
   /** When the plane last came out of a transport (it may come out inside another one's mouth). */
   private transportedAt = -Infinity;
+  /** Where the last transport put the plane down, and how many times running it has been put back there. */
+  private lastArrival: { room: string; x: number; y: number } | null = null;
+  private transportLoops = 0;
   /** Caught in a cobweb: seconds left, and where. */
   private snagT = 0;
   private snagAt = { x: 0, y: 0 };
@@ -443,7 +446,18 @@ export class Session {
       if (this.phase !== 'fly' || !this.level.rooms[toRoom]) return;
       // just out of one: not straight back into the next (linked transports often face each other)
       if (this.time - this.transportedAt < TRANSPORT_REST) return;
+      // put back where it last came out, again and again: a plane that can't get out of a chain of transports (as
+      // Glider PRO's glider can't, without helium, at the end of Land of Illusion's vortex) is lost there
+      const a = this.lastArrival;
+      const again = !!a && a.room === toRoom && Math.hypot(a.x - x, a.y - y) < 2 && this.time - this.transportedAt < 2.5;
+      this.transportLoops = again ? this.transportLoops + 1 : 0;
+      if (this.transportLoops >= 3) {
+        this.flightOver('grounded');
+        this.message = 'Stuck in the transports!';
+        return;
+      }
       this.transportedAt = this.time;
+      this.lastArrival = { room: toRoom, x, y };
       this.arriveAt(toRoom, x, y, facing);
       this.sfx('stairsUp', { pitch: 4 });
     },
@@ -543,6 +557,8 @@ export class Session {
     this.sling.release();
     launch(this.plane, cp.x, cp.y, angle, power);
     this.phase = 'fly';
+    this.lastArrival = null;
+    this.transportLoops = 0;
     this.tick.groundT = 0;
     this.tick.stillT = 0;
     this.message = null;
