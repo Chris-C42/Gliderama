@@ -126,9 +126,9 @@
   "status": {
    "flyable": true,
    "reached": "all 4 stars, through 43 rooms",
-   "par": 380,
-   "lost": 13,
-   "note": "bot pilot: 208 s of flying, 13 sheets lost"
+   "par": 335,
+   "lost": 5,
+   "note": "bot pilot: 218 s of flying, 5 sheets lost"
   }
  },
  {
@@ -146,9 +146,9 @@
   "status": {
    "flyable": true,
    "reached": "the star, through 24 rooms",
-   "par": 125,
+   "par": 115,
    "lost": 1,
-   "note": "bot pilot: 82 s of flying, 1 sheet lost"
+   "note": "bot pilot: 73 s of flying, 1 sheet lost"
   }
  },
  {
@@ -205,9 +205,9 @@
   "status": {
    "flyable": true,
    "reached": "all 4 stars, through 39 rooms",
-   "par": 285,
-   "lost": 6,
-   "note": "bot pilot: 174 s of flying, 6 sheets lost"
+   "par": 245,
+   "lost": 5,
+   "note": "bot pilot: 149 s of flying, 5 sheets lost"
   }
  },
  {
@@ -247,7 +247,7 @@
    "reached": "all 3 stars, through 49 rooms",
    "par": 300,
    "lost": 1,
-   "note": "bot pilot: 215 s of flying, 1 sheet lost"
+   "note": "bot pilot: 219 s of flying, 1 sheet lost"
   }
  },
  {
@@ -307,9 +307,9 @@
   "status": {
    "flyable": true,
    "reached": "all 5 stars, through 62 rooms",
-   "par": 555,
+   "par": 635,
    "lost": 8,
-   "note": "bot pilot: 370 s of flying, 8 sheets lost"
+   "note": "bot pilot: 433 s of flying, 8 sheets lost"
   }
  },
  {
@@ -345,10 +345,11 @@
   "goal": "stars",
   "blurb": null,
   "status": {
-   "flyable": false,
-   "reached": "4 of 5 stars, through 64 rooms; stuck in \"Transformation\" (62,-9), 7 rooms from the next star",
-   "lost": 26,
-   "note": "bot pilot: 572 s of flying, 26 sheets lost; the last star is seven rooms up, a climb made on helium in Glider PRO, with no rising air here"
+   "flyable": true,
+   "reached": "all 5 stars, through 71 rooms",
+   "par": 900,
+   "lost": 19,
+   "note": "bot pilot: 571 s of flying, 19 sheets lost; the last star is seven rooms up, a climb on helium"
   }
  },
  {
@@ -409,9 +410,9 @@
   "status": {
    "flyable": true,
    "reached": "all 6 stars, through 149 rooms",
-   "par": 1350,
-   "lost": 27,
-   "note": "bot pilot: 867 s of flying, 27 sheets lost"
+   "par": 1330,
+   "lost": 26,
+   "note": "bot pilot: 859 s of flying, 26 sheets lost"
   }
  },
  {

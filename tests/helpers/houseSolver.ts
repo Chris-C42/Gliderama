@@ -11,7 +11,9 @@
  * bot tries another target. Flights that stop getting anywhere (circling in an updraft) are given up. Things that
  * move (balloons, darts, a leaping fish...) are flown alongside, as they go from the moment the plane comes into
  * their room (or a sheet is thrown there: the play lab's autopilot makes the room afresh before each throw), and
- * touching one ends the flight. If the bot finds a way through, a player with the same controls can.
+ * touching one ends the flight. Helium canisters picked up give the plane gas, kept from flight to flight until it is
+ * used, as in the game; while it has some, the bot can hold the gadget button to have a balloon take the plane up. If
+ * the bot finds a way through, a player with the same controls can.
  */
 
 import { analyzeDesign } from '../../src/paper/aero';
@@ -23,7 +25,7 @@ import { bounds, polyVsBox, profileHull } from '../../src/game/collide';
 import { entryCheckpoint, goalStarIds, neighbour, type LevelDef } from '../../src/game/level';
 import { createPlane, launch, planePx, type FlightInput, type Plane } from '../../src/physics/flight';
 import { damagePct } from '../../src/physics/damage';
-import { PX_PER_M, ROOM_H, ROOM_W } from '../../src/physics/config';
+import { PHYS, PX_PER_M, ROOM_H, ROOM_W } from '../../src/physics/config';
 import type { GameObject, ObjCtx, SessionApi, WindOut } from '../../src/game/objects/types';
 import { OBJECTS, stillHazards } from '../../src/game/objects';
 import { LAYOUT, type ItemDef, type Rect, type RoomDef } from '../../src/world/types';
@@ -89,6 +91,8 @@ interface Target {
 interface Steps {
   dir: -1 | 0 | 1;
   pitch: number;
+  /** The gadget button held for helium (while the plane has gas). */
+  helium?: boolean;
   prev: Steps | null;
 }
 
@@ -100,7 +104,7 @@ export interface Flight {
   /** Game ticks the player waits before throwing, the room's moving hazards going round (timing a throw past them). */
   wait?: number;
   stepTicks: number;
-  steps: { dir: -1 | 0 | 1; pitch: number }[];
+  steps: { dir: -1 | 0 | 1; pitch: number; helium?: boolean }[];
 }
 
 interface Node {
@@ -122,6 +126,8 @@ interface Node {
   roomSig: string;
   /** Goal stars this flight has collected ('toggled:<group>' for switches flipped). */
   got: string[];
+  /** Helium canisters this flight has picked up (room|id; its gas is in the plane's). */
+  cans: string[];
   /** The switches the plane is in (a switch flips once each time the plane comes through it, as in the game). */
   over: string[];
   /** Switches with a delay set off in this room, still to flip (group, flight time it flips at; in order). */
@@ -155,6 +161,8 @@ export interface HouseSolveResult {
   steps?: number;
   /** The switches as the bot left them (group → on). */
   switches?: Record<string, boolean>;
+  /** Helium gas left (sim s). */
+  gas?: number;
 }
 
 function clonePlane(p: Plane): Plane {
@@ -662,6 +670,8 @@ export interface HouseSolveOptions {
   switches?: 'early' | 'late';
   /** How the switches are when the bot starts (flying a section of a house): group → on. */
   switchesAt?: Map<string, boolean>;
+  /** Helium gas the plane has when the bot starts (sim s, as the game's `charges.gas`). */
+  gas?: number;
 }
 
 export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOptions = {}): HouseSolveResult {
@@ -777,6 +787,10 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
   let totalT = 0;
   // switch states carried from flight to flight (a switch stays flipped)
   let switchesNow = new Map<string, boolean>(opts.switchesAt ?? []);
+  // helium gas carried from flight to flight (it is kept until it is used), and the canisters picked up (they stay
+  // picked up)
+  let gasNow = opts.gas ?? 0;
+  const cans = new Set<string>();
   // switches the bot went for, as it wants them: a flight that flips one back (coming round through it again) is
   // given up, until the bot goes for that switch again
   const wanted = new Map<string, boolean>();
@@ -958,6 +972,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
         ]) {
           const plane = createPlane(aero);
           launch(plane, cp.x, cp.y, facing > 0 ? angle : Math.PI - angle, power);
+          plane.gas = gasNow;
           out.push({
             key: cp.room,
             plane,
@@ -973,6 +988,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
             roomTick: Math.round(wait / TICK),
             roomSig: sig,
             got: [],
+            cans: [],
             over: [],
             armed: [],
             trace: [`throw ${facing > 0 ? '>' : '<'} a${angle} p${power}${wait ? ` after ${wait}s` : ''} from ${cp.room}`],
@@ -996,8 +1012,10 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       got: n0.got.slice(),
       armed: n0.armed.slice(),
       checkpoint: { ...n0.checkpoint },
-      steps: { dir: input.dir as -1 | 0 | 1, pitch: input.pitch, prev: n0.steps },
+      steps: { dir: input.dir as -1 | 0 | 1, pitch: input.pitch, ...(input.helium ? { helium: true } : {}), prev: n0.steps },
     };
+    // (where a balloon takes the plane, for the trace)
+    if (input.helium && n.plane.gas > 0 && !n0.steps?.helium) n.trace = [...n.trace, `helium held in ${n.key} @${(totalT + n.t).toFixed(1)}s`];
     const st: TickState = { plane: n.plane, aero, hullLocal, halfLen, groundT: n.groundT, stillT: n.stillT };
     let room = roomOf(n.key);
     const known: Partial<SessionApi> = {
@@ -1091,7 +1109,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       const over: string[] = [];
       for (const o of room.objects) {
         const t = o.def.t;
-        if (t !== 'switch' && t !== 'star' && t !== 'stairsUp' && t !== 'stairsDown' && t !== 'transport' && t !== 'exit') continue;
+        if (t !== 'switch' && t !== 'star' && t !== 'helium' && t !== 'stairsUp' && t !== 'stairsDown' && t !== 'transport' && t !== 'exit') continue;
         if (hurt && t !== 'switch' && t !== 'star') continue;
         const tr = o.trigger?.();
         if (!tr || bb.x1 < tr.x || bb.x0 > tr.x + tr.w || bb.y1 < tr.y || bb.y0 > tr.y + tr.h || !polyVsBox(hw, { ...tr })) continue;
@@ -1110,6 +1128,14 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
           if (typeof id === 'string' && o.def.goal && !n.got.includes(id)) {
             n.got.push(id);
             n.trace = [...n.trace, `star ${id} @${(totalT + n.t).toFixed(1)}s`];
+          }
+        } else if (t === 'helium') {
+          // a canister of gas (once: it stays picked up, the next flights' too)
+          const id = `${n.key}|${o.id}`;
+          if (!cans.has(id) && !n.cans.includes(id)) {
+            n.cans = [...n.cans, id];
+            n.plane.gas += PHYS.gasSupply;
+            n.trace = [...n.trace, `helium in ${n.key} @${(totalT + n.t).toFixed(1)}s`];
           }
         } else if (t === 'exit') {
           n.trace = [...n.trace, `exit in ${n.key}`];
@@ -1180,6 +1206,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
     const f = opts.replay;
     const plane = createPlane(aero);
     launch(plane, f.from.x, f.from.y, f.angle, f.power);
+    plane.gas = opts.gas ?? 0;
     const sw = new Map(opts.switchesAt ?? []);
     let n: Node | null = {
       key: f.from.room,
@@ -1196,6 +1223,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       roomTick: f.wait ?? 0,
       roomSig: sigOf(f.from.room, sw),
       got: [],
+      cans: [],
       over: [],
       armed: [],
       trace: [],
@@ -1205,7 +1233,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
     let lost = null as Node | null;
     for (const s of f.steps) {
       const prev: Node = n!;
-      n = advance(prev, { dir: s.dir, pitch: s.pitch, boost: false }, null, (d) => (lost = d));
+      n = advance(prev, { dir: s.dir, pitch: s.pitch, boost: false, helium: !!s.helium }, null, (d) => (lost = d));
       opts.onReplay?.(n ?? prev, !n);
       if (!n) break;
     }
@@ -1222,6 +1250,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       flights: [],
       stepTicks,
       switches: end ? Object.fromEntries(end.switches) : undefined,
+      gas: end?.plane.gas,
     };
   }
 
@@ -1244,11 +1273,11 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
     return -d * 10000 + best - damagePct(n.plane.damage) * 3 - dive - slow;
   };
 
-  /** How good a checkpoint is to throw from, for `target`. */
-  const cpRank = (cp: Checkpoint, target: Target, sw: Map<string, boolean>): number => {
+  /** How good a checkpoint is to throw from, for `target` (with `gas` left: a little better with helium to spare). */
+  const cpRank = (cp: Checkpoint, target: Target, sw: Map<string, boolean>, gas: number): number => {
     const node = nodeOf(cp.room, cp.x, cp.y);
     const d = distTo(target.node, sw).get(node) ?? 999;
-    return -d * 10000 + (node === target.node ? toward(cp.x, cp.y, target.x, target.y) : 0);
+    return -d * 10000 + (node === target.node ? toward(cp.x, cp.y, target.x, target.y) : 0) + 10 * Math.min(gas, 4 * PHYS.gasSupply);
   };
 
   /** The rooms a flight went into, from its trace. */
@@ -1257,7 +1286,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
 
   const flightOf = (n: Node): Flight => {
     const steps: Flight['steps'] = [];
-    for (let s = n.steps; s; s = s.prev) steps.push({ dir: s.dir, pitch: s.pitch });
+    for (let s = n.steps; s; s = s.prev) steps.push({ dir: s.dir, pitch: s.pitch, ...(s.helium ? { helium: true } : {}) });
     const { wait, ...rest } = n.thrown;
     return { ...rest, ...(wait ? { wait } : {}), steps: steps.reverse() };
   };
@@ -1270,7 +1299,9 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
   // the search is deterministic: from a checkpoint already thrown from (near enough) it would only fly the same
   // flights again, so each try searches differently; after the last, that checkpoint is used up for the target
   const tries = new Map<string, number>();
-  const cpKey = (cp: Checkpoint, target: Target) => `${target.key}|${cp.room}@${Math.round(cp.x / 48)},${Math.round(cp.y / 40)},${cp.facing}`;
+  // (with helium gas or without: a sheet thrown from there with some can fly where one without could not)
+  const cpKey = (cp: Checkpoint, target: Target, gas: number) =>
+    `${target.key}|${cp.room}@${Math.round(cp.x / 48)},${Math.round(cp.y / 40)},${cp.facing}${gas > 0 ? '|gas' : ''}`;
   // targets that got nowhere from the checkpoint's room (tried again once the bot is somewhere else)
   let skip = new Set<string>();
   let skipRoom = checkpoint.room;
@@ -1284,7 +1315,7 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       target = chooseTarget(nodeOf(checkpoint.room, checkpoint.x, checkpoint.y), switchesNow, skip);
       unwant(target);
       if (!target || sheets > maxSheets) break;
-      const k = cpKey(checkpoint, target);
+      const k = cpKey(checkpoint, target, gasNow);
       const tried = tries.get(k) ?? 0;
       if (tried >= TRIES.length) {
         // thrown from here for it every way there is: another target
@@ -1306,9 +1337,9 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
     let gotIt = false;
     const consider = (cp: Checkpoint, n?: Node) => {
       const got = !!n && reached(n, tgt);
-      if (!got && (tries.get(cpKey(cp, tgt)) ?? 0) >= TRIES.length) return;
+      if (!got && (tries.get(cpKey(cp, tgt, n?.plane.gas ?? gasNow)) ?? 0) >= TRIES.length) return;
       gotIt ||= got;
-      const rank = got ? Infinity : cpRank(cp, tgt, n?.switches ?? switchesNow);
+      const rank = got ? Infinity : cpRank(cp, tgt, n?.switches ?? switchesNow, n?.plane.gas ?? gasNow);
       if (!bestDeath || rank > bestDeath.rank) {
         const q = n ? planePx(n.plane) : { x: cp.x, y: cp.y };
         bestDeath = { cp, rank, trace: n?.trace ?? [], at: `${n?.key ?? cp.room} @${Math.round(q.x)},${Math.round(q.y)} t${(n?.t ?? 0).toFixed(1)}`, node: n };
@@ -1322,8 +1353,12 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       for (const n of beam) {
         for (const turn of [false, true]) {
           if (turn && n.plane.turn) continue;
-          for (const pitch of tryNow.pitches) {
-            const r = advance(n, { dir: turn ? ((n.plane.facing > 0 ? -1 : 1) as -1 | 1) : 0, pitch, boost: false }, tgt, onDeath);
+          const dir = turn ? ((n.plane.facing > 0 ? -1 : 1) as -1 | 1) : 0;
+          const inputs: FlightInput[] = tryNow.pitches.map((pitch) => ({ dir, pitch, boost: false }));
+          // with gas, helium held too (the balloon hangs the plane level: the stick's pitch does next to nothing)
+          if (n.plane.gas > 0) inputs.push({ dir, pitch: 0, boost: false, helium: true });
+          for (const input of inputs) {
+            const r = advance(n, input, tgt, onDeath);
             if (!r) continue;
             if (reached(r, tgt)) {
               done = r;
@@ -1356,6 +1391,9 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
         trace.push(...done.trace);
         checkpoint = done.checkpoint;
         switchesNow = done.switches;
+        gasNow = done.plane.gas;
+        for (const c of done.cans) cans.add(c);
+        done.cans = [];
         if (done.got.includes('exit') || got.size >= goals.length) {
           record(done);
           break outer;
@@ -1417,11 +1455,16 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       skip.add(tgt.key);
       continue;
     }
-    opts.log?.(`sheet ${sheets} for ${tgt.key}: best flight ended in ${bd.at} -> next from ${cpKey(bd.cp, tgt)} [${bd.trace.join(' | ')}]`);
+    opts.log?.(
+      `sheet ${sheets} for ${tgt.key}: best flight ended in ${bd.at} -> next from ${cpKey(bd.cp, tgt, bd.node?.plane.gas ?? gasNow)} [${bd.trace.join(' | ')}]`,
+    );
     // the flight that got there is part of the way (a checkpoint carried over from before needs none)
     if (bd.node) {
       record(bd.node);
       switchesNow = bd.node.switches;
+      // (and the helium it had left, the canisters it picked up)
+      gasNow = bd.node.plane.gas;
+      for (const c of bd.node.cans) cans.add(c);
       // its time and rooms count too (the player flies it)
       totalT += bd.node.t;
       visited.push(...roomsOf(bd.node.trace));
@@ -1453,5 +1496,6 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
     stepTicks,
     steps: budget - Math.max(0, stepsLeft),
     switches: Object.fromEntries(switchesNow),
+    gas: gasNow,
   };
 }
