@@ -1364,6 +1364,10 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
         // (the switch stays as it is now)
         if (tgt.kind === 'switch') wanted.set(tgt.group!, switchesNow.get(tgt.group!) ?? true);
         skip = new Set();
+        // (the flight goes on, its clock started again from here: what it keeps time by goes with it, the last
+        // transport it came out of and the switches set off still to flip)
+        done.transT -= done.t;
+        done.armed = done.armed.map((a) => ({ g: a.g, at: a.at - done.t }));
         done.t = 0;
         done.peak = -Infinity;
         done.peakT = 0;
