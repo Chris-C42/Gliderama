@@ -32,7 +32,35 @@ function bricks(px: Px, x: number, y: number, w: number, h: number, ramp: Ramp, 
 }
 
 // ---------------------------------------------------------------------------------------------
-// Fireplace: brick surround, mantel, firebox. The fire itself is the runtime `fireplace` object.
+// Fireplace: brick surround, mantel, firebox. The fire itself is the runtime `fireplace` object. `cold`: an unlit
+// hearth, charred logs on a bed of ash (the Classic Houses: Glider PRO's fireplaces are scenery, nothing to burn on).
+
+/**
+ * A burnt-out fire on the grate (an unlit hearth): a pile of logs charred black-brown, pale ash along their tops and
+ * on their cut ends, on a heaped bed of cold ash. Sized to the firebox.
+ */
+function charredLogs(px: Px, fx: number, fw: number, gy: number) {
+  const t = Math.max(5, Math.min(9, Math.round(fw / 18)));
+  const log = (x0: number, x1: number, y: number) => {
+    px.rect(x0, y - t, x1 - x0, t, R.walnut[1]);
+    px.hline(x0, y - t, x1 - x0, R.stone[2]);
+    px.dither(x0, y - t + 1, x1 - x0, 2, R.stone[1], 0.45);
+    px.hline(x0, y - 1, x1 - x0, R.ink[1]);
+    for (let x = x0 + 5; x < x1 - 4; x += 9) px.vline(x, y - t + 2, t - 3, R.ink[1]);
+    // the cut ends, ringed with ash
+    px.ellipse(x0, y - t / 2, t / 2, t / 2, R.stone[3]);
+    px.ellipse(x0, y - t / 2, t / 2 - 1.5, t / 2 - 1.5, R.walnut[0]);
+    px.ellipse(x1, y - t / 2, t / 2, t / 2, R.stone[2]);
+  };
+  const mid = fx + fw / 2;
+  // the ash bed, then two logs side by side and one across them
+  px.ellipse(mid, gy + 2, fw / 2 - 8, 4, R.stone[2]);
+  px.ellipse(mid, gy + 1, fw / 2 - 16, 3, R.stone[3]);
+  log(fx + 14, mid - 3, gy);
+  log(mid + 3, fx + fw - 14, gy);
+  log(fx + fw * 0.28, fx + fw * 0.72, gy - t + 1);
+  px.speckle(fx + 12, gy - 2, fw - 24, 5, [R.stone[4], R.stone[1]], 0.22);
+}
 
 export const fireplaceKind: KindDef = {
   z: 1,
@@ -86,6 +114,7 @@ export const fireplaceKind: KindDef = {
     px.ellipse(fx + 14, gy - 4, 1, 1, R.oak[2]);
     px.rect(fx + 22, gy - 12, fw - 50, 5, R.oak[1]);
     px.ellipse(fx + fw - 28, gy - 10, 3, 3, R.oak[4]);
+    if (it.cold) charredLogs(px, fx, fw, gy);
     // hearth stone
     px.rect(x - 14, y + h - 6, w + 28, 6, R.stone[3]);
     px.hline(x - 14, y + h - 6, w + 28, R.stone[5]);
@@ -97,6 +126,7 @@ export const fireplaceKind: KindDef = {
     px.dither(x - 8, y + 11, w + 16, 3, R.ink[1], 0.45);
   },
   glow(px, it) {
+    if (it.cold) return;
     const w = W(it, 170);
     const h = H(it, 150);
     const fx = it.x + 34;
@@ -114,6 +144,7 @@ export const fireplaceKind: KindDef = {
     ];
   },
   lights(it) {
+    if (it.cold) return [];
     const w = W(it, 170);
     const h = H(it, 150);
     return [{ x: it.x + w / 2, y: it.y + h - 24, r: 190, color: '#ff9a50', intensity: 1, flicker: 0.35 }];

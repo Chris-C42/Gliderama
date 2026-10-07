@@ -1133,9 +1133,10 @@ export const OBJECT_MAP = {
     const r = rectOf(ob.bounds);
     c.emit({ t: 'mousehole', x: r.x, y: GR.wallBase - r.h, w: r.w, h: r.h });
   },
+  // (unlit: Glider PRO's fireplace is a picture, nothing to burn on or rise above)
   fireplace: (ob, c) => {
     const r = rectOf(ob.bounds);
-    c.emit({ t: 'fireplace', x: r.x, y: r.y, w: Math.max(120, r.w), h: GR.floor - r.y });
+    c.emit({ t: 'fireplace', x: r.x, y: r.y, w: Math.max(120, r.w), h: GR.floor - r.y, cold: true });
   },
   flower: plantFrom,
   wallWindow: clutterAs('window'),

@@ -20,6 +20,8 @@ function bump(x: number, a: number, b: number): number {
 // Fireplace: flames in the firebox (a hazard), and a strong warm updraft rising off the mantel.
 
 export const fireplace: ObjFactory = (def, id, gfx) => {
+  // (an unlit hearth: nothing burns, nothing rises off it)
+  if (def.cold) return { id, def };
   const w = def.w ?? 170;
   const h = def.h ?? 150;
   const power = num(def.power, 2.8);
