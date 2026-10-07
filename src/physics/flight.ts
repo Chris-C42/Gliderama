@@ -22,6 +22,8 @@ export const NO_WIND: WindFn = () => ({ x: 0, y: 0 });
 export interface FlightInput {
   /** -1 / 0 / +1 held direction. */
   dir: -1 | 0 | 1;
+  /** Climb assist (a player option): a gentle hand on the elevator in rising air (see `climbAssist`). */
+  assist?: boolean;
   /** Elevator command -1..1 (nose down .. nose up). */
   pitch: number;
   /** Battery boost held. */
@@ -197,6 +199,31 @@ export function stepPlane(p: Plane, input: FlightInput, wind: WindFn, dtReal: nu
   tickDamage(p.damage, dt * n);
 }
 
+/**
+ * Climb assist (a player option), in rising air and in proportion to how strongly it rises: 0 outside it, 1 in a
+ * strong updraft.
+ */
+function climbHelp(lift: number): number {
+  return Math.max(0, Math.min(1, (lift - PHYS.climbLift0) / PHYS.climbLiftFull));
+}
+
+/**
+ * The climb assist's gentle hand on the elevator: it eases off a pull that would stall the wing, nudges a stalled one
+ * back to flying, and leans against a real nose-dive. A push still takes the plane down, only a little softer.
+ */
+function climbAssist(p: Plane, alphaStall: number, k: number, cmd: number): number {
+  if (k <= 0) return cmd;
+  const nearStall = p.alpha > alphaStall * 0.8;
+  if (nearStall) {
+    if (cmd > 0) cmd *= 1 - 0.6 * k;
+    cmd -= 0.2 * k * Math.min(1, (p.alpha - alphaStall * 0.8) / (alphaStall * 0.3));
+  } else if (p.theta < -0.35) {
+    cmd += 0.3 * k * Math.min(1, (-p.theta - 0.35) / 0.35);
+  }
+  if (cmd < 0 && !nearStall) cmd *= 1 - 0.2 * k;
+  return Math.max(-1, Math.min(1, cmd));
+}
+
 function substep(p: Plane, input: FlightInput, wind: WindFn, dt: number): void {
   const a = p.aero;
   const mass = a.mass * p.mods.massMul;
@@ -204,7 +231,9 @@ function substep(p: Plane, input: FlightInput, wind: WindFn, dt: number): void {
   updraftExit(p, w.y, dt);
 
   // Elevator servo with a gentle expo curve on the command; an agile design answers the stick quicker.
-  const cmd = Math.sign(input.pitch) * Math.pow(Math.abs(input.pitch), 1.35);
+  let cmd = Math.sign(input.pitch) * Math.pow(Math.abs(input.pitch), 1.35);
+  const help = input.assist ? climbHelp(w.y) : 0;
+  if (help > 0) cmd = climbAssist(p, a.alphaStall, help, cmd);
   const target = p.trimCtrl + cmd * CONTROL_MAX;
   const maxD = PHYS.servoRate * Math.max(0.5, 1 + (a.friendly.agility - 5) * PHYS.agilityServo) * dt;
   p.ctrl += Math.max(-maxD, Math.min(maxD, target - p.ctrl));
@@ -229,7 +258,9 @@ function substep(p: Plane, input: FlightInput, wind: WindFn, dt: number): void {
   const gamma = Math.atan2(wv, u);
   const alpha = wrap(p.theta - gamma);
   const qhat = (p.q * a.MAC) / (2 * V);
-  const c = coeffs(a, alpha, p.ctrl, qhat, p.mods);
+  // (with the climb assist the wing rides out the sudden rise in angle a gust from below gives it, as a real wing
+  // briefly does, instead of stalling at the edge of every updraft)
+  const c = coeffs(a, alpha, p.ctrl, qhat, help > 0 ? { ...p.mods, stallMul: p.mods.stallMul * (1 + PHYS.climbStallMargin * help) } : p.mods);
   const qS = 0.5 * RHO * V * V * a.S;
   // Roll wobble from asymmetric damage reduces effective lift.
   const rollLift = Math.cos(p.roll);
