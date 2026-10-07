@@ -87,9 +87,9 @@
   "status": {
    "flyable": true,
    "reached": "all 4 stars, through 31 rooms",
-   "par": 345,
-   "lost": 4,
-   "note": "bot pilot: 233 s of flying, 4 sheets lost"
+   "par": 335,
+   "lost": 3,
+   "note": "bot pilot: 233 s of flying, 3 sheets lost"
   }
  },
  {
@@ -126,9 +126,9 @@
   "status": {
    "flyable": true,
    "reached": "all 4 stars, through 43 rooms",
-   "par": 385,
-   "lost": 12,
-   "note": "bot pilot: 218 s of flying, 12 sheets lost"
+   "par": 400,
+   "lost": 13,
+   "note": "bot pilot: 223 s of flying, 13 sheets lost"
   }
  },
  {
@@ -164,9 +164,9 @@
   "status": {
    "flyable": true,
    "reached": "all 6 stars, through 46 rooms",
-   "par": 330,
+   "par": 295,
    "lost": 2,
-   "note": "bot pilot: 235 s of flying, 2 sheets lost"
+   "note": "bot pilot: 206 s of flying, 2 sheets lost"
   }
  },
  {
@@ -184,9 +184,9 @@
   "status": {
    "flyable": true,
    "reached": "all 5 stars, through 32 rooms",
-   "par": 355,
-   "lost": 8,
-   "note": "bot pilot: 219 s of flying, 8 sheets lost"
+   "par": 290,
+   "lost": 6,
+   "note": "bot pilot: 177 s of flying, 6 sheets lost"
   }
  },
  {
@@ -204,10 +204,10 @@
   "blurb": "Home of a thousand drips, darts and ducts.",
   "status": {
    "flyable": true,
-   "reached": "all 4 stars, through 38 rooms",
-   "par": 320,
+   "reached": "all 4 stars, through 39 rooms",
+   "par": 280,
    "lost": 6,
-   "note": "bot pilot: 202 s of flying, 6 sheets lost"
+   "note": "bot pilot: 170 s of flying, 6 sheets lost"
   }
  },
  {
@@ -245,9 +245,9 @@
   "status": {
    "flyable": true,
    "reached": "all 3 stars, through 49 rooms",
-   "par": 305,
-   "lost": 2,
-   "note": "bot pilot: 213 s of flying, 2 sheets lost"
+   "par": 300,
+   "lost": 1,
+   "note": "bot pilot: 215 s of flying, 1 sheet lost"
   }
  },
  {
@@ -266,9 +266,9 @@
   "status": {
    "flyable": true,
    "reached": "all 9 stars, through 50 rooms",
-   "par": 860,
-   "lost": 26,
-   "note": "bot pilot: 499 s of flying, 26 sheets lost"
+   "par": 1200,
+   "lost": 44,
+   "note": "bot pilot: 653 s of flying, 44 sheets lost"
   }
  },
  {
@@ -309,7 +309,7 @@
    "reached": "all 5 stars, through 62 rooms",
    "par": 555,
    "lost": 8,
-   "note": "bot pilot: 371 s of flying, 8 sheets lost"
+   "note": "bot pilot: 370 s of flying, 8 sheets lost"
   }
  },
  {
@@ -327,9 +327,9 @@
   "status": {
    "flyable": true,
    "reached": "all 3 stars, through 39 rooms",
-   "par": 255,
+   "par": 250,
    "lost": 7,
-   "note": "bot pilot: 146 s of flying, 7 sheets lost"
+   "note": "bot pilot: 142 s of flying, 7 sheets lost"
   }
  },
  {
@@ -346,9 +346,9 @@
   "blurb": null,
   "status": {
    "flyable": false,
-   "reached": "4 of 5 stars, through 65 rooms; stuck in \"Transformation\" (62,-9), 7 rooms from the next star",
+   "reached": "4 of 5 stars, through 64 rooms; stuck in \"Transformation\" (62,-9), 7 rooms from the next star",
    "lost": 26,
-   "note": "bot pilot: 579 s of flying, 26 sheets lost; the last star is seven rooms up, a climb made on helium in Glider PRO, with no rising air here"
+   "note": "bot pilot: 572 s of flying, 26 sheets lost; the last star is seven rooms up, a climb made on helium in Glider PRO, with no rising air here"
   }
  },
  {
@@ -368,10 +368,10 @@
   "blurb": null,
   "status": {
    "flyable": true,
-   "reached": "all 6 stars, through 123 rooms",
-   "par": 1105,
-   "lost": 32,
-   "note": "bot pilot: 651 s of flying, 32 sheets lost"
+   "reached": "all 6 stars, through 122 rooms",
+   "par": 1120,
+   "lost": 31,
+   "note": "bot pilot: 668 s of flying, 31 sheets lost"
   }
  },
  {
@@ -389,9 +389,9 @@
   "status": {
    "flyable": true,
    "reached": "the star, through 11 rooms",
-   "par": 130,
-   "lost": 5,
-   "note": "bot pilot: 62 s of flying, 5 sheets lost"
+   "par": 295,
+   "lost": 17,
+   "note": "bot pilot: 117 s of flying, 17 sheets lost"
   }
  },
  {
@@ -409,9 +409,9 @@
   "status": {
    "flyable": true,
    "reached": "all 6 stars, through 149 rooms",
-   "par": 1315,
-   "lost": 27,
-   "note": "bot pilot: 843 s of flying, 27 sheets lost"
+   "par": 1305,
+   "lost": 26,
+   "note": "bot pilot: 841 s of flying, 26 sheets lost"
   }
  },
  {
