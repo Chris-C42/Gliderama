@@ -20,6 +20,11 @@ export const PHYS = {
   servoRate: 3.6,
   /** How much the design's agility (0..10) speeds up or slows down the elevator: × (1 + (agility - 5) × this). */
   agilityServo: 0.08,
+  /** Climb assist: rising air (m/s) where it starts to help, and how much more for its full help. */
+  climbLift0: 0.4,
+  climbLiftFull: 1.6,
+  /** ...and how much further past its stall angle (fraction) a wing flies in the strongest rising air. */
+  climbStallMargin: 0.3,
   /** Turnaround duration multiplier on the design's turn time. */
   turnMul: 0.38,
   /** Fraction of airspeed kept through a turnaround (before drag). */

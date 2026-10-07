@@ -49,6 +49,8 @@ export interface SessionOptions {
   fixedStart?: boolean;
   /** The hover assist may be switched on (it circles the plane in rising air). */
   hover?: boolean;
+  /** The climb assist: steadier in rising air (see `climbAssist` in physics/flight). */
+  climbAssist?: boolean;
   /** Random source for collision damage (which wing takes a knock); a fixed one makes flights replayable. */
   rand?: () => number;
   /** Switch groups as they are at the start (a lab starting part way through a house): group → on. */
@@ -787,7 +789,7 @@ export class Session {
     const dir = this.hover ? this.hover.step(p, this.windAt, dt) : input.dir;
     const outcome = flightTick(
       this.tick,
-      { dir, pitch: input.pitch, boost },
+      { dir, pitch: input.pitch, boost, assist: !!this.opts.climbAssist },
       this.windAt,
       this.room.colliders(),
       dt,

@@ -94,6 +94,7 @@ export function SettingsScreen() {
             <Toggle k="slowMo" label="Slow motion" hint="extra time to react" />
             <Toggle k="flightData" label="Flight data" hint="speed, angle of attack, glide ratio" />
             <Toggle k="hoverAssist" label="Hover" hint="a button (or H) that circles you up in rising air" />
+            <Toggle k="climbAssist" label="Climb" hint="steadier in rising air: fewer stalls and nose-dives over a vent" />
             <Toggle k="airCurrents" label="Air currents" hint="lines showing where vents, fans and fires blow" />
             <Toggle k="reducedMotion" label="Reduced motion" hint="less screen shake" />
           </div>

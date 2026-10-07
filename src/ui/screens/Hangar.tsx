@@ -126,7 +126,7 @@ export function Hangar(props: { design?: Design }) {
       renderer,
       hangarLevel(extras.current),
       design,
-      { autoTrim: s.autoTrim, slowMo: s.slowMo, infiniteSheets: true, record: true, hover: s.hoverAssist },
+      { autoTrim: s.autoTrim, slowMo: s.slowMo, infiniteSheets: true, record: true, hover: s.hoverAssist, climbAssist: s.climbAssist },
       {
         hud: (h) => setHud(h),
         sfx: (n, o) => sfx(n, o),

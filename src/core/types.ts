@@ -30,6 +30,8 @@ export interface Settings {
   airCurrents: boolean;
   /** Offer the hover assist (a button / H key that circles the plane in rising air). */
   hoverAssist: boolean;
+  /** Climb assist: in rising air the wing rides out gusts and the plane resists stalling and nose-diving. */
+  climbAssist: boolean;
   /** Reduce screen shake / flashing. */
   reducedMotion: boolean;
   /** Haptic feedback on touch devices where supported. */
@@ -50,6 +52,7 @@ export const DEFAULT_SETTINGS: Settings = {
   flightData: false,
   airCurrents: true,
   hoverAssist: true,
+  climbAssist: true,
   reducedMotion: false,
   haptics: true,
   engineerView: false,

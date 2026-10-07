@@ -73,6 +73,7 @@ export function Play(props: { spec: PlaySpec }) {
         record: false,
         // the hover assist would fly endurance challenges for you
         hover: s.hoverAssist && spec.goal?.kind !== 'aloft',
+        climbAssist: s.climbAssist,
       },
       {
         hud: (h) => {
@@ -205,7 +206,8 @@ export function Play(props: { spec: PlaySpec }) {
         <TouchControls
           input={inputRef.current}
           settings={() => settings.peek()}
-          onPause={() => setPause(true)}
+          // (no onPause: its pause button also fires the input's pause edge, which the loop toggles on; doing both
+          // paused and unpaused in the same frame)
           stickEnabled={hud?.phase === 'fly'}
           hover={hoverOk && hud?.phase === 'fly' ? !!hud?.hovering : null}
         />
