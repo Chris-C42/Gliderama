@@ -87,9 +87,9 @@
   "status": {
    "flyable": true,
    "reached": "all 4 stars, through 31 rooms",
-   "par": 335,
-   "lost": 3,
-   "note": "bot pilot: 233 s of flying, 3 sheets lost"
+   "par": 345,
+   "lost": 4,
+   "note": "bot pilot: 233 s of flying, 4 sheets lost"
   }
  },
  {
@@ -126,9 +126,9 @@
   "status": {
    "flyable": true,
    "reached": "all 4 stars, through 43 rooms",
-   "par": 400,
+   "par": 380,
    "lost": 13,
-   "note": "bot pilot: 223 s of flying, 13 sheets lost"
+   "note": "bot pilot: 208 s of flying, 13 sheets lost"
   }
  },
  {
@@ -205,9 +205,9 @@
   "status": {
    "flyable": true,
    "reached": "all 4 stars, through 39 rooms",
-   "par": 280,
+   "par": 285,
    "lost": 6,
-   "note": "bot pilot: 170 s of flying, 6 sheets lost"
+   "note": "bot pilot: 174 s of flying, 6 sheets lost"
   }
  },
  {
@@ -368,10 +368,10 @@
   "blurb": null,
   "status": {
    "flyable": true,
-   "reached": "all 6 stars, through 122 rooms",
-   "par": 1120,
-   "lost": 31,
-   "note": "bot pilot: 668 s of flying, 31 sheets lost"
+   "reached": "all 6 stars, through 123 rooms",
+   "par": 1175,
+   "lost": 30,
+   "note": "bot pilot: 718 s of flying, 30 sheets lost"
   }
  },
  {
@@ -409,9 +409,9 @@
   "status": {
    "flyable": true,
    "reached": "all 6 stars, through 149 rooms",
-   "par": 1305,
-   "lost": 26,
-   "note": "bot pilot: 841 s of flying, 26 sheets lost"
+   "par": 1350,
+   "lost": 27,
+   "note": "bot pilot: 867 s of flying, 27 sheets lost"
   }
  },
  {
