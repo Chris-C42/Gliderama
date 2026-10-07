@@ -35,8 +35,8 @@ const level =
   (q.has('menagerie') && structuredClone(MENAGERIE)) ||
   SAMPLE_LEVEL;
 // &room=1,0 starts in another room of the level (for looking at its art and air), &at=596,150,-1 where in it (x, y,
-// facing); &goal=63,0:star:0 makes that the only star to find, &sw=gp1.14=0,gp5.11=1 sets switches (a part of a
-// house on its own, for the autopilot)
+// facing); &goal=63,0:star:0 makes that the only star to find, &sw=gp1.14=0,gp5.11=1 sets switches, &gas=13.6 gives
+// the plane that much helium gas (sim s; a canister is 3.4): a part of a house on its own, for the autopilot
 if (q.get('room') && level.rooms[q.get('room')!]) {
   const [x, y, f] = (q.get('at') ?? '').split(',').map(Number);
   level.start = { ...level.start, room: q.get('room')!, ...(q.has('at') ? { x, y, facing: f < 0 ? -1 : 1 } : {}) };
@@ -47,7 +47,8 @@ const presets: [string, boolean][] = (q.get('sw') ?? '')
   .filter(Boolean)
   .map((kv) => [kv.split('=')[0], kv.split('=')[1] === '1']);
 // &det: knocks always damage the same wing, as in the headless bot pilot (so its flights replay exactly)
-const opts = { autoTrim: q.has('autotrim'), slowMo: false, rand: q.has('det') ? () => 0.5 : undefined, switches: presets };
+const gas = Number(q.get('gas') ?? 0);
+const opts = { autoTrim: q.has('autotrim'), slowMo: false, rand: q.has('det') ? () => 0.5 : undefined, switches: presets, charges: { gas } };
 const session = new Session(renderer, level, design, opts, {
   hud(h) {
     hudEl.textContent = `${h.roomName}  phase:${h.phase}  sheets:${h.sheets}  stars:${h.stars}/${h.starsTotal}  dmg:${h.damage}%  t:${h.time.toFixed(1)}\nV ${h.speed.toFixed(2)} m/s  α ${h.alpha.toFixed(1)}°  L/D ${h.ld.toFixed(1)} ${h.stall > 0.5 ? 'STALL' : ''}  ${h.message ?? ''}`;
@@ -140,7 +141,7 @@ w.__hold = (code: string, ms: number) => {
   setTimeout(() => keys.delete(code), ms);
 };
 
-// __autopilot(plan) replays flights tick for tick: { flights: [{ angle, power, stepTicks, steps: [{ dir, pitch }] }] }
+// __autopilot(plan) replays flights tick for tick: { flights: [{ angle, power, stepTicks, steps: [{ dir, pitch, helium }] }] }
 // (the bot pilot's solutions, tests/helpers/houseSolver.ts); __pilotLog collects what happened
 interface PilotFlight {
   from?: { room: string; x: number; y: number };
@@ -150,7 +151,8 @@ interface PilotFlight {
   wait?: number;
   /** Game ticks per entry of `steps`. */
   stepTicks: number;
-  steps: { dir: -1 | 0 | 1; pitch: number }[];
+  /** `helium`: the gadget button held for it. */
+  steps: { dir: -1 | 0 | 1; pitch: number; helium?: boolean }[];
 }
 let pilot: { flights: PilotFlight[]; i: number; tick: number; thrown: boolean; waiting: number | null } | null = null;
 w.__pilotLog = [] as string[];
@@ -162,6 +164,7 @@ function drive() {
   const f = p.flights[p.i];
   ctl.dir = 0;
   ctl.pitch = 0;
+  ctl.gadget = false;
   if (!f) return;
   if (session.phase === 'aim' && !p.thrown) {
     if (p.waiting === null) {
@@ -184,6 +187,8 @@ function drive() {
     if (s) {
       ctl.dir = s.dir;
       ctl.pitch = s.pitch;
+      // (held only while there is gas, as the bot holds it: the button is the plane's own gadget's without)
+      ctl.gadget = !!s.helium && session.charges.gas > 0;
     } else if (pilot!.flights[p.i + 1]) {
       // the plan gave this flight up here (getting nowhere) and throws the next sheet from where it was
       w.__pilotLog.push(`flight ${p.i} given up in ${session.room.key} after ${(p.tick / 120).toFixed(1)}s, as planned`);
@@ -203,7 +208,7 @@ function drive() {
 if (q.has('autopilot') && campaignLevel) {
   const { solveHouse } = await import('../../tests/helpers/houseSolver');
   const t0 = performance.now();
-  const plan = solveHouse(level, design, { maxSteps: Number(q.get('steps') ?? 4000), switchesAt: new Map(presets) });
+  const plan = solveHouse(level, design, { maxSteps: Number(q.get('steps') ?? 4000), switchesAt: new Map(presets), gas });
   w.__plan = { ...plan, ms: performance.now() - t0 };
   w.__autopilot(plan);
 }
@@ -224,7 +229,15 @@ function frame(now: number) {
     // &trail: the plane tick by tick while it flies (comparing the game with the bot pilot's own flight of a plan)
     if (trail && session.phase === 'fly') {
       const pl = session.plane;
-      trail.push([session.room.key, +(pl.x * 128).toFixed(2), +(360 - pl.y * 128).toFixed(2), +pl.vx.toFixed(4), +pl.vy.toFixed(4), +pl.theta.toFixed(4)]);
+      trail.push([
+        session.room.key,
+        +(pl.x * 128).toFixed(2),
+        +(360 - pl.y * 128).toFixed(2),
+        +pl.vx.toFixed(4),
+        +pl.vy.toFixed(4),
+        +pl.theta.toFixed(4),
+        +session.charges.gas.toFixed(3),
+      ]);
     }
     ctl.gadgetPressed = false;
     thr.released = false;

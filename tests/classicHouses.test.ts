@@ -147,3 +147,25 @@ describe('Demo House flight', () => {
     expect(again.stars.length > 0 || r.flights.length > 1).toBe(true);
   }, 300_000);
 });
+
+describe('Land of Illusion flight', () => {
+  it('the bot pilot picks up the helium coming out of the vortex, and climbs on it to the last star', async () => {
+    const level = structuredClone(await loadClassicHouse('land-of-illusion'));
+    // from the top of the vortex ("Center Of The Vortex"), the last star the only one to find
+    level.start = { room: '58,-7', x: 320, y: 40, facing: 1 };
+    for (const r of Object.values(level.rooms)) for (const it of r.items) if (it.t === 'star' && it.id !== '62,-16:star:0') delete it.goal;
+    const glider = RECIPES.find((q) => q.id === 'glider')!.make();
+    const r = solveHouse(level, glider, { maxSteps: 2000 });
+    expect(r.solved, `stuck at ${r.stuck}`).toBe(true);
+    expect(r.sheetsUsed).toBe(0);
+    // the four canisters in "Transformation", coming out of the transport there, then seven rooms up on them (with no
+    // rising air)
+    expect(r.trace.filter((l) => l.startsWith('helium in 62,-9')).length).toBe(4);
+    for (const room of ['62,-9', '62,-10', '62,-13', '62,-16']) expect(r.rooms).toContain(room);
+    const f = r.flights[0];
+    expect(f.steps.some((s) => s.helium)).toBe(true);
+    // and the flight flies the same way again
+    const again = solveHouse(level, glider, { replay: f });
+    expect(again.stars).toContain('62,-16:star:0');
+  }, 300_000);
+});

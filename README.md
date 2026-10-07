@@ -64,7 +64,7 @@ Dev pages served by `npm run dev`:
 | Page | |
 |---|---|
 | `/play.html?level=cottage-1&plane=glider` | Bare play screen for any campaign level (`window.__throw(angle, power)` hook) |
-| `/play.html?level=classic-demo-house&det&autopilot` | A Classic House flown by the bot pilot, planned in the page (`&room=63,-1` starts elsewhere) |
+| `/play.html?level=classic-demo-house&det&autopilot` | A Classic House flown by the bot pilot, planned in the page (`&room=63,-1` starts elsewhere, `&gas=13.6` with that much helium) |
 | `/room-lab.html?level=home-2&room=1,-1` | Room art and colliders (`&debug` for boxes and lights) |
 | `/procgen-lab.html?seed=7&floor=2&theme=cottage` | Generated floors with their validation flights (`&stairs=1`: every change of storey a flight of stairs) |
 | `/hangar-lab.html` | Flight tests and charts for every recipe |
