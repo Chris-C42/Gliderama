@@ -17,6 +17,8 @@ export interface ClassicStatus {
   par?: number;
   /** Sheets the bot pilot lost on the way (the house gives half as many again, and a few). */
   lost?: number;
+  /** The house gives at least this many sheets all the same (where a player is likely to lose more than the bot). */
+  minSheets?: number;
 }
 
 export interface ClassicHouse {
