@@ -605,6 +605,8 @@ export class Session {
     }
     this.phase = 'down';
     this.downT = 0;
+    // (a trigger the lost plane set off goes dead with it: the next sheet starts the room's clock afresh)
+    for (const o of this.room.objects) o.planeLost?.();
     if (this.opts.infiniteSheets) {
       this.message = targetId ? 'Bullseye!' : reason === 'crashed' ? 'Crumpled!' : 'Landed.';
       return;

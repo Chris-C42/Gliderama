@@ -82,6 +82,8 @@ export interface GameObject {
   sound?(): AmbientSound | null;
   /** The shape of this object's air current, drawn as squiggly lines that end where the wind ends. */
   airflow?(): AirFlow[];
+  /** The plane was lost: forget what it set off that has yet to happen (a trigger's switch). */
+  planeLost?(): void;
   dispose?(): void;
 }
 

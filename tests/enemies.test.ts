@@ -278,6 +278,12 @@ describe('clutter', () => {
     run(o, ctx, 0.2);
     expect(state.get('away')).toBe(false);
     expect(calls.sfx).toContain('switch');
+    // set off again by a plane that is then lost: it goes dead with it
+    o.onTouch!(ctx);
+    o.planeLost!();
+    run(o, ctx, 3);
+    expect(state.get('away')).toBe(false);
+    expect(calls.sfx.filter((n) => n === 'switch')).toHaveLength(1);
   });
 });
 

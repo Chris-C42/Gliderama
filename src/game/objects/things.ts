@@ -138,8 +138,8 @@ function paintSwitch(px: Px, look: string, on: boolean) {
 // Light switch: fly into it to flip the room lights (or a named group, e.g. a fan). `room` wires it to another
 // room's lights; `hidden` makes it an invisible trigger of size w × h (Glider PRO's invisible switches). It flips once
 // each time the plane comes through (lingering in a big trigger does not flip it back). `delay` (s): it flips that
-// long after the plane came through, if the plane is still in the room then (Glider PRO's triggers, which go dead
-// when the glider leaves the room).
+// long after the plane came through, if the plane is still in the room then and has not been lost (Glider PRO's
+// triggers, which go dead when the glider leaves the room).
 
 export const lightSwitch: ObjFactory = (def, id, gfx) => {
   const group = str(def.group, 'lights');
@@ -197,6 +197,9 @@ export const lightSwitch: ObjFactory = (def, id, gfx) => {
       cooldown = 0.8;
       if (delay > 0) armed.push(delay);
       else flip(ctx);
+    },
+    planeLost() {
+      armed = [];
     },
     dispose() {
       sprite?.dispose();

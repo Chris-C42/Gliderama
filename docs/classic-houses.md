@@ -174,7 +174,7 @@ the original stands on the floor; furniture and clutter are drawn over the origi
 | Floor / ceiling transport, invisible transport, deluxe transport | 244 / 465 / 385 / 61 | transport (unlinked ones are the far ends, or dropped when nothing leads to them) |
 | Light switch, machine switch, thermostat, power switch, knife switch | 113 / 79 / 108 / 78 / 230 | switch, drawn as the original (toggle, rocker, dial, button, knife switch). It works a room's lights (any room's), a blower, a deluxe transport, an enemy, an outlet or a shredder, and spills a grease can; a switch for anything else flips but does nothing here |
 | Invisible switch | 635 | invisible switch, where it works one of those; else dropped |
-| Trigger, large trigger | 239 / 81 | a trigger fires what it is linked to after its delay (a tenth of a second a step: Nemo's Market's "8 Second Shopping Spree" gives the glider 8 s in the room before it is whisked away), if the plane is still in the room then; set off again each time the plane comes through. Linked to a switch: an invisible switch that does that switch's job after the delay; linked to a grease can, one that spills it. Linked to an enemy, an outlet, a guitar, a toaster or a drip: dropped (they go off by themselves here) |
+| Trigger, large trigger | 239 / 81 | a trigger fires what it is linked to after its delay (a tenth of a second a step: Nemo's Market's "8 Second Shopping Spree" gives the glider 8 s in the room before it is whisked away), if the plane is still in the room then (and has not been lost); set off again each time the plane comes through. Linked to a switch: an invisible switch that does that switch's job after the delay; linked to a grease can, one that spills it. Linked to an enemy, an outlet, a guitar, a toaster or a drip: dropped (they go off by themselves here) |
 | Sound trigger | 122 | dropped |
 | Ceiling light / light bulb / table lamp | 160 / 252 / 70 | pendant lamp / pendant on a cord / desk lamp |
 | Fluorescent / track light | 115 / 81 | fluorescent tube / track of spotlights under the ceiling |
@@ -307,7 +307,8 @@ Not drawn at all: the houses' own pictures (`customPict`, 4782 of them), which G
   linked to goes off on its own timer. The toaster's toast doesn't pop, the microwave doesn't take gadgets away,
   and switches for appliances (TV, stereo, microwave, toaster...) flip without effect. Bonuses that an invisible
   switch took away in the original stay. The slider and sound triggers are left out.
-- **Switches** flip once each time the plane goes through them (as the original's).
+- **Switches** flip once each time the plane goes through them (as the original's). A trigger set off by a plane
+  that is then lost goes dead with it; in Glider PRO it still went off while the glider came back.
 - **Clocks and the invisible bonus** are stars that count for points (the All Stars medal), not the goal.
 - **Helium**: in Glider PRO a helium canister lets the glider float straight up while the battery key is held
   (5 s a canister, 4 px a frame); here it is drawn as a battery and gives a boost charge, for planes with the
