@@ -1,4 +1,5 @@
-import type { ObjFactory } from './types';
+import type { Rect } from '../../world/types';
+import type { GameObject, ObjFactory } from './types';
 import { ceilingVent, current, deskFan, draft, floorVent, radiator } from './air';
 import { transport } from './classic';
 import { cat, cuckooClock, fireplace, grandfatherClock, kettle, stove } from './cottage';
@@ -54,4 +55,21 @@ export const OBJECTS: Record<string, ObjFactory> = {
 
 export function registerObjects(extra: Record<string, ObjFactory>): void {
   Object.assign(OBJECTS, extra);
+}
+
+/** Things that set the plane alight. */
+export const FLAMES = ['candle', 'fireplace', 'tiki', 'bbq'];
+
+/**
+ * Where a plane thrown from a standstill would come to harm at once: in a flame or a cobweb (they stay where they
+ * are; what flies about, a balloon or a dart, is somewhere else by the time anyone throws).
+ */
+export function stillHazards(objects: GameObject[]): Rect[] {
+  const out: Rect[] = [];
+  for (const o of objects) {
+    if (!FLAMES.includes(o.def.t) && o.def.t !== 'cobweb') continue;
+    const r = o.trigger?.();
+    if (r) out.push(r);
+  }
+  return out;
 }

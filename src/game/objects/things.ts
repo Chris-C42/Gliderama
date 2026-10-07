@@ -5,7 +5,7 @@ import { R } from '../../render/palette';
 import { Px } from '../../render/pixel';
 import { rgb } from '../../render/particles';
 import { fanOut } from './airflow';
-import type { ObjFactory } from './types';
+import type { ObjCtx, ObjFactory } from './types';
 
 const num = (v: unknown, d: number) => (typeof v === 'number' ? v : d);
 const str = (v: unknown, d: string) => (typeof v === 'string' ? v : d);
@@ -137,12 +137,15 @@ function paintSwitch(px: Px, look: string, on: boolean) {
 // ---------------------------------------------------------------------------------------------
 // Light switch: fly into it to flip the room lights (or a named group, e.g. a fan). `room` wires it to another
 // room's lights; `hidden` makes it an invisible trigger of size w × h (Glider PRO's invisible switches). It flips once
-// each time the plane comes through (lingering in a big trigger does not flip it back).
+// each time the plane comes through (lingering in a big trigger does not flip it back). `delay` (s): it flips that
+// long after the plane came through, if the plane is still in the room then and has not been lost (Glider PRO's
+// triggers, which go dead when the glider leaves the room).
 
 export const lightSwitch: ObjFactory = (def, id, gfx) => {
   const group = str(def.group, 'lights');
   const room = typeof def.room === 'string' ? def.room : undefined;
   const hidden = !!def.hidden;
+  const delay = num(def.delay, 0);
   const sprite = hidden ? null : (gfx?.createSprite(10, 16, 0, 6) ?? null);
   const px = sprite ? new Px(sprite.canvas, 2) : null;
   let state: boolean | null = null;
@@ -150,16 +153,32 @@ export const lightSwitch: ObjFactory = (def, id, gfx) => {
   // touched this tick / the tick before
   let over = false;
   let wasOver = false;
+  // set off and still to flip (s to go)
+  let armed: number[] = [];
   const draw = (on: boolean) => {
     if (!px || !sprite) return;
     px.ctx.clearRect(0, 0, 10, 16);
     paintSwitch(px, str(def.look, 'light'), on);
     sprite.refresh();
   };
+  const flip = (ctx: ObjCtx) => {
+    if (group === 'lights') ctx.api.toggleLights(room);
+    else ctx.api.setSwitch(group, !ctx.api.switchOn(group));
+    ctx.api.sfx('switch');
+  };
   sprite?.set(def.x, def.y);
   return {
     id,
     def,
+    early(ctx) {
+      if (!armed.length) return;
+      armed = armed.map((s) => s - ctx.dt);
+      // (to the tick: a delay is a whole number of them, give or take the rounding)
+      while (armed.length && armed[0] <= 1e-6) {
+        armed.shift();
+        flip(ctx);
+      }
+    },
     update(ctx) {
       cooldown = Math.max(0, cooldown - ctx.dt);
       wasOver = over;
@@ -177,9 +196,11 @@ export const lightSwitch: ObjFactory = (def, id, gfx) => {
       over = true;
       if (wasOver || cooldown > 0) return;
       cooldown = 0.8;
-      if (group === 'lights') ctx.api.toggleLights(room);
-      else ctx.api.setSwitch(group, !ctx.api.switchOn(group));
-      ctx.api.sfx('switch');
+      if (delay > 0) armed.push(delay);
+      else flip(ctx);
+    },
+    planeLost() {
+      armed = [];
     },
     dispose() {
       sprite?.dispose();
@@ -383,7 +404,8 @@ export const batteryPickup = pickup('battery');
 export const bandsPickup = pickup('bands');
 
 // ---------------------------------------------------------------------------------------------
-// Drip: water drops fall from (x, y) every `every` seconds.
+// Drip: water drops fall from (x, y) every `every` seconds, the first a whole `every` after the plane comes in (the
+// same each time the room is flown, as Glider PRO's); a drop that meets the plane soaks it.
 
 export const drip: ObjFactory = (def, id, gfx) => {
   const every = num(def.every, 1.4);
@@ -408,7 +430,13 @@ export const drip: ObjFactory = (def, id, gfx) => {
     }
     drops.push({ y: 0, vy: 0, s, live: false });
   }
-  let timer = Math.random() * every;
+  let timer = every;
+  /** The drop falling lowest (the one a plane under the drip meets first). */
+  const lowest = () => {
+    let low: Drop | null = null;
+    for (const d of drops) if (d.live && (!low || d.y > low.y)) low = d;
+    return low;
+  };
   return {
     id,
     def,
@@ -435,16 +463,21 @@ export const drip: ObjFactory = (def, id, gfx) => {
           continue;
         }
         d.s?.set(def.x - 1, d.y - 2, true);
-        const p = ctx.api.plane();
-        if (p.alive && Math.abs(p.x - def.x) < 16 && Math.abs(p.y - d.y) < 10) {
-          d.live = false;
-          d.s?.set(0, 0, false);
-          ctx.api.soak(0.18);
-          ctx.api.sfx('splash');
-          for (let k = 0; k < 6; k++)
-            ctx.particles.spawn({ x: def.x, y: d.y, vx: (Math.random() - 0.5) * 80, vy: -30 - Math.random() * 40, grav: 300, life: 0.4, max: 0.4, ...rgb('#a9d4f0'), a: 0.9 });
-        }
       }
+    },
+    trigger() {
+      const d = lowest();
+      return d ? { x: def.x - 2, y: d.y - 3, w: 4, h: 6 } : null;
+    },
+    onTouch(ctx) {
+      const d = lowest();
+      if (!d) return;
+      d.live = false;
+      d.s?.set(0, 0, false);
+      ctx.api.soak(0.18);
+      ctx.api.sfx('splash');
+      for (let k = 0; k < 6; k++)
+        ctx.particles.spawn({ x: def.x, y: d.y, vx: (Math.random() - 0.5) * 80, vy: -30 - Math.random() * 40, grav: 300, life: 0.4, max: 0.4, ...rgb('#a9d4f0'), a: 0.9 });
     },
     dispose() {
       for (const d of drops) d.s?.dispose();

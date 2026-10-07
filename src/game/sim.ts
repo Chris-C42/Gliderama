@@ -12,7 +12,7 @@ import { roomColliders } from '../world/colliders';
 import type { Collider, Rect, RoomDef } from '../world/types';
 import { profileHull, bounds, polyVsBox } from './collide';
 import { flightTick, planeHull, type TickState } from './flightTick';
-import { OBJECTS } from './objects';
+import { FLAMES, OBJECTS } from './objects';
 import type { GameObject, ObjCtx, SessionApi, WindOut } from './objects/types';
 import type { LevelDef } from './level';
 import { spillsFor, spillWind, updateSpills, type Spill } from './roomAir';
@@ -28,9 +28,6 @@ export interface SimRoom {
   /** Air from the rooms above and below, through the floor and ceiling openings. */
   spills: Spill[];
 }
-
-/** Things that set the plane alight. */
-const FLAMES = ['candle', 'fireplace', 'tiki', 'bbq'];
 
 /** A room ready to fly headless. Pass the level and the room's key so air from the rooms above and below counts. */
 export function buildSimRoom(def: RoomDef, where?: { level: Pick<LevelDef, 'rooms'>; key: string }): SimRoom {
@@ -154,6 +151,7 @@ export function simulateRoom(
   let k = 0;
   for (;;) {
     ctx.time = t;
+    for (const o of room.objects) o.early?.(ctx);
     for (const o of room.objects) o.update?.(ctx);
     updateSpills(room.spills, ctx);
     const r = flightTick(st, control(plane, t), wind, room.colliders, dt, { rand: opts.rand }, {});

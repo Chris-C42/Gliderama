@@ -18,7 +18,7 @@ import { rgb } from '../render/particles';
 import { Px } from '../render/pixel';
 import { R } from '../render/palette';
 import { Slingshot, pulledBack } from '../render/slingshot';
-import { OBJECTS } from './objects';
+import { OBJECTS, stillHazards } from './objects';
 import { TRANSPORT_REST } from './objects/classic';
 import type { AirFlow, GameObject, ObjCtx, SessionApi, WindOut } from './objects/types';
 import { bounds, polyVsBox, profileHull, surfaceBelow, type V } from './collide';
@@ -53,6 +53,8 @@ export interface SessionOptions {
   climbAssist?: boolean;
   /** Random source for collision damage (which wing takes a knock); a fixed one makes flights replayable. */
   rand?: () => number;
+  /** Switch groups as they are at the start (a lab starting part way through a house): group → on. */
+  switches?: [string, boolean][];
 }
 
 export interface FlightStats {
@@ -266,6 +268,7 @@ export class Session {
     this.goalStars = new Set(level.goal === 'stars' ? goalStarIds(level) : []);
     this.charges = { boost: 0, bands: 0, helium: 0, ...opts.charges };
     for (const id of opts.collected ?? []) this.collected.add(id);
+    for (const [g, on] of opts.switches ?? []) this.switches.set(g, on);
     this.checkpoint = { ...level.start };
     this.setDesign(design, true);
     this.enterRoom(level.start.room);
@@ -604,6 +607,8 @@ export class Session {
     }
     this.phase = 'down';
     this.downT = 0;
+    // (a trigger the lost plane set off goes dead with it: the next sheet starts the room's clock afresh)
+    for (const o of this.room.objects) o.planeLost?.();
     if (this.opts.infiniteSheets) {
       this.message = targetId ? 'Bullseye!' : reason === 'crashed' ? 'Crumpled!' : 'Landed.';
       return;
@@ -640,6 +645,7 @@ export class Session {
     this.realTime += dt;
     this.triggeredThisTick.clear();
     const ctx: ObjCtx = { dt, time: this.realTime, particles: this.renderer.particles, api: this.api };
+    for (const o of this.room.objects) o.early?.(ctx);
     for (const o of this.room.objects) o.update?.(ctx);
     updateSpills(this.room.spills, ctx);
 
@@ -883,7 +889,7 @@ export class Session {
     const np = planePx(p);
     // checkpoint: just inside the entry edge
     const entry = { left: 'right', right: 'left', up: 'down', down: 'up' }[side] as 'left' | 'right' | 'up' | 'down';
-    if (!this.opts.fixedStart) this.checkpoint = entryCheckpoint(this.level, next, entry, np.x, np.y, p.facing);
+    if (!this.opts.fixedStart) this.checkpoint = entryCheckpoint(this.level, next, entry, np.x, np.y, p.facing, stillHazards(this.room.objects));
   }
 
   /** Room-grid-aware global pixel position. */
@@ -920,6 +926,14 @@ export class Session {
       landedX: q.x,
       targetId,
     };
+  }
+
+  /**
+   * Put the plane down where it is (the play lab's autopilot, where the bot pilot's plan gave up a flight that was
+   * getting nowhere: a player would fly it into the floor there).
+   */
+  giveUp(): void {
+    this.flightOver('crashed');
   }
 
   /**

@@ -22,13 +22,17 @@ import { extractFloorSuite, parseHouse } from './glider/house.mjs';
 import { colourStats, decodePict } from './glider/pict.mjs';
 import { parseRez } from './glider/rez.mjs';
 import {
+  AIR,
   DROPPED,
+  EDGE,
   GONE_WHEN_OFF,
   GR,
   HOUSES,
   BUILTIN,
   MISSING_ART,
   OBJECT_MAP,
+  SCENERY,
+  SOLID_SCENERY,
   ORDER,
   OVERRIDES,
   ROOF_RAMP,
@@ -243,8 +247,8 @@ export function convertHouse(name, house, rsrc, file = '', pictures = null) {
         for (const [g0, g1] of subtract(h.gaps, blocked)) {
           const y = Math.round(Y(g0));
           const hh = Math.round(Y(g1)) - y;
-          gapBlocks.get(a).push({ t: 'solid', x: GR.roomW - GR.sideWall, y, w: GR.sideWall, h: hh });
-          gapBlocks.get(b).push({ t: 'solid', x: 0, y, w: GR.sideWall, h: hh });
+          gapBlocks.get(a).push({ t: 'solid', x: GR.roomW - GR.sideWall, y, w: GR.sideWall + EDGE, h: hh });
+          gapBlocks.get(b).push({ t: 'solid', x: -EDGE, y, w: GR.sideWall + EDGE, h: hh });
         }
       }
     }
@@ -264,8 +268,8 @@ export function convertHouse(name, house, rsrc, file = '', pictures = null) {
         for (const [g0, g1] of subtract(h.gaps, blocked)) {
           const x = Math.round(X(g0));
           const w = Math.round(X(g1)) - x;
-          gapBlocks.get(a).push({ t: 'solid', x, y: GR.floor, w, h: GR.roomH - GR.floor });
-          gapBlocks.get(below).push({ t: 'solid', x, y: 0, w, h: GR.ceiling });
+          gapBlocks.get(a).push({ t: 'solid', x, y: GR.floor, w, h: GR.roomH - GR.floor + EDGE });
+          gapBlocks.get(below).push({ t: 'solid', x, y: -EDGE, w, h: GR.ceiling + EDGE });
         }
       }
     }
@@ -370,6 +374,8 @@ export function convertHouse(name, house, rsrc, file = '', pictures = null) {
       const n0 = items.length;
       const art0 = missingArt[ob.type] ?? 0;
       handler(ob, ctx);
+      // (scenery is nothing to bump into, as in Glider PRO)
+      if (SCENERY.has(ob.type)) for (const it of items.slice(n0)) if (SOLID_SCENERY.has(it.t)) it.solid = false;
       if (droppedHere === before) {
         mapped++;
         // drawn with the art of something else (unless the handler said how already)
@@ -491,10 +497,15 @@ function block(x0, x1, top) {
 /** Keep an item's anchor inside the room. */
 function clampItem(it) {
   const c = { ...it };
-  if (typeof c.x === 'number') c.x = Math.max(0, Math.min(GR.roomW, c.x));
-  if (typeof c.y === 'number') c.y = Math.max(0, Math.min(GR.roomH, c.y));
-  if (typeof c.w === 'number' && typeof c.x === 'number') c.w = Math.max(1, Math.min(c.w, GR.roomW - c.x));
-  if (typeof c.h === 'number' && typeof c.y === 'number') c.h = Math.max(1, Math.min(c.h, GR.roomH - c.y));
+  // (blocks at an edge carry on past it, as the room's walls do; invisible air keeps its place and size, a column at
+  // a wall partly past it, a rising one up to the top carrying on through the ceiling)
+  const air = it.t === 'current';
+  const mx = it.t === 'solid' ? EDGE : air ? AIR.columnW / 2 : 0;
+  const my = it.t === 'solid' ? EDGE : air ? AIR.carryOn : 0;
+  if (typeof c.x === 'number') c.x = Math.max(-mx, Math.min(GR.roomW, c.x));
+  if (typeof c.y === 'number') c.y = Math.max(-my, Math.min(GR.roomH, c.y));
+  if (typeof c.w === 'number' && typeof c.x === 'number') c.w = Math.max(1, Math.min(c.w, GR.roomW + mx - c.x));
+  if (typeof c.h === 'number' && typeof c.y === 'number') c.h = Math.max(1, Math.min(c.h, GR.roomH + (air ? 0 : my) - c.y));
   return c;
 }
 

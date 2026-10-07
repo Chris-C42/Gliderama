@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { entryCheckpoint, type LevelDef } from '../src/game/level';
+import { OBJECTS, stillHazards } from '../src/game/objects';
 import type { ItemDef, RoomDef } from '../src/world/types';
 
 function level(items: ItemDef[], startY = 110): LevelDef {
@@ -43,5 +44,38 @@ describe('relaunch checkpoints', () => {
 
   it('dropping in through the ceiling still starts just under it', () => {
     expect(entryCheckpoint(level([]), '1,0', 'up', 320, 2, 1).y).toBe(60);
+  });
+
+  it('up or down a shaft, it is thrown from inside the shaft, clear of its walls', () => {
+    // the opening in the floor is a shaft x 280..380 between blocks: a plane that came up it close to one wall is
+    // thrown from just off that wall
+    const shaft: ItemDef[] = [
+      { t: 'solid', x: 0, y: 0, w: 280, h: 360 },
+      { t: 'solid', x: 380, y: 0, w: 260, h: 360 },
+    ];
+    const up = entryCheckpoint(level(shaft), '1,0', 'down', 375, 355, 1);
+    expect(up.x).toBeGreaterThanOrEqual(350);
+    expect(up.x).toBeLessThanOrEqual(358);
+    expect(up.y).toBe(110);
+    const down = entryCheckpoint(level(shaft), '1,0', 'up', 284, 2, -1);
+    expect(down.x).toBeGreaterThanOrEqual(302);
+    expect(down.x).toBeLessThanOrEqual(310);
+  });
+
+  it('it is never thrown again into a cobweb or a flame by where it came in', () => {
+    // a cobweb under the ceiling where the plane fell in, a candle by the side it flew in by
+    const items: ItemDef[] = [
+      { t: 'cobweb', x: 300, y: 19, w: 68, h: 48 },
+      { t: 'candle', x: 40, y: 120 },
+    ];
+    const avoid = stillHazards(items.map((it, i) => OBJECTS[it.t](it, `o${i}`, null, { dark: false, night: false })));
+    expect(avoid.length).toBe(2);
+    const clear = (cp: { x: number; y: number }) => avoid.every((r) => cp.x + 22 <= r.x || cp.x - 22 >= r.x + r.w || cp.y + 9 <= r.y || cp.y - 9 >= r.y + r.h);
+    const fell = entryCheckpoint(level(items), '1,0', 'up', 320, 2, 1, avoid);
+    expect(clear(fell)).toBe(true);
+    expect(Math.hypot(fell.x - 320, fell.y - 60)).toBeLessThan(60);
+    const flew = entryCheckpoint(level(items), '1,0', 'left', 4, 120, 1, avoid);
+    expect(clear(flew)).toBe(true);
+    expect(flew.x).toBe(44);
   });
 });

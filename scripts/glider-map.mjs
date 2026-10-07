@@ -713,13 +713,30 @@ const fixed =
     c.emit({ t: kind, x, y, ...(typeof extra === 'function' ? extra(ob, c) : extra) });
   };
 
+/** How far past a room's edge a block at that edge carries on (as the room's own walls do, see src/world/colliders). */
+export const EDGE = 40;
+
 /**
  * Invisible obstacles stand for things drawn into the original's pictures (walls, pipes, ledges): without the
- * picture they are drawn as plain blocks in its colour there, so that nothing in a room is solid unseen.
+ * picture they are drawn as plain blocks in its colour there, so that nothing in a room is solid unseen. One that
+ * reaches an edge of the room (up past the ceiling line or down past the floor line too: the glider could not get
+ * between it and the edge there) carries on past it, like a wall: a block in the room above or next door meets it
+ * there, with no seam between the rooms to slip along.
  */
 function obstacle(ob, c) {
   const r = rectOf(ob.bounds);
   if (r.w <= 0 || r.h <= 0) return c.drop(ob.type, 'empty rectangle');
+  const b = ob.bounds;
+  if (b.top <= GP.ceiling) {
+    r.h += r.y + EDGE;
+    r.y = -EDGE;
+  }
+  if (b.bottom >= GP.floor) r.h = GR.roomH + EDGE - r.y;
+  if (b.left <= 0) {
+    r.w += r.x + EDGE;
+    r.x = -EDGE;
+  }
+  if (b.right >= GP.roomW) r.w = GR.roomW + EDGE - r.x;
   c.emit({ t: 'solid', ...r, ramp: c.solidRamp(ob) });
 }
 
@@ -817,20 +834,25 @@ export const TRIGGERS = ['trigger', 'lgTrigger'];
 /**
  * What a switch flips: the object it is linked to ({ room, key, target }, see the converter's link), or null. A
  * trigger flips nothing itself: it fires what it is linked to a moment later (Sources/Triggers.c FireTrigger), and
- * when that is another switch, it is as if the glider had flown through that one.
+ * when that is another switch, it is as if the glider had flown through that one; a grease can it spills.
  */
 export function flipped(ob, link) {
   const l = link(ob);
   if (!l?.target) return null;
   if (!TRIGGERS.includes(ob.type)) return l;
   const t = l.target;
+  if (GREASE.includes(t.type)) return l;
   if (t.family !== 'switch' || TRIGGERS.includes(t.type) || t.type === 'soundTrigger') return null;
   const l2 = link(t);
   return l2?.target ? l2 : null;
 }
 
-/** Things Gliderama can switch on and off besides the lights (their `group`): air, switched transports, the menagerie. */
-const SWITCHABLE = new Set('deluxeTrans balloon copterLf copterRt dartLf dartRt ball fish outlet shredder'.split(' '));
+const GREASE = ['greaseRt', 'greaseLf'];
+/**
+ * Things Gliderama can switch on and off besides the lights (their `group`): air, switched transports, the menagerie,
+ * and grease cans, which a switch spills (Sources/Interactions.c, Triggers.c).
+ */
+const SWITCHABLE = new Set(['deluxeTrans', 'balloon', 'copterLf', 'copterRt', 'dartLf', 'dartRt', 'ball', 'fish', 'outlet', 'shredder', ...GREASE]);
 /** Things Glider PRO's switches cannot change either (Sources/Objects.c SetObjectState). */
 const UNSWITCHABLE = new Set('taper candle stubby tiki bbq cinderBlock flowerBox cds customPict guitar cobweb slider invisTrans'.split(' '));
 
@@ -859,19 +881,21 @@ function switchObj(ob, c) {
   const y = r1(Y(ob.topLeft.v + 2));
   const look = SWITCH_LOOKS[ob.type] ? { look: SWITCH_LOOKS[ob.type] } : {};
   const hidden = visible ? {} : { hidden: true, w: r1(X(w)), h: r1(SY * h) };
+  // a trigger fires `delay` × 3 frames (at 30 a second) after the glider goes through, if it is still in the room
+  // (Sources/Triggers.c ArmTrigger; RoomGraphics.c DrawLocale zeroes the triggers in a new room)
+  const delay = TRIGGERS.includes(ob.type) && ob.delay > 0 ? { delay: ob.delay / 10 } : {};
   const l = flipped(ob, c.link);
   const t = l?.target;
   if (t?.family === 'light') {
     // a light switch: the lights of the room the light is in
-    c.emit({ t: 'switch', x, y, ...look, ...(l.key !== c.key ? { room: l.key } : {}), ...hidden });
+    c.emit({ t: 'switch', x, y, ...look, ...(l.key !== c.key ? { room: l.key } : {}), ...hidden, ...delay });
   } else if (t && (t.family === 'blower' || SWITCHABLE.has(t.type))) {
-    c.emit({ t: 'switch', x, y, ...look, group: c.groupName(l.room, t.slot), ...hidden });
+    c.emit({ t: 'switch', x, y, ...look, group: c.groupName(l.room, t.slot), ...hidden, ...delay });
   } else if (visible) {
     // nothing here for it to switch: it still flips (a group of its own, that nothing listens to)
     c.emit({ t: 'switch', x, y, ...look, group: c.groupName(c.room, ob.slot) });
     return c.approx(ob.type, idleSwitch(ob, c));
   } else return c.drop(ob.type, idleSwitch(ob, c), true);
-  if (TRIGGERS.includes(ob.type)) c.approx(ob.type, 'fires its switch as the plane goes through (no delay)');
 }
 
 function light(ob, c) {
@@ -949,12 +973,16 @@ function shredder(ob, c) {
   c.emit({ t: 'shredder', x: r1(X(left + 36.5) - 45), y: (onFloor(top + 22) ? GR.floor : r1(Y(top + 22))) - 24, ...poweredBy(ob, c) });
 }
 
-/** A grease can (its foot where the original's is) tips over when clipped, spilling a slick `length` long (or lies spilt). */
+/**
+ * A grease can (its foot where the original's is) tips over when clipped, spilling a slick `length` long (or lies
+ * spilt); a switch or trigger wired to it spills it too (its `group`).
+ */
 function grease(ob, c) {
   const { h: left, v: top } = ob.topLeft;
   const reach = ob.length > 5 ? { reach: r1(X(ob.length)) } : {};
   const y = onFloor(top + 27) ? GR.floor - 29 : r1(Y(top));
-  c.emit({ t: 'grease', x: r1(X(left)), y, h: 29, dir: ob.type === 'greaseRt' ? 1 : -1, ...reach, ...(ob.initial ? {} : { spilled: true }) });
+  const state = ob.initial ? c.group(ob, true) : { spilled: true };
+  c.emit({ t: 'grease', x: r1(X(left)), y, h: 29, dir: ob.type === 'greaseRt' ? 1 : -1, ...reach, ...state });
 }
 
 function plantFrom(ob, c) {
@@ -972,6 +1000,17 @@ function plantFrom(ob, c) {
   const pot = Math.min(22, Math.max(12, r1((Y(b.bottom) - Y(b.top)) * 0.4)));
   c.emit({ t: 'plant', x: r1(cx - w / 2), y: r1(bottom - pot), w, tall: Math.max(16, r1(Y(b.bottom) - Y(b.top) - pot)), v: c.seed % 4 });
 }
+
+/**
+ * Things Glider PRO draws but the glider flies through (Sources/ObjectRects.c gives them nothing to touch: pictures,
+ * plants, windows, the teddy bear, the fireplace, the lamps). The Gliderama kinds they are drawn as that are solid
+ * are marked `solid: false` here: nothing to bump into (a fireplace in Leviathan has a transport in its hearth).
+ */
+const PICTURES = 'ozma mirror mousehole fireplace flower wallWindow bear calendar vase1 vase2 bulletin cloud faucet rug';
+const LAMPS = 'ceilingLight lightBulb tableLamp hipLamp decoLamp flourescent trackLight';
+export const SCENERY = new Set(`${PICTURES} ${LAMPS}`.split(' '));
+/** The Gliderama kinds scenery is drawn as that are solid in Gliderama's own rooms. */
+export const SOLID_SCENERY = new Set(['fireplace', 'window', 'bear', 'plant', 'pendant', 'floorLamp', 'deskLamp']);
 
 /** Handlers by Glider PRO object type. `null` = dropped with the reason given. */
 export const OBJECT_MAP = {
@@ -1187,56 +1226,31 @@ export const OVERRIDES = {};
  * a few), note }.
  */
 export const STATUS = {
-  'Demo House': { flyable: true, reached: 'the star, through 13 rooms', par: 90, lost: 0, note: 'bot pilot: 62 s of flying, no sheet lost' },
-  Sampler: { flyable: true, reached: 'the star, through 1 room', par: 15, lost: 0, note: 'bot pilot: 4 s of flying, no sheet lost' },
-  'California or Bust!': { flyable: true, reached: 'the star, through 14 rooms', par: 80, lost: 0, note: 'bot pilot: 54 s of flying, no sheet lost' },
+  'Demo House': { flyable: true, reached: 'the star, through 13 rooms', par: 60, lost: 0, note: 'bot pilot: 36 s of flying, no sheet lost' },
+  Sampler: { flyable: true, reached: 'the star, through 1 room', par: 15, lost: 0, note: 'bot pilot: 2 s of flying, no sheet lost' },
+  'California or Bust!': { flyable: true, reached: 'the star, through 14 rooms', par: 75, lost: 0, note: 'bot pilot: 50 s of flying, no sheet lost' },
   'Fun House': { flyable: false, reached: 'no stars to find (free flight)', note: 'the house has no stars, as in Glider PRO' },
-  "Castle o' the Air": {
-    flyable: false,
-    reached: '2 of 4 stars, through 11 rooms; stuck in "Castletop" (64,-3), 3 rooms from the next star',
-    lost: 14,
-    note: 'bot pilot: 101 s of flying, 14 sheets lost',
-  },
-  'Empty House': { flyable: true, reached: 'the star, through 12 rooms', par: 65, lost: 0, note: 'bot pilot: 40 s of flying, no sheet lost' },
-  'Davis Station': {
-    flyable: false,
-    reached: '2 of 4 stars, through 35 rooms; stuck in "Is This a Silo?" (63,3), 3 rooms from the next star',
-    lost: 61,
-    note: 'bot pilot: 331 s of flying, 61 sheets lost',
-  },
-  'In The Mirror': { flyable: true, reached: 'the star, through 26 rooms', par: 145, lost: 1, note: 'bot pilot: 96 s of flying, 1 sheet lost' },
-  'Art Museum': { flyable: true, reached: 'all 6 stars, through 46 rooms', par: 320, lost: 5, note: 'bot pilot: 209 s of flying, 5 sheets lost' },
-  "Nemo's Market": { flyable: true, reached: 'all 5 stars, through 34 rooms', par: 455, lost: 9, note: 'bot pilot: 289 s of flying, 9 sheets lost' },
-  Metropolis: { flyable: true, reached: 'all 4 stars, through 38 rooms', par: 915, lost: 58, note: 'bot pilot: 348 s of flying, 58 sheets lost' },
-  'The Asylum Pro': { flyable: true, reached: 'the star, through 15 rooms', par: 125, lost: 0, note: 'bot pilot: 87 s of flying, no sheet lost' },
-  'Grand Prix': { flyable: true, reached: 'all 3 stars, through 49 rooms', par: 425, lost: 2, note: 'bot pilot: 308 s of flying, 2 sheets lost' },
-  'CD Demo House': { flyable: true, reached: 'all 9 stars, through 50 rooms', par: 1485, lost: 55, note: 'bot pilot: 806 s of flying, 55 sheets lost' },
-  Titanic: { flyable: true, reached: 'the star, through 26 rooms', par: 215, lost: 3, note: 'bot pilot: 141 s of flying, 3 sheets lost' },
-  "Rainbow's End": {
-    flyable: false,
-    reached: '1 of 5 stars, through 16 rooms; stuck in "The Playground!" (71,-1), 2 rooms from the next star',
-    lost: 15,
-    note: 'bot pilot: 118 s of flying, 15 sheets lost',
-  },
-  'ImagineHouse PRO II': { flyable: true, reached: 'all 3 stars, through 38 rooms', par: 365, lost: 13, note: 'bot pilot: 196 s of flying, 13 sheets lost' },
+  "Castle o' the Air": { flyable: true, reached: 'all 4 stars, through 31 rooms', par: 345, lost: 4, note: 'bot pilot: 233 s of flying, 4 sheets lost' },
+  'Empty House': { flyable: true, reached: 'the star, through 12 rooms', par: 60, lost: 0, note: 'bot pilot: 38 s of flying, no sheet lost' },
+  'Davis Station': { flyable: true, reached: 'all 4 stars, through 43 rooms', par: 380, lost: 13, note: 'bot pilot: 208 s of flying, 13 sheets lost' },
+  'In The Mirror': { flyable: true, reached: 'the star, through 24 rooms', par: 125, lost: 1, note: 'bot pilot: 82 s of flying, 1 sheet lost' },
+  'Art Museum': { flyable: true, reached: 'all 6 stars, through 46 rooms', par: 295, lost: 2, note: 'bot pilot: 206 s of flying, 2 sheets lost' },
+  "Nemo's Market": { flyable: true, reached: 'all 5 stars, through 32 rooms', par: 290, lost: 6, note: 'bot pilot: 177 s of flying, 6 sheets lost' },
+  Metropolis: { flyable: true, reached: 'all 4 stars, through 39 rooms', par: 285, lost: 6, note: 'bot pilot: 174 s of flying, 6 sheets lost' },
+  'The Asylum Pro': { flyable: true, reached: 'the star, through 15 rooms', par: 95, lost: 1, note: 'bot pilot: 60 s of flying, 1 sheet lost' },
+  'Grand Prix': { flyable: true, reached: 'all 3 stars, through 49 rooms', par: 300, lost: 1, note: 'bot pilot: 215 s of flying, 1 sheet lost' },
+  'CD Demo House': { flyable: true, reached: 'all 9 stars, through 50 rooms', par: 1200, lost: 44, note: 'bot pilot: 653 s of flying, 44 sheets lost' },
+  Titanic: { flyable: true, reached: 'the star, through 21 rooms', par: 160, lost: 6, note: 'bot pilot: 80 s of flying, 6 sheets lost' },
+  "Rainbow's End": { flyable: true, reached: 'all 5 stars, through 62 rooms', par: 555, lost: 8, note: 'bot pilot: 370 s of flying, 8 sheets lost' },
+  'ImagineHouse PRO II': { flyable: true, reached: 'all 3 stars, through 39 rooms', par: 250, lost: 7, note: 'bot pilot: 142 s of flying, 7 sheets lost' },
   'Land of Illusion': {
     flyable: false,
-    reached: '0 of 5 stars, through 13 rooms; stuck in "Honey, I Shrunk The House!" (75,-3), 1 room from the next star',
-    lost: 12,
-    note: 'bot pilot: 104 s of flying, 12 sheets lost',
+    reached: '4 of 5 stars, through 64 rooms; stuck in "Transformation" (62,-9), 7 rooms from the next star',
+    lost: 26,
+    note: 'bot pilot: 572 s of flying, 26 sheets lost; the last star is seven rooms up, a climb made on helium in Glider PRO, with no rising air here',
   },
-  Slumberland: {
-    flyable: false,
-    reached: '2 of 6 stars, through 21 rooms; stuck in "Give It Some Gas!" (72,-2), 21 rooms from the next star',
-    lost: 61,
-    note: 'bot pilot: 412 s of flying, 61 sheets lost',
-  },
-  SpacePods: {
-    flyable: false,
-    reached: 'not the star, through 3 rooms; stuck in "The Pod Connection" (118,-12), 1 room from the next star',
-    lost: 61,
-    note: 'bot pilot: 141 s of flying, 61 sheets lost',
-  },
-  Leviathan: { flyable: true, reached: 'all 6 stars, through 95 rooms', par: 895, lost: 14, note: 'bot pilot: 598 s of flying, 14 sheets lost' },
-  'Teddy World': { flyable: true, reached: 'the star, through 7 rooms', par: 105, lost: 6, note: 'bot pilot: 38 s of flying, 6 sheets lost' },
+  Slumberland: { flyable: true, reached: 'all 6 stars, through 123 rooms', par: 1175, lost: 30, note: 'bot pilot: 718 s of flying, 30 sheets lost' },
+  SpacePods: { flyable: true, reached: 'the star, through 11 rooms', par: 295, lost: 17, note: 'bot pilot: 117 s of flying, 17 sheets lost' },
+  Leviathan: { flyable: true, reached: 'all 6 stars, through 149 rooms', par: 1350, lost: 27, note: 'bot pilot: 867 s of flying, 27 sheets lost' },
+  'Teddy World': { flyable: true, reached: 'the star, through 7 rooms', par: 40, lost: 0, note: 'bot pilot: 23 s of flying, no sheet lost' },
 };

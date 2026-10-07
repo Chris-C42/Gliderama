@@ -72,6 +72,8 @@ A Glider PRO room is 512 × 322 px, the floor line at y 312 and the ceiling at 8
 with the plane's floor at 340 and ceiling at 16. x scales by 1.25; y maps floor line to floor line and ceiling
 to ceiling (× 1.066), so every height in the original has its height here. Furniture whose bottom is within
 28 px of the floor stands on Gliderama's floor. Room keys are `"suite,-floor"` (Gliderama's y grows downward).
+Blocks at a room's edge (invisible obstacles there, the walls between two openings) carry on 40 px past it, as
+the room's own walls do: no slit is left between a block and the edge, and no seam where two rooms meet.
 
 ### Rooms and the ways between them
 
@@ -129,11 +131,11 @@ and strong enough for that, and their tops stay where the original's end. All in
 |---|---|
 | Floor vent, floor blower, sewer grate, Greco vent, sewer blower (on the floor) | `floorVent`, power 3.2 + distance / 260 m/s (≤ 4.6), spread 0.12, reach = the column's top |
 | The same standing on furniture | its grille there (`grille`), invisible rising `current` from it |
-| A column that reaches the ceiling under an opening | carries on into the room above (reach −40 / to the top edge) |
+| A column that reaches the ceiling under an opening | carries on into the room above (a vent's reach is −40; an invisible column starts 40 px above the room, so it is at full strength up to the opening) |
 | Ceiling vent, ceiling blower | `ceilingVent`, 2.6 m/s down to the column's end |
 | Left / right fan | `fan`, 3.4 m/s, reach = the original's distance |
 | Candle, taper, stubby candle, tiki torch, barbecue | `candle`, `tiki`, `bbq` (each burns with a candle's flame) and, where the original's heat column is 64 px or more, rising air above the flame's deadly part |
-| Invisible blower (up / down / left / right) | invisible `current`: columns 140 px wide (the original's are 4 px, but the glider is 48 wide), bands 46 px high |
+| Invisible blower (up / down / left / right) | invisible `current`: columns 140 px wide (the original's are 4 px, but the glider is 48 wide), bands 46 px high, centred where the original's are (a column at a wall reaches past it) |
 | Lift area | invisible `current` over its rectangle (at least 140 px wide, or 46 px high for sideways air); rising air up to the ceiling carries on through an opening there |
 | Blowers that start off | off until their switch is flipped (switch group `!g`); ones no switch turns on are left out |
 
@@ -163,16 +165,16 @@ the original stands on the floor; furniture and clutter are drawn over the origi
 | Battery / helium balloon | 119 / 50 | battery (the helium balloon has no art of its own) |
 | Rubber bands | 150 | bands |
 | Foil | 83 | tape (no art of its own) |
-| Grease (left / right) | 143 / 195 | grease can that tips over when clipped and spills a slick its original length (harmless); the 104 that start spilt in the original lie spilt |
+| Grease (left / right) | 143 / 195 | grease can that tips over when clipped and spills a slick its original length (harmless), or when a switch or trigger wired to it goes; the 104 that start spilt in the original lie spilt |
 | Sparkle | 486 | a glint that twinkles every second or two |
 | Slider | 354 | dropped (an invisible slippery surface) |
 | Up / down stairs | 163 / 163 | stairs |
 | Doors, windows (inside / outside, left / right) | 167 | openings |
 | Mailbox (left / right) | 44 / 34 | a mailbox on its post, its door open on the side it faces, and the transport in it |
 | Floor / ceiling transport, invisible transport, deluxe transport | 244 / 465 / 385 / 61 | transport (unlinked ones are the far ends, or dropped when nothing leads to them) |
-| Light switch, machine switch, thermostat, power switch, knife switch | 113 / 79 / 108 / 78 / 230 | switch, drawn as the original (toggle, rocker, dial, button, knife switch). It works a room's lights (any room's), a blower, a deluxe transport, an enemy, an outlet or a shredder; a switch for anything else flips but does nothing here |
+| Light switch, machine switch, thermostat, power switch, knife switch | 113 / 79 / 108 / 78 / 230 | switch, drawn as the original (toggle, rocker, dial, button, knife switch). It works a room's lights (any room's), a blower, a deluxe transport, an enemy, an outlet or a shredder, and spills a grease can; a switch for anything else flips but does nothing here |
 | Invisible switch | 635 | invisible switch, where it works one of those; else dropped |
-| Trigger, large trigger | 239 / 81 | a trigger fires what it is linked to a moment later. Linked to a switch: an invisible switch that does that switch's job (at once). Linked to an enemy, an outlet, a guitar, grease, a toaster or a drip: dropped (they go off by themselves here) |
+| Trigger, large trigger | 239 / 81 | a trigger fires what it is linked to after its delay (a tenth of a second a step: Nemo's Market's "8 Second Shopping Spree" gives the glider 8 s in the room before it is whisked away), if the plane is still in the room then (and has not been lost); set off again each time the plane comes through. Linked to a switch: an invisible switch that does that switch's job after the delay; linked to a grease can, one that spills it. Linked to an enemy, an outlet, a guitar, a toaster or a drip: dropped (they go off by themselves here) |
 | Sound trigger | 122 | dropped |
 | Ceiling light / light bulb / table lamp | 160 / 252 / 70 | pendant lamp / pendant on a cord / desk lamp |
 | Fluorescent / track light | 115 / 81 | fluorescent tube / track of spotlights under the ceiling |
@@ -181,21 +183,22 @@ the original stands on the floor; furniture and clutter are drawn over the origi
 | Toaster | 140 | toaster (its toast does not pop) |
 | Mac Plus / TV / microwave / VCR / stereo / coffee maker / CD rack | 74 / 80 / 56 / 26 / 36 / 38 / 63 | computer / television (their screens lit when the original's start on) / microwave / VCR / stereo / coffee maker / CD rack, solid |
 | Cinder block / flower box | 43 / 35 | cinder block / window box of flowers |
-| Shredder | 50 | paper shredder: flying low over its slot while it is on shreds the plane |
+| Shredder | 50 | paper shredder: flying low over its slot while it is on shreds the plane; as in Glider PRO it is nothing to bump into (switched off, the plane flies through it: Land of Illusion's shaft of four) |
 | Outlet | 100 | wall outlet sparking for a second every `delay`: it hurts |
-| Guitar / wind chimes | 29 / 54 | guitar that strums, wind chimes that ring when the plane brushes them |
+| Guitar / wind chimes | 29 / 54 | guitar that strums, wind chimes that ring when the plane brushes them; as in Glider PRO, the plane flies through a guitar (Slumberland's way on goes past one) |
 | Balloon | 500 | balloon rising from the floor to the ceiling, again after `delay` |
 | Helicopter (left / right) | 259 / 155 | toy helicopter flying down across the room from under the ceiling |
 | Dart (left / right) | 151 / 117 | paper dart sailing across from the wall behind it at the original's height |
 | Ball | 212 | ball bouncing as high as the original's |
 | Fish | 120 | goldfish in its bowl, leaping as high as the original's every `delay` |
 | Cobweb | 86 | cobweb that catches the plane and holds it a moment |
-| Drip | 477 | drip |
+| Drip | 477 | drip: a drop every so often, the first a whole period after the plane comes in (as the original's); a drop that meets the plane soaks it (Glider PRO's drop is the end of the glider) |
 | Fireplace / wall window / rug | 33 / 195 / 81 | fireplace / window / rug |
 | Mirror / Ozma picture | 667 / 77 | wall mirror / a picture frame (the Ozma picture has no art of its own) |
 | Calendar / bulletin board | 58 / 38 | wall calendar / cork board with notes |
 | Mouse hole / teddy bear / cloud / faucet | 174 / 169 / 1860 / 28 | mouse hole in the skirting / teddy bear / cloud / tap |
 | Flower, vase | 547, 158 | plant (no art of their own; a flower in a vase is part of the vase's plant) |
+| *Scenery* | | the lamps, pictures, plants, windows, the teddy bear and the fireplace are nothing to bump into, as in Glider PRO (it gives them nothing the glider touches): the Gliderama kinds that are solid in its own rooms are marked `solid: false` |
 | Custom picture (`customPict`) | 4782 | dropped (the house's own pictures; they colour the obstacles drawn where they were) |
 
 **What moves or sparks** (balloons, helicopters, darts, balls, fish, outlets) starts where Glider PRO's does, at
@@ -221,43 +224,56 @@ banner, the goal and the credit; the end card shows the house's trailer.
 ## Per-house status
 
 The flight check (`tests/classicReport.test.ts`) flies every house with the bot pilot
-(`tests/helpers/houseSolver.ts`) in the Simple Glider: a beam search over stick input, room by room along the
-house's map, towards the nearest star still to find; when the way there is shut or needs air that is switched off
-(a switched transport, a climb out through a ceiling, a star high up over a switched blower), towards the switch
-that opens it (a house it does not finish that way it flies again trying each star itself first, the switches only
-once the stars got nowhere; the better of the two counts). The menagerie flies alongside, from the moment the plane
-comes into its room (the game makes a room's things afresh then; the play lab's autopilot makes the room afresh
-before each throw, as the plans assume), and touching anything that hurts ends a flight; a star touched as the
-plane is lost still counts, as in the game. *Finished* means the bot collected every star, so a player with the
-same controls can. A house it does not finish may well be flyable: Glider PRO's tricks (hanging still in a column,
-quick switch timing, long detours for a switch) are hard for a paper plane and harder for a search; where it got
-stuck is given. The bot finishes 15 of the 21 houses that have stars (the Fun House has none); the Demo House and
-The Asylum Pro were also flown through to the end in the browser by the play lab's autopilot.
+(`tests/helpers/houseSolver.ts`) in the Simple Glider: a beam search over stick input, towards the nearest star
+still to find. It plans its way on the parts of the rooms a plane can fly between (each room's free space on an
+8 px grid: a shelf across a room, the walls of a maze or the wall between two shafts split it; switched shredders
+filling a passage make a way through that opens once they are all off), and inside a part it steers round what is
+in the way. When the way to a star is shut or needs air that is switched off (a switched transport, a climb out
+through a ceiling, a star high up over a switched blower), it plans the switches on the way (the cheapest route over
+rooms and switch states, up to four switches deep; failing that, the nearest switch for something that shuts the
+way) and flies to the first of them; a switch it went for stays as it left it (a flight that flips it back is
+given up), and a star with no way on from it to the others (a room with no way out) is left for last. A house it
+does not finish that way it flies again trying each star itself first, the switches only once the stars got
+nowhere; the better of the two counts. It throws as a player can: level, up, or steeply down (aiming with the
+mouse), and where things move about it may wait a second or two to time a throw past them; a flight getting
+nowhere it gives up, as a player would put the plane down there (and so does the play lab's autopilot). The menagerie flies
+alongside, from the moment the plane comes into its room (the game makes a room's things afresh then; the play lab's
+autopilot makes the room afresh before each throw, and waits as long as the plan does, as the plans assume), and
+touching anything that hurts ends a flight (a cobweb or a drip's drop too, though in the game one only holds the
+plane a moment and the other soaks it); a star touched as the plane is lost still counts, as in the game.
+*Finished* means the bot collected every star, so a player with the same controls can. A house it does not finish
+may well be flyable: Glider PRO's tricks (hanging still in a column, quick switch timing, long detours for a switch)
+are hard for a paper plane and harder for a search; where it got stuck is given. The bot finishes 20 of the 21
+houses that have stars (the Fun House has none); Land of Illusion's last star is out of reach here (see **Helium**
+below). The play lab's autopilot also flew, in the real game in the browser, the stretches the bot once got stuck
+on in Castle o' the Air (Castletop), Davis Station (the silo), Rainbow's End (the way to its second star), Land of
+Illusion (the dollhouse) and Slumberland (the way to its third star), and SpacePods, Nemo's Market, the Demo
+House and The Asylum Pro from start to finish.
 
 | House | Authors | Rooms | Objects mapped / dropped | Stars | Flight check (bot pilot) | Par |
 |---|---|---:|---:|---:|---|---:|
-| Demo House | John Calhoun & Kim Money | 45 | 129 / 9 | 1 | **finished**: the star, through 13 rooms; 62 s of flying, no sheet lost | 90 s |
-| Sampler | — | 2 | 11 / 0 | 1 | **finished**: the star, through 1 room; 4 s of flying, no sheet lost | 15 s |
-| California or Bust! | — | 16 | 222 / 86 | 1 | **finished**: the star, through 14 rooms; 54 s of flying, no sheet lost | 80 s |
+| Demo House | John Calhoun & Kim Money | 45 | 129 / 9 | 1 | **finished**: the star, through 13 rooms; 36 s of flying, no sheet lost | 60 s |
+| Sampler | — | 2 | 11 / 0 | 1 | **finished**: the star, through 1 room; 2 s of flying, no sheet lost | 15 s |
+| California or Bust! | — | 16 | 222 / 86 | 1 | **finished**: the star, through 14 rooms; 50 s of flying, no sheet lost | 75 s |
 | Fun House | — | 43 | 348 / 58 | 0 | no stars to find (free flight); the house has no stars, as in Glider PRO | — |
-| Castle o' the Air | John Calhoun | 85 | 611 / 9 | 4 | 2 of 4 stars, through 11 rooms; stuck in "Castletop" (64,-3), 3 rooms from the next star; 101 s of flying, 14 sheets lost | — |
-| Empty House | — | 35 | 78 / 0 | 1 | **finished**: the star, through 12 rooms; 40 s of flying, no sheet lost | 65 s |
-| Davis Station | Jonathan Chin (alias Paul Finn) & John Calhoun | 65 | 511 / 80 | 4 | 2 of 4 stars, through 35 rooms; stuck in "Is This a Silo?" (63,3), 3 rooms from the next star; 331 s of flying, 61 sheets lost | — |
-| In The Mirror | Jonathan Chin (alias Paul Finn) | 97 | 729 / 66 | 1 | **finished**: the star, through 26 rooms; 96 s of flying, 1 sheet lost | 145 s |
-| Art Museum | — | 109 | 476 / 93 | 6 | **finished**: all 6 stars, through 46 rooms; 209 s of flying, 5 sheets lost | 320 s |
-| Nemo's Market | Ward Hartenstein | 124 | 456 / 380 | 5 | **finished**: all 5 stars, through 34 rooms; 289 s of flying, 9 sheets lost | 455 s |
-| Metropolis | Jonathan Chin (alias Paul Finn) & John Calhoun | 127 | 730 / 79 | 4 | **finished**: all 4 stars, through 38 rooms; 348 s of flying, 58 sheets lost | 915 s |
-| The Asylum Pro | Steve Sullivan | 140 | 1019 / 77 | 1 | **finished**: the star, through 15 rooms; 87 s of flying, no sheet lost | 125 s |
-| Grand Prix | Jonathan Chin (alias Paul Finn) | 175 | 1232 / 49 | 3 | **finished**: all 3 stars, through 49 rooms; 308 s of flying, 2 sheets lost | 425 s |
-| CD Demo House | John Calhoun & Kim Money | 206 | 866 / 667 | 9 | **finished**: all 9 stars, through 50 rooms; 806 s of flying, 55 sheets lost | 1485 s |
-| Titanic | Jonathan Chin (alias Paul Finn) & John Calhoun | 208 | 1259 / 115 | 1 | **finished**: the star, through 26 rooms; 141 s of flying, 3 sheets lost | 215 s |
-| Rainbow's End | Ward Hartenstein | 223 | 1595 / 78 | 5 | 1 of 5 stars, through 16 rooms; stuck in "The Playground!" (71,-1), 2 rooms from the next star; 118 s of flying, 15 sheets lost | — |
-| ImagineHouse PRO II | Jonathan Chin (alias Paul Finn) | 279 | 1758 / 56 | 3 | **finished**: all 3 stars, through 38 rooms; 196 s of flying, 13 sheets lost | 365 s |
-| Land of Illusion | Ward Hartenstein | 303 | 1626 / 190 | 5 | 0 of 5 stars, through 13 rooms; stuck in "Honey, I Shrunk The House!" (75,-3), 1 room from the next star; 104 s of flying, 12 sheets lost | — |
-| Slumberland | John Calhoun (first house and top of fourth house), Jonathan Chin (second house), Steve Sullivan (third house), Ward Hartenstein (bottom of fourth house) | 383 | 2950 / 46 | 6 | 2 of 6 stars, through 21 rooms; stuck in "Give It Some Gas!" (72,-2), 21 rooms from the next star; 412 s of flying, 61 sheets lost | — |
-| SpacePods | Ward Hartenstein | 402 | 2962 / 2878 | 1 | not the star, through 3 rooms; stuck in "The Pod Connection" (118,-12), 1 room from the next star; 141 s of flying, 61 sheets lost | — |
-| Leviathan | Jonathan Chin (alias Paul Finn) | 472 | 3155 / 180 | 6 | **finished**: all 6 stars, through 95 rooms; 598 s of flying, 14 sheets lost | 895 s |
-| Teddy World | Shawn Brenneman | 531 | 2957 / 564 | 1 | **finished**: the star, through 7 rooms; 38 s of flying, 6 sheets lost | 105 s |
+| Castle o' the Air | John Calhoun | 85 | 612 / 8 | 4 | **finished**: all 4 stars, through 31 rooms; 233 s of flying, 4 sheets lost | 345 s |
+| Empty House | — | 35 | 78 / 0 | 1 | **finished**: the star, through 12 rooms; 38 s of flying, no sheet lost | 60 s |
+| Davis Station | Jonathan Chin (alias Paul Finn) & John Calhoun | 65 | 511 / 80 | 4 | **finished**: all 4 stars, through 43 rooms; 208 s of flying, 13 sheets lost | 380 s |
+| In The Mirror | Jonathan Chin (alias Paul Finn) | 97 | 729 / 66 | 1 | **finished**: the star, through 24 rooms; 82 s of flying, 1 sheet lost | 125 s |
+| Art Museum | — | 109 | 476 / 93 | 6 | **finished**: all 6 stars, through 46 rooms; 206 s of flying, 2 sheets lost | 295 s |
+| Nemo's Market | Ward Hartenstein | 124 | 456 / 380 | 5 | **finished**: all 5 stars, through 32 rooms; 177 s of flying, 6 sheets lost | 290 s |
+| Metropolis | Jonathan Chin (alias Paul Finn) & John Calhoun | 127 | 730 / 79 | 4 | **finished**: all 4 stars, through 39 rooms; 174 s of flying, 6 sheets lost | 285 s |
+| The Asylum Pro | Steve Sullivan | 140 | 1023 / 73 | 1 | **finished**: the star, through 15 rooms; 60 s of flying, 1 sheet lost | 95 s |
+| Grand Prix | Jonathan Chin (alias Paul Finn) | 175 | 1232 / 49 | 3 | **finished**: all 3 stars, through 49 rooms; 215 s of flying, 1 sheet lost | 300 s |
+| CD Demo House | John Calhoun & Kim Money | 206 | 866 / 667 | 9 | **finished**: all 9 stars, through 50 rooms; 653 s of flying, 44 sheets lost | 1200 s |
+| Titanic | Jonathan Chin (alias Paul Finn) & John Calhoun | 208 | 1259 / 115 | 1 | **finished**: the star, through 21 rooms; 80 s of flying, 6 sheets lost | 160 s |
+| Rainbow's End | Ward Hartenstein | 223 | 1595 / 78 | 5 | **finished**: all 5 stars, through 62 rooms; 370 s of flying, 8 sheets lost | 555 s |
+| ImagineHouse PRO II | Jonathan Chin (alias Paul Finn) | 279 | 1758 / 56 | 3 | **finished**: all 3 stars, through 39 rooms; 142 s of flying, 7 sheets lost | 250 s |
+| Land of Illusion | Ward Hartenstein | 303 | 1627 / 189 | 5 | 4 of 5 stars, through 64 rooms; stuck in "Transformation" (62,-9), 7 rooms from the next star; 572 s of flying, 26 sheets lost; the last star is seven rooms up, a climb made on helium in Glider PRO, with no rising air here | — |
+| Slumberland | John Calhoun (first house and top of fourth house), Jonathan Chin (second house), Steve Sullivan (third house), Ward Hartenstein (bottom of fourth house) | 383 | 2954 / 42 | 6 | **finished**: all 6 stars, through 123 rooms; 718 s of flying, 30 sheets lost | 1175 s |
+| SpacePods | Ward Hartenstein | 402 | 2962 / 2878 | 1 | **finished**: the star, through 11 rooms; 117 s of flying, 17 sheets lost | 295 s |
+| Leviathan | Jonathan Chin (alias Paul Finn) | 472 | 3163 / 172 | 6 | **finished**: all 6 stars, through 149 rooms; 867 s of flying, 27 sheets lost | 1350 s |
+| Teddy World | Shawn Brenneman | 531 | 2958 / 563 | 1 | **finished**: the star, through 7 rooms; 23 s of flying, no sheet lost | 40 s |
 
 ## Glider PRO objects without Gliderama art
 
@@ -289,19 +305,24 @@ Not drawn at all: the houses' own pictures (`customPict`, 4782 of them), which G
 - **Looks** come from the pictures' colours; the pictures themselves (and the rooms' own pictures,
   `customPict`) are not shown.
 - **Enemies and hazards** move as in the original and hurt the Gliderama way (a knock crumples the plane, the
-  shredder shreds it, a cobweb holds it a moment). Triggers set nothing off: what they were linked to goes off on
-  its own timer, and triggers that fire a switch do so at once rather than after their delay. The toaster's toast
-  doesn't pop, the microwave doesn't take gadgets away, and switches for appliances (TV, stereo, microwave,
-  toaster...) flip without effect. Bonuses that an invisible switch took away in the original stay. The slider and
-  sound triggers are left out.
-- **Switches** flip once each time the plane goes through them (as the original's).
+  shredder shreds it, a cobweb holds it a moment). Triggers set off only switches and grease: what else they were
+  linked to goes off on its own timer. The toaster's toast doesn't pop, the microwave doesn't take gadgets away,
+  and switches for appliances (TV, stereo, microwave, toaster...) flip without effect. Bonuses that an invisible
+  switch took away in the original stay. The slider and sound triggers are left out.
+- **Switches** flip once each time the plane goes through them (as the original's). A trigger set off by a plane
+  that is then lost goes dead with it; in Glider PRO it still went off while the glider came back.
 - **Clocks and the invisible bonus** are stars that count for points (the All Stars medal), not the goal.
+- **Helium**: in Glider PRO a helium canister lets the glider float straight up while the battery key is held
+  (5 s a canister, 4 px a frame); here it is drawn as a battery and gives a boost charge, for planes with the
+  battery gadget. Land of Illusion's last seven rooms ("Transformation" up to "Final Reward"), climbed on four
+  canisters in the original, have no rising air at all, so its last star can't be reached here.
 - **Transports** put the plane down gliding level where the original puts the glider; deluxe transports keep
   their on/off state and switch.
 - **Lights**: a switch can work another room's lights; darkness follows the original's rule, but rooms are
   lit or dark as a whole (every lamp in a room is on its light switch).
 - **Roofs** are stepped blocks, not slopes.
-- **Fireplaces** add Gliderama's fire and its updraft.
+- **Fireplaces** add Gliderama's fire and its updraft (the fireplace itself is scenery: a plane can fly into its
+  hearth, as Leviathan's way on does, through a transport there).
 
 ## Overrides
 

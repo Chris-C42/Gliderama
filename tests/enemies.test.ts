@@ -38,6 +38,7 @@ const make = (it: ItemDef): GameObject => OBJECTS[it.t](it, `test:${it.t}`, null
 /** Run an object for `secs`, calling `each` after every tick. */
 function run(o: GameObject, ctx: ObjCtx, secs: number, each?: (t: number) => void) {
   for (let t = 0; t < secs; t += ctx.dt) {
+    o.early?.(ctx);
     o.update?.(ctx);
     each?.(t);
   }
@@ -263,6 +264,27 @@ describe('clutter', () => {
       o.onTouch!(ctx);
       expect(calls.sfx.filter((n) => n === sound)).toHaveLength(2);
     }
+  });
+
+  it("a trigger flips its switch only its delay after the plane came through (Glider PRO's 8 second shopping spree)", () => {
+    const { calls, ctx } = harness();
+    const state = new Map<string, boolean>();
+    Object.assign(ctx.api, { switchOn: (g: string) => state.get(g) ?? true, setSwitch: (g: string, on: boolean) => void state.set(g, on) });
+    const o = make({ t: 'switch', x: 68, y: 10, group: 'away', hidden: true, w: 60, h: 51, delay: 2 });
+    o.update!(ctx);
+    o.onTouch!(ctx);
+    run(o, ctx, 1.9);
+    expect(state.has('away')).toBe(false);
+    expect(calls.sfx).not.toContain('switch');
+    run(o, ctx, 0.2);
+    expect(state.get('away')).toBe(false);
+    expect(calls.sfx).toContain('switch');
+    // set off again by a plane that is then lost: it goes dead with it
+    o.onTouch!(ctx);
+    o.planeLost!();
+    run(o, ctx, 3);
+    expect(state.get('away')).toBe(false);
+    expect(calls.sfx.filter((n) => n === 'switch')).toHaveLength(1);
   });
 });
 
