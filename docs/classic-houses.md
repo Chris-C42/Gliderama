@@ -238,7 +238,8 @@ nowhere; the better of the two counts. It throws as a player can: level, up, or 
 mouse), and where things move about it may wait a second or two to time a throw past them. The menagerie flies
 alongside, from the moment the plane comes into its room (the game makes a room's things afresh then; the play lab's
 autopilot makes the room afresh before each throw, and waits as long as the plan does, as the plans assume), and
-touching anything that hurts ends a flight; a star touched as the plane is lost still counts, as in the game.
+touching anything that hurts ends a flight (a cobweb or a drip's drop too, though in the game one only holds the
+plane a moment and the other soaks it); a star touched as the plane is lost still counts, as in the game.
 *Finished* means the bot collected every star, so a player with the same controls can. A house it does not finish
 may well be flyable: Glider PRO's tricks (hanging still in a column, quick switch timing, long detours for a switch)
 are hard for a paper plane and harder for a search; where it got stuck is given. The bot finishes 20 of the 21
@@ -252,25 +253,25 @@ Asylum Pro from start to finish.
 |---|---|---:|---:|---:|---|---:|
 | Demo House | John Calhoun & Kim Money | 45 | 129 / 9 | 1 | **finished**: the star, through 13 rooms; 36 s of flying, no sheet lost | 60 s |
 | Sampler | — | 2 | 11 / 0 | 1 | **finished**: the star, through 1 room; 2 s of flying, no sheet lost | 15 s |
-| California or Bust! | — | 16 | 222 / 86 | 1 | **finished**: the star, through 14 rooms; 55 s of flying, no sheet lost | 80 s |
+| California or Bust! | — | 16 | 222 / 86 | 1 | **finished**: the star, through 14 rooms; 50 s of flying, no sheet lost | 75 s |
 | Fun House | — | 43 | 348 / 58 | 0 | no stars to find (free flight); the house has no stars, as in Glider PRO | — |
-| Castle o' the Air | John Calhoun | 85 | 612 / 8 | 4 | **finished**: all 4 stars, through 31 rooms; 189 s of flying, 3 sheets lost | 280 s |
+| Castle o' the Air | John Calhoun | 85 | 612 / 8 | 4 | **finished**: all 4 stars, through 31 rooms; 233 s of flying, 3 sheets lost | 335 s |
 | Empty House | — | 35 | 78 / 0 | 1 | **finished**: the star, through 12 rooms; 38 s of flying, no sheet lost | 60 s |
-| Davis Station | Jonathan Chin (alias Paul Finn) & John Calhoun | 65 | 511 / 80 | 4 | **finished**: all 4 stars, through 43 rooms; 232 s of flying, 12 sheets lost | 405 s |
+| Davis Station | Jonathan Chin (alias Paul Finn) & John Calhoun | 65 | 511 / 80 | 4 | **finished**: all 4 stars, through 43 rooms; 222 s of flying, 13 sheets lost | 400 s |
 | In The Mirror | Jonathan Chin (alias Paul Finn) | 97 | 729 / 66 | 1 | **finished**: the star, through 24 rooms; 82 s of flying, 1 sheet lost | 125 s |
-| Art Museum | — | 109 | 476 / 93 | 6 | **finished**: all 6 stars, through 48 rooms; 224 s of flying, 4 sheets lost | 330 s |
+| Art Museum | — | 109 | 476 / 93 | 6 | **finished**: all 6 stars, through 46 rooms; 235 s of flying, 2 sheets lost | 330 s |
 | Nemo's Market | Ward Hartenstein | 124 | 456 / 380 | 5 | **finished**: all 5 stars, through 32 rooms; 219 s of flying, 8 sheets lost | 355 s |
-| Metropolis | Jonathan Chin (alias Paul Finn) & John Calhoun | 127 | 730 / 79 | 4 | **finished**: all 4 stars, through 39 rooms; 202 s of flying, 6 sheets lost | 320 s |
+| Metropolis | Jonathan Chin (alias Paul Finn) & John Calhoun | 127 | 730 / 79 | 4 | **finished**: all 4 stars, through 38 rooms; 202 s of flying, 6 sheets lost | 320 s |
 | The Asylum Pro | Steve Sullivan | 140 | 1023 / 73 | 1 | **finished**: the star, through 15 rooms; 60 s of flying, 1 sheet lost | 95 s |
-| Grand Prix | Jonathan Chin (alias Paul Finn) | 175 | 1232 / 49 | 3 | **finished**: all 3 stars, through 49 rooms; 219 s of flying, 2 sheets lost | 310 s |
-| CD Demo House | John Calhoun & Kim Money | 206 | 866 / 667 | 9 | **finished**: all 9 stars, through 51 rooms; 689 s of flying, 36 sheets lost | 1185 s |
+| Grand Prix | Jonathan Chin (alias Paul Finn) | 175 | 1232 / 49 | 3 | **finished**: all 3 stars, through 49 rooms; 213 s of flying, 2 sheets lost | 305 s |
+| CD Demo House | John Calhoun & Kim Money | 206 | 866 / 667 | 9 | **finished**: all 9 stars, through 51 rooms; 643 s of flying, 38 sheets lost | 1145 s |
 | Titanic | Jonathan Chin (alias Paul Finn) & John Calhoun | 208 | 1259 / 115 | 1 | **finished**: the star, through 21 rooms; 80 s of flying, 6 sheets lost | 160 s |
-| Rainbow's End | Ward Hartenstein | 223 | 1595 / 78 | 5 | **finished**: all 5 stars, through 63 rooms; 400 s of flying, 8 sheets lost | 590 s |
+| Rainbow's End | Ward Hartenstein | 223 | 1595 / 78 | 5 | **finished**: all 5 stars, through 62 rooms; 371 s of flying, 8 sheets lost | 555 s |
 | ImagineHouse PRO II | Jonathan Chin (alias Paul Finn) | 279 | 1758 / 56 | 3 | **finished**: all 3 stars, through 39 rooms; 146 s of flying, 7 sheets lost | 255 s |
-| Land of Illusion | Ward Hartenstein | 303 | 1627 / 189 | 5 | 4 of 5 stars, through 65 rooms; stuck in "Transformation" (62,-9), 7 rooms from the next star; 638 s of flying, 24 sheets lost; the last star is seven rooms up, a climb made on helium in Glider PRO, with no rising air here | — |
-| Slumberland | John Calhoun (first house and top of fourth house), Jonathan Chin (second house), Steve Sullivan (third house), Ward Hartenstein (bottom of fourth house) | 383 | 2954 / 42 | 6 | **finished**: all 6 stars, through 124 rooms; 626 s of flying, 33 sheets lost | 1080 s |
+| Land of Illusion | Ward Hartenstein | 303 | 1627 / 189 | 5 | 4 of 5 stars, through 65 rooms; stuck in "Transformation" (62,-9), 7 rooms from the next star; 574 s of flying, 26 sheets lost; the last star is seven rooms up, a climb made on helium in Glider PRO, with no rising air here | — |
+| Slumberland | John Calhoun (first house and top of fourth house), Jonathan Chin (second house), Steve Sullivan (third house), Ward Hartenstein (bottom of fourth house) | 383 | 2954 / 42 | 6 | **finished**: all 6 stars, through 123 rooms; 624 s of flying, 33 sheets lost | 1080 s |
 | SpacePods | Ward Hartenstein | 402 | 2962 / 2878 | 1 | **finished**: the star, through 11 rooms; 61 s of flying, 5 sheets lost | 130 s |
-| Leviathan | Jonathan Chin (alias Paul Finn) | 472 | 3163 / 172 | 6 | **finished**: all 6 stars, through 150 rooms; 963 s of flying, 27 sheets lost | 1470 s |
+| Leviathan | Jonathan Chin (alias Paul Finn) | 472 | 3163 / 172 | 6 | **finished**: all 6 stars, through 149 rooms; 848 s of flying, 26 sheets lost | 1315 s |
 | Teddy World | Shawn Brenneman | 531 | 2958 / 563 | 1 | **finished**: the star, through 7 rooms; 23 s of flying, no sheet lost | 40 s |
 
 ## Glider PRO objects without Gliderama art
