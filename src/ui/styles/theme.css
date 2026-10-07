@@ -3,6 +3,26 @@
  * Index cards, masking tape, graph paper and cutting mats; chunky pixel buttons with hard shadows.
  */
 
+/* Pixelify Sans draws its 5 as an S. A later face of the same family for U+0035 alone wins over the original's for
+ * that character (CSS Fonts: the last rule defined is checked first), so every 5, in CSS and on canvas, is the
+ * redrawn one from scripts/fonts/make-five.py and everything else is the original font. */
+@font-face {
+  font-family: 'Pixelify Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/pixelify-five-400.woff2') format('woff2');
+  unicode-range: U+0035;
+}
+@font-face {
+  font-family: 'Pixelify Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../fonts/pixelify-five-700.woff2') format('woff2');
+  unicode-range: U+0035;
+}
+
 :root {
   --ink: #2b2340;
   --ink-2: #3d3357;
