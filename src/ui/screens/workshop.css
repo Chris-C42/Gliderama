@@ -131,6 +131,10 @@
   padding-top: 0.4em;
   background: rgba(20, 12, 28, 0.35);
 }
+/* sliders are dragged sideways: keep them out of the system's gesture strip along the bottom edge */
+.ws__panel.safe {
+  padding-bottom: max(10px, env(safe-area-inset-bottom), var(--gesture-bottom));
+}
 .ws__tools {
   display: flex;
   flex-wrap: wrap;

@@ -455,6 +455,19 @@ input[type='range'].slider::-moz-range-thumb {
     max(12px, env(safe-area-inset-left));
 }
 
+/*
+ * Touch screens: the bottom edge belongs to the system (Android's swipe-up and switch-app gestures start there), so
+ * controls that are dragged keep this far above it.
+ */
+:root {
+  --gesture-bottom: 0px;
+}
+@media (pointer: coarse) {
+  :root {
+    --gesture-bottom: 32px;
+  }
+}
+
 .scroll {
   overflow: auto;
   -webkit-overflow-scrolling: touch;
