@@ -147,9 +147,9 @@
   "status": {
    "flyable": true,
    "reached": "the star, through 24 rooms",
-   "par": 115,
+   "par": 120,
    "lost": 1,
-   "note": "bot pilot: 73 s of flying, 1 sheet lost"
+   "note": "bot pilot: 78 s of flying, 1 sheet lost"
   }
  },
  {
@@ -164,10 +164,10 @@
   "blurb": null,
   "status": {
    "flyable": true,
-   "reached": "all 6 stars, through 46 rooms",
-   "par": 295,
-   "lost": 2,
-   "note": "bot pilot: 206 s of flying, 2 sheets lost"
+   "reached": "all 6 stars, through 47 rooms",
+   "par": 290,
+   "lost": 3,
+   "note": "bot pilot: 198 s of flying, 3 sheets lost"
   }
  },
  {
@@ -267,9 +267,9 @@
   "status": {
    "flyable": true,
    "reached": "all 9 stars, through 50 rooms",
-   "par": 1200,
-   "lost": 44,
-   "note": "bot pilot: 653 s of flying, 44 sheets lost"
+   "par": 1085,
+   "lost": 36,
+   "note": "bot pilot: 612 s of flying, 36 sheets lost"
   }
  },
  {
@@ -308,9 +308,9 @@
   "status": {
    "flyable": true,
    "reached": "all 5 stars, through 62 rooms",
-   "par": 635,
+   "par": 590,
    "lost": 8,
-   "note": "bot pilot: 433 s of flying, 8 sheets lost"
+   "note": "bot pilot: 396 s of flying, 8 sheets lost"
   }
  },
  {
@@ -347,10 +347,10 @@
   "blurb": null,
   "status": {
    "flyable": true,
-   "reached": "all 5 stars, through 71 rooms",
-   "par": 900,
-   "lost": 19,
-   "note": "bot pilot: 571 s of flying, 19 sheets lost; the last star is seven rooms up, a climb on helium"
+   "reached": "all 5 stars, through 73 rooms",
+   "par": 1095,
+   "lost": 27,
+   "note": "bot pilot: 674 s of flying, 27 sheets lost; the last star is seven rooms up, a climb on helium"
   }
  },
  {
@@ -371,9 +371,9 @@
   "status": {
    "flyable": true,
    "reached": "all 6 stars, through 123 rooms",
-   "par": 1175,
+   "par": 1055,
    "lost": 30,
-   "note": "bot pilot: 718 s of flying, 30 sheets lost"
+   "note": "bot pilot: 625 s of flying, 30 sheets lost"
   }
  },
  {
@@ -411,9 +411,9 @@
   "status": {
    "flyable": true,
    "reached": "all 6 stars, through 149 rooms",
-   "par": 1330,
-   "lost": 26,
-   "note": "bot pilot: 859 s of flying, 26 sheets lost"
+   "par": 1365,
+   "lost": 25,
+   "note": "bot pilot: 893 s of flying, 25 sheets lost"
   }
  },
  {
@@ -431,9 +431,9 @@
   "status": {
    "flyable": true,
    "reached": "the star, through 7 rooms",
-   "par": 40,
-   "lost": 0,
-   "note": "bot pilot: 23 s of flying, no sheet lost"
+   "par": 70,
+   "lost": 1,
+   "note": "bot pilot: 40 s of flying, 1 sheet lost"
   }
  }
 ]
