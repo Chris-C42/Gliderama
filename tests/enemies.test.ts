@@ -38,6 +38,7 @@ const make = (it: ItemDef): GameObject => OBJECTS[it.t](it, `test:${it.t}`, null
 /** Run an object for `secs`, calling `each` after every tick. */
 function run(o: GameObject, ctx: ObjCtx, secs: number, each?: (t: number) => void) {
   for (let t = 0; t < secs; t += ctx.dt) {
+    o.early?.(ctx);
     o.update?.(ctx);
     each?.(t);
   }

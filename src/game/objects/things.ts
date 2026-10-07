@@ -170,18 +170,19 @@ export const lightSwitch: ObjFactory = (def, id, gfx) => {
   return {
     id,
     def,
+    early(ctx) {
+      if (!armed.length) return;
+      armed = armed.map((s) => s - ctx.dt);
+      // (to the tick: a delay is a whole number of them, give or take the rounding)
+      while (armed.length && armed[0] <= 1e-6) {
+        armed.shift();
+        flip(ctx);
+      }
+    },
     update(ctx) {
       cooldown = Math.max(0, cooldown - ctx.dt);
       wasOver = over;
       over = false;
-      if (armed.length) {
-        armed = armed.map((s) => s - ctx.dt);
-        // (to the tick: a delay is a whole number of them, give or take the rounding)
-        while (armed.length && armed[0] <= 1e-6) {
-          armed.shift();
-          flip(ctx);
-        }
-      }
       const on = group === 'lights' ? ctx.api.lightsOn(room) : ctx.api.switchOn(group);
       if (on !== state) {
         state = on;

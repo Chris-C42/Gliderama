@@ -67,6 +67,8 @@ export interface GameObject {
   def: ItemDef;
   /** Add this object's wind (m/s, room frame, y UP) at a room-pixel position. */
   wind?(x: number, y: number, out: WindOut): void;
+  /** Before any object's update each tick: what happens here (a trigger's switch flipping) all of them go by at once. */
+  early?(ctx: ObjCtx): void;
   update?(ctx: ObjCtx): void;
   /** Trigger area (room px); `onTouch` fires when the plane overlaps it. */
   trigger?(): Rect | null;

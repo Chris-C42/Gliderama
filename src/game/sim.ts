@@ -151,6 +151,7 @@ export function simulateRoom(
   let k = 0;
   for (;;) {
     ctx.time = t;
+    for (const o of room.objects) o.early?.(ctx);
     for (const o of room.objects) o.update?.(ctx);
     updateSpills(room.spills, ctx);
     const r = flightTick(st, control(plane, t), wind, room.colliders, dt, { rand: opts.rand }, {});

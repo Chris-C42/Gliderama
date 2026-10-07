@@ -643,6 +643,7 @@ export class Session {
     this.realTime += dt;
     this.triggeredThisTick.clear();
     const ctx: ObjCtx = { dt, time: this.realTime, particles: this.renderer.particles, api: this.api };
+    for (const o of this.room.objects) o.early?.(ctx);
     for (const o of this.room.objects) o.update?.(ctx);
     updateSpills(this.room.spills, ctx);
 
