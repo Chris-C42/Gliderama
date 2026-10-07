@@ -13,7 +13,7 @@ export interface SessionApi {
   collectStar(id: string): void;
   addSheet(): void;
   repair(amount: number): void;
-  addCharge(kind: 'boost' | 'bands' | 'helium', n: number): void;
+  addCharge(kind: 'boost' | 'bands' | 'helium' | 'gas', n: number): void;
   /** Flip the lights of the current room (or of `room`, for a switch wired to another room's lights). */
   toggleLights(room?: string): void;
   setSwitch(group: string, on: boolean): void;

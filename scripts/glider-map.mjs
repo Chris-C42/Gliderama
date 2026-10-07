@@ -1056,7 +1056,7 @@ export const OBJECT_MAP = {
   star: prize('star', { goal: true }),
   paper: prize('sheet'),
   battery: prize('battery'),
-  helium: prize('battery'),
+  helium: prize('helium'),
   bands: prize('bands'),
   foil: prize('tape'),
   greaseRt: grease,
@@ -1167,7 +1167,7 @@ export const DROPPED = {
  * Types whose art Gliderama is missing (for the art list): drawn with the art of something else (a ceiling blower
  * as a ceiling vent, foil as tape). Invisible objects and custom pictures aside.
  */
-export const MISSING_ART = new Set('ceilingBlower helium foil ozma flower vase1 vase2'.split(' '));
+export const MISSING_ART = new Set('ceilingBlower foil ozma flower vase1 vase2'.split(' '));
 
 // ---------------------------------------------------------------------------------------------
 // Houses: credits and per-house settings. Authors are as credited in the Glider PRO release (README.md), or

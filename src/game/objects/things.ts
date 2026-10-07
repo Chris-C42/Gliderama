@@ -1,6 +1,7 @@
 /** Candles, switches, collectibles, drips, workbenches, exits. */
 
 import * as THREE from 'three';
+import { PHYS } from '../../physics/config';
 import { R } from '../../render/palette';
 import { Px } from '../../render/pixel';
 import { rgb } from '../../render/particles';
@@ -325,7 +326,7 @@ export const star: ObjFactory = (def, id, gfx) => {
   };
 };
 
-type PickupKind = 'sheet' | 'tape' | 'battery' | 'bands';
+type PickupKind = 'sheet' | 'tape' | 'battery' | 'bands' | 'helium';
 
 function pickup(kind: PickupKind): ObjFactory {
   return (def, id, gfx) => {
@@ -358,6 +359,8 @@ function pickup(kind: PickupKind): ObjFactory {
       px.rect(4, 5, 4, 6, R.brass[4]);
       px.rect(15, 6, 2, 4, R.steel[4]);
       px.px(10, 7, '#fff');
+    } else if (kind === 'helium') {
+      paintCanister(px);
     } else {
       px.ellipse(9, 8, 6, 4, R.rose[3]);
       px.ellipse(9, 8, 4, 2, 'rgba(0,0,0,0)');
@@ -389,7 +392,9 @@ function pickup(kind: PickupKind): ObjFactory {
         if (kind === 'tape') ctx.api.repair(0.35);
         if (kind === 'battery') ctx.api.addCharge('boost', 1);
         if (kind === 'bands') ctx.api.addCharge('bands', 3);
+        if (kind === 'helium') ctx.api.addCharge('gas', PHYS.gasSupply);
         ctx.api.sfx(kind === 'sheet' ? 'sheet' : kind === 'tape' ? 'tape' : 'select');
+        if (kind === 'helium') ctx.api.sfx('hiss', { vol: 0.6, pitch: 3 });
       },
       dispose() {
         sprite?.dispose();
@@ -398,10 +403,42 @@ function pickup(kind: PickupKind): ObjFactory {
   };
 }
 
+/**
+ * A helium canister (Glider PRO's helium, in the Classic Houses): a little steel gas bottle with a brass valve and a
+ * pink band round it with a balloon on, standing upright.
+ */
+function paintCanister(px: Px) {
+  // the outline, then the bottle shaded as a cylinder (lit from the upper left)
+  px.rect(5, 4, 8, 11, R.ink[1]);
+  px.rect(6, 3, 6, 1, R.ink[1]);
+  const cols = [R.steel[3], R.steel[5], R.steel[6], R.steel[5], R.steel[4], R.steel[3]];
+  cols.forEach((c, i) => px.vline(6 + i, 4, 10, c));
+  px.hline(7, 4, 4, R.steel[5]);
+  px.px(8, 4, R.steel[6]);
+  px.hline(6, 13, 6, R.steel[2]);
+  // the band and its balloon
+  px.hline(6, 8, 6, R.rose[4]);
+  px.hline(6, 9, 6, R.rose[3]);
+  px.hline(6, 10, 6, R.rose[3]);
+  px.px(6, 8, R.rose[3]);
+  px.px(11, 10, R.rose[2]);
+  px.px(9, 9, '#ffffff');
+  px.px(9, 10, R.rose[5]);
+  // the neck and the valve, with its tap
+  px.rect(8, 1, 2, 2, R.ink[1]);
+  px.px(8, 2, R.brass[4]);
+  px.px(9, 2, R.brass[3]);
+  px.hline(7, 0, 4, R.ink[1]);
+  px.hline(7, 1, 4, R.brass[4]);
+  px.px(10, 1, R.brass[3]);
+  px.px(11, 2, R.brass[2]);
+}
+
 export const sheetPickup = pickup('sheet');
 export const tapePickup = pickup('tape');
 export const batteryPickup = pickup('battery');
 export const bandsPickup = pickup('bands');
+export const heliumPickup = pickup('helium');
 
 // ---------------------------------------------------------------------------------------------
 // Drip: water drops fall from (x, y) every `every` seconds, the first a whole `every` after the plane comes in (the

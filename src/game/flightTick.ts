@@ -65,6 +65,9 @@ export function flightTick(
   const p = st.plane;
   const rand = opts.rand ?? Math.random;
   stepPlane(p, input, wind, dt, { slowMo: opts.slowMo });
+  // (a plane hanging from a helium balloon only bumps: as in Glider PRO, a wall or a ceiling does it no harm and
+  // doesn't hold it back; something sharp still does)
+  const hung = p.balloon;
 
   const pos0 = planePx(p);
   const squash = turnSquash(p);
@@ -97,7 +100,7 @@ export function flightTick(
       }
       if (vn < 0) {
         const impact = -vn;
-        const sev = kind === 'slick' ? 0 : (impact - PHYS.safeImpact) * (kind === 'soft' ? 0.35 : kind === 'sharp' ? 2.5 : 1);
+        const sev = kind === 'slick' ? 0 : (impact - PHYS.safeImpact) * (kind === 'soft' ? 0.35 : kind === 'sharp' ? 2.5 : 1) * (kind === 'sharp' ? 1 : 1 - hung);
         if (sev > 0) {
           const pos = planePx(p);
           const part = partAt(st, ct.px, ct.py, pos, ny, rand);
@@ -110,7 +113,8 @@ export function flightTick(
         const vn2 = vx * nx + vy * ny;
         const tx = vx - vn2 * nx;
         const ty = vy - vn2 * ny;
-        const f = kind === 'slick' ? 1 : kind === 'sticky' ? 0.2 : kind === 'soft' ? 0.6 : PHYS.friction;
+        const f0 = kind === 'slick' ? 1 : kind === 'sticky' ? 0.2 : kind === 'soft' ? 0.6 : PHYS.friction;
+        const f = kind === 'sticky' ? f0 : f0 + (1 - f0) * hung;
         vx = vn2 * nx + tx * f;
         vy = vn2 * ny + ty * f;
         p.vx = vx;
@@ -119,7 +123,7 @@ export function flightTick(
         if (kind === 'slick') {
           p.q *= 0.5;
           p.theta *= 0.9;
-        } else p.q += -Math.sign(ny || 1) * Math.min(6, impact * 1.5) * 0.3;
+        } else p.q += -Math.sign(ny || 1) * Math.min(6, impact * 1.5) * 0.3 * (1 - hung);
         if (p.turn && kind !== 'slick') {
           p.turn = null;
           p.facing = p.vx >= 0 ? 1 : -1;

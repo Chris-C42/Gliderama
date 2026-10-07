@@ -58,6 +58,24 @@
   border: 2px solid var(--ink);
   box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.4);
 }
+.hud__cells {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.hud__cell {
+  display: flex;
+  align-items: flex-end;
+  width: 0.45em;
+  height: 0.85em;
+  border: 2px solid var(--ink);
+  background: var(--paper-3);
+}
+.hud__cell > i {
+  display: block;
+  width: 100%;
+  background: var(--sky);
+}
 .hud__sheet {
   color: var(--ink);
   margin-right: -0.25em;

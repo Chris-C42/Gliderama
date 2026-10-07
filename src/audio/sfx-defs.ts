@@ -235,6 +235,23 @@ export const SFX_DEFS = {
     filter: { type: 'bandpass', freq: 1800, endFreq: 1200, time: 0.2, q: 2.5 },
     cooldown: 0.2, maxVoices: 1,
   },
+  /** Helium let out of its canister while the gadget button is held: a soft gas hiss, played again and again. */
+  hiss: {
+    gain: 1,
+    wave: 'noise', freq: 30000, duration: 0.26, vol: 0.16,
+    env: { a: 0.05, d: 0.08, s: 0.75, r: 0.1 },
+    filter: { type: 'highpass', freq: 4200 },
+    cooldown: 0.15, maxVoices: 2,
+  },
+  /** The helium running out: the hiss sputters and sinks (Glider PRO's fizzle). */
+  fizzle: {
+    gain: 1.2,
+    wave: 'noise', freq: 22000, duration: 0.16, vol: 0.26,
+    env: { a: 0.004, d: 0.15, s: 0, r: 0.01 },
+    filter: { type: 'bandpass', freq: 4200, endFreq: 900, time: 0.16, q: 1.2 },
+    repeat: { count: 3, interval: 0.11, volDecay: 0.7, pitchStep: -3 },
+    cooldown: 0.5, maxVoices: 1,
+  },
   /** Toaster pop: a springy "boing" with a clunk. */
   toast: {
     wave: 'triangle', freq: 180, path: [[0.05, 330], [0.1, 250], [0.15, 380], [0.22, 260], [0.3, 300], [0.4, 240]],

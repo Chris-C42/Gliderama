@@ -162,7 +162,8 @@ the original stands on the floor; furniture and clutter are drawn over the origi
 | Red / blue / yellow clock, cuckoo clock | 140 / 163 / 330 / 100 | alarm clocks in the three colours and a cuckoo clock, collected like stars (points; the All Stars medal counts them) |
 | Invisible bonus | 327 | star (points) |
 | Paper | 283 | sheet (an extra throw) |
-| Battery / helium balloon | 119 / 50 | battery (the helium balloon has no art of its own) |
+| Battery | 119 | battery |
+| Helium | 50 | a helium canister: any plane can then hold the gadget button and rise under a helium balloon (see Helium below) |
 | Rubber bands | 150 | bands |
 | Foil | 83 | tape (no art of its own) |
 | Grease (left / right) | 143 / 195 | grease can that tips over when clipped and spills a slick its original length (harmless), or when a switch or trigger wired to it goes; the 104 that start spilt in the original lie spilt |
@@ -244,8 +245,8 @@ plane a moment and the other soaks it); a star touched as the plane is lost stil
 *Finished* means the bot collected every star, so a player with the same controls can. A house it does not finish
 may well be flyable: Glider PRO's tricks (hanging still in a column, quick switch timing, long detours for a switch)
 are hard for a paper plane and harder for a search; where it got stuck is given. The bot finishes 20 of the 21
-houses that have stars (the Fun House has none); Land of Illusion's last star is out of reach here (see **Helium**
-below). The play lab's autopilot also flew, in the real game in the browser, the stretches the bot once got stuck
+houses that have stars (the Fun House has none); Land of Illusion's last star is seven rooms up, a climb on
+helium (see **Helium** below) that the bot doesn't fly yet. The play lab's autopilot also flew, in the real game in the browser, the stretches the bot once got stuck
 on in Castle o' the Air (Castletop), Davis Station (the silo), Rainbow's End (the way to its second star), Land of
 Illusion (the dollhouse) and Slumberland (the way to its third star), and SpacePods, Nemo's Market, the Demo
 House and The Asylum Pro from start to finish.
@@ -288,7 +289,6 @@ house's `meta.missingArt`):
 | `foil` | 83 | drawn as tape | In The Mirror 37, Slumberland 8, Leviathan 8, Teddy World 7, ImagineHouse PRO II 6, Art Museum 4, Titanic 3, Fun House 2, Nemo's Market 2, Rainbow's End 2, California or Bust! 1, Castle o' the Air 1, Metropolis 1, The Asylum Pro 1 |
 | `ozma` | 77 | drawn as frame | Slumberland 17, Teddy World 16, Leviathan 12, ImagineHouse PRO II 9, CD Demo House 5, Land of Illusion 4, Fun House 3, The Asylum Pro 3, California or Bust! 2, In The Mirror 2, Titanic 2, Davis Station 1, Art Museum 1 |
 | `vase1` | 72 | drawn as plant | Leviathan 15, Rainbow's End 14, Teddy World 13, Titanic 6, Slumberland 6, In The Mirror 4, Fun House 2, Davis Station 2, Art Museum 2, ImagineHouse PRO II 2, Demo House 1, California or Bust! 1, Castle o' the Air 1, The Asylum Pro 1, Grand Prix 1, CD Demo House 1 |
-| `helium` | 50 | drawn as battery | Land of Illusion 14, Leviathan 6, In The Mirror 5, ImagineHouse PRO II 5, Metropolis 4, SpacePods 4, Grand Prix 3, CD Demo House 2, Titanic 2, Rainbow's End 2, Davis Station 1, Art Museum 1, Nemo's Market 1 |
 | `ceilingBlower` | 12 | drawn as a ceiling vent | Leviathan 3, Grand Prix 2, ImagineHouse PRO II 2, In The Mirror 1, Metropolis 1, CD Demo House 1, Rainbow's End 1, Slumberland 1 |
 
 Not drawn at all: the houses' own pictures (`customPict`, 4782 of them), which Gliderama does not show.
@@ -313,9 +313,12 @@ Not drawn at all: the houses' own pictures (`customPict`, 4782 of them), which G
   that is then lost goes dead with it; in Glider PRO it still went off while the glider came back.
 - **Clocks and the invisible bonus** are stars that count for points (the All Stars medal), not the goal.
 - **Helium**: in Glider PRO a helium canister lets the glider float straight up while the battery key is held
-  (5 s a canister, 4 px a frame); here it is drawn as a battery and gives a boost charge, for planes with the
-  battery gadget. Land of Illusion's last seven rooms ("Transformation" up to "Final Reward"), climbed on four
-  canisters in the original, have no rising air at all, so its last star can't be reached here.
+  (5 s a canister, 4 px a frame). Here a canister gives any plane, whatever its own gadget, about 8 s of helium
+  (more than the original's 5, for a plane that can't stop in the air), used while the gadget button is held: a
+  helium balloon takes the plane, carrying it up at about the original's rate and on, level, at three quarters of
+  its gliding speed, drifting with the air it is in (so a current shoves it along, as the original's fans do), and a
+  bump does it no harm. While there is helium, the gadget button is the helium's (as in Glider PRO, where helium
+  takes the battery's place). Let go, the plane flies on.
 - **Transports** put the plane down gliding level where the original puts the glider; deluxe transports keep
   their on/off state and switch.
 - **Lights**: a switch can work another room's lights; darkness follows the original's rule, but rooms are

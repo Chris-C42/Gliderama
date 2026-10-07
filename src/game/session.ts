@@ -18,6 +18,7 @@ import { rgb } from '../render/particles';
 import { Px } from '../render/pixel';
 import { R } from '../render/palette';
 import { Slingshot, pulledBack } from '../render/slingshot';
+import { HeliumBalloon } from '../render/balloon';
 import { OBJECTS, stillHazards } from './objects';
 import { TRANSPORT_REST } from './objects/classic';
 import type { AirFlow, GameObject, ObjCtx, SessionApi, WindOut } from './objects/types';
@@ -79,6 +80,12 @@ export interface Charges {
   boost: number;
   bands: number;
   helium: number;
+  /**
+   * Helium gas from the Classic Houses' canisters (sim s of rising, see PHYS.gasRise). While there is some, the
+   * gadget button is the helium's, whatever the design's own gadget: held, it lifts the plane (as in Glider PRO,
+   * where helium takes the battery's place). It is kept from sheet to sheet until it is used.
+   */
+  gas: number;
 }
 
 export interface HudState {
@@ -253,6 +260,9 @@ export class Session {
   private bands: { x: number; y: number; vx: number; vy: number; t: number; s: SpriteHandle }[] = [];
   /** The slingshot drawn at the launch point while aiming, and what the throw input was doing this frame. */
   private sling: Slingshot;
+  private balloon: HeliumBalloon;
+  /** Real s until the helium's next hiss while it is held. */
+  private hissT = 0;
   private pulling = { aiming: false, power: 0, dt: 0 };
 
   constructor(
@@ -263,10 +273,11 @@ export class Session {
     readonly cb: SessionCallbacks = {},
   ) {
     this.sling = new Slingshot(renderer);
+    this.balloon = new HeliumBalloon(renderer);
     this.sheets = level.sheets + (opts.bonusSheets ?? 0);
     this.starsTotal = countStars(level);
     this.goalStars = new Set(level.goal === 'stars' ? goalStarIds(level) : []);
-    this.charges = { boost: 0, bands: 0, helium: 0, ...opts.charges };
+    this.charges = { boost: 0, bands: 0, helium: 0, gas: 0, ...opts.charges };
     for (const id of opts.collected ?? []) this.collected.add(id);
     for (const [g, on] of opts.switches ?? []) this.switches.set(g, on);
     this.checkpoint = { ...level.start };
@@ -315,6 +326,7 @@ export class Session {
       this.room.dispose();
       this.renderer.clearSprites();
       this.sling.reset();
+      this.balloon.reset();
       this.logRoom();
     }
     const def = this.level.rooms[key];
@@ -748,9 +760,12 @@ export class Session {
 
   private flyStep(dt: number, input: ControlState, ctx: ObjCtx): void {
     const p = this.plane;
+    // helium gas (from a Classic House's canister) has the gadget button while there is some: held, it lifts
+    const gas = this.charges.gas > 0;
+    const helium = gas && input.gadget;
     // gadgets
-    const boost = input.gadget && this.design.extras.gadget === 'battery' && (this.charges.boost > 0 || p.boostLeft > 0);
-    if (input.gadgetPressed) {
+    const boost = !gas && input.gadget && this.design.extras.gadget === 'battery' && (this.charges.boost > 0 || p.boostLeft > 0);
+    if (input.gadgetPressed && !gas) {
       if (this.design.extras.gadget === 'battery' && this.charges.boost > 0 && p.boostLeft <= 0) {
         this.charges.boost--;
         p.boostLeft = PHYS.boostTime;
@@ -787,9 +802,17 @@ export class Session {
     }
     if (this.hover && input.dir !== 0) this.hover = null;
     const dir = this.hover ? this.hover.step(p, this.windAt, dt) : input.dir;
+    p.gas = this.charges.gas;
+    if (helium) {
+      this.hissT -= dt;
+      if (this.hissT <= 0) {
+        this.sfx('hiss', { vol: 0.5 });
+        this.hissT = 0.22;
+      }
+    } else this.hissT = 0;
     const outcome = flightTick(
       this.tick,
-      { dir, pitch: input.pitch, boost, assist: !!this.opts.climbAssist },
+      { dir, pitch: input.pitch, boost, helium, assist: !!this.opts.climbAssist },
       this.windAt,
       this.room.colliders(),
       dt,
@@ -813,6 +836,11 @@ export class Session {
         },
       },
     );
+    if (gas) {
+      // (the helium running out under the player's finger: Glider PRO's fizzle)
+      if (helium && p.gas <= 0) this.sfx('fizzle');
+      this.charges.gas = p.gas;
+    }
 
     // burning plane: fire particles
     if (p.damage.burning > 0) {
@@ -1042,11 +1070,15 @@ export class Session {
       const pull = this.pulling.aiming ? this.pulling.power : 0;
       const back = pulledBack(a, pull);
       this.sling.aim(pos.x, pos.y, a, pull, !this.pulling.aiming, this.tick.halfLen * 0.85, this.pulling.dt);
+      this.balloon.update(pos.x, pos.y, 0, 0, this.pulling.dt);
       r.plane.pose({ x: pos.x + back.dx, y: pos.y + back.dy, theta, facing, turn: null, bank: 0, roll: 0, righting: 0, visible: true });
       this.previewTrajectory();
     } else {
       this.sling.update(this.pulling.dt);
       const visible = this.phase === 'fly' || this.phase === 'workbench' || this.phase === 'complete' || (this.phase === 'down' && this.downT < 0.15);
+      // the helium balloon, full while helium lifts the plane (the sticker's lift too), going down as it fades
+      const fill = Math.max(p.balloon, Math.min(1, p.heliumLeft / 0.25));
+      this.balloon.update(pos.x, pos.y - 2, visible ? fill : 0, p.vx * PX_PER_M * PHYS.timeScale, this.pulling.dt);
       r.setGuide([]);
       r.plane.pose({
         x: pos.x,

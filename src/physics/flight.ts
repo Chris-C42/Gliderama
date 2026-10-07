@@ -28,6 +28,8 @@ export interface FlightInput {
   pitch: number;
   /** Battery boost held. */
   boost: boolean;
+  /** Helium gas held (see PHYS.gasRise): a balloon takes the plane while it carries `gas`. */
+  helium?: boolean;
 }
 
 export interface Turn {
@@ -67,6 +69,10 @@ export interface Plane {
   boostLeft: number;
   boosting: boolean;
   heliumLeft: number;
+  /** Helium gas carried (sim s of it), how much its balloon has the plane now (0..1, see PHYS.gasRise), and whether it is held. */
+  gas: number;
+  balloon: number;
+  balloonHeld: boolean;
   /** Sim s spent climbing in rising air, and the shove waiting / under way for when it is left (see PHYS.exit*). */
   liftT: number;
   exitPending: boolean;
@@ -119,6 +125,9 @@ export function createPlane(aero: AeroModel, opts: { autoTrim?: boolean } = {}):
     boostLeft: 0,
     boosting: false,
     heliumLeft: 0,
+    gas: 0,
+    balloon: 0,
+    balloonHeld: false,
     liftT: 0,
     exitPending: false,
     exitBoost: 0,
@@ -163,6 +172,8 @@ export function launch(p: Plane, xPx: number, yPx: number, angle: number, power:
   p.liftT = 0;
   p.exitPending = false;
   p.exitBoost = 0;
+  p.balloon = 0;
+  p.balloonHeld = false;
 }
 
 export function planePx(p: Plane): { x: number; y: number } {
@@ -228,6 +239,9 @@ function substep(p: Plane, input: FlightInput, wind: WindFn, dt: number): void {
   const a = p.aero;
   const mass = a.mass * p.mods.massMul;
   const w = wind(p.x, p.y);
+  // on helium the balloon has the plane (as much as `k`), and the wing flies it only as much as is left
+  const k = balloon(p, input, dt);
+  const fly = 1 - k;
   updraftExit(p, w.y, dt);
 
   // Elevator servo with a gentle expo curve on the command; an agile design answers the stick quicker.
@@ -287,9 +301,9 @@ function substep(p: Plane, input: FlightInput, wind: WindFn, dt: number): void {
   }
 
   if (turn) {
-    turn.vh = Math.max(0, turn.vh + ((fu + tu) / mass) * dt);
+    turn.vh = Math.max(0, turn.vh + ((fu * fly + tu) / mass) * dt);
     turn.vh *= 1 - ((1 - PHYS.turnSpeedKeep) * dt) / turn.dur;
-    p.vy += ((fw + tw + lift2) / mass - G) * dt;
+    p.vy += ((fw * fly + tw + lift2) / mass - G * fly) * dt;
     turn.t += dt;
     const s = Math.min(1, turn.t / turn.dur);
     const psi = Math.PI * s;
@@ -303,12 +317,21 @@ function substep(p: Plane, input: FlightInput, wind: WindFn, dt: number): void {
       p.bank = 0;
     }
   } else {
-    fx = p.facing * (fu + tu);
-    fy = fw + tw + lift2;
+    fx = p.facing * (fu * fly + tu);
+    fy = fw * fly + tw + lift2;
     p.vx += (fx / mass) * dt;
-    p.vy += (fy / mass - G) * dt;
+    p.vy += (fy / mass - G * fly) * dt;
     p.yaw = 0;
     p.bank = 0;
+  }
+  // The balloon brings the plane to its steady climb, flying on a little slower than it glides, with the air it is
+  // in (a balloon goes where the air goes: a current across it shoves it along); letting go, it stops the climb, so
+  // the wing takes over in level flight. In a turnaround the way across is the turn's own.
+  if (k > 0) {
+    const held = p.balloonHeld;
+    const e = held ? k * (1 - Math.exp(-PHYS.gasEase * dt)) : 1 - Math.exp(-PHYS.gasLetGo * dt);
+    if (!p.turn) p.vx += (w.x + p.facing * PHYS.gasDrift * a.perf.vBest - p.vx) * e;
+    p.vy += (w.y + (held ? PHYS.gasRise : 0) - p.vy) * e;
   }
   // Coming out of an updraft slow: a gentle shove along the heading, back towards best-glide speed.
   if (p.exitBoost > 0 && !p.turn) {
@@ -326,10 +349,16 @@ function substep(p: Plane, input: FlightInput, wind: WindFn, dt: number): void {
   // Pitch dynamics.
   const I = a.Iyy * p.mods.massMul * PHYS.inertiaMul;
   const M = qS * a.MAC * c.Cm - PHYS.extraDamping * qS * a.MAC * ((p.q * a.MAC) / (2 * V)) * 0.5;
-  p.q += (M / I) * dt;
+  p.q += (M / I) * dt * fly;
   // Soft limit on spin rate
   p.q = Math.max(-25, Math.min(25, p.q));
   p.theta = wrap(p.theta + p.q * dt);
+  // (a plane hanging from a balloon hangs level)
+  if (k > 0) {
+    const e = k * (1 - Math.exp(-PHYS.gasLevel * dt));
+    p.q -= p.q * e;
+    p.theta = wrap(p.theta - p.theta * e);
+  }
 
   // Upside down and not deliberately looping: dihedral and keel roll a paper plane upright.
   // Mirror the state so it flies on, upright, the other way (a half-roll / Immelmann).
@@ -341,19 +370,35 @@ function substep(p: Plane, input: FlightInput, wind: WindFn, dt: number): void {
   }
   if (p.righting > 0) p.righting = Math.max(0, p.righting - dt);
 
-  // Damage asymmetry: roll oscillator, unstable near the stall.
+  // Damage asymmetry: roll oscillator, unstable near the stall. (A wing the helium balloon holds up is not flying
+  // the plane, and doesn't stall it.)
+  const stall = c.stall * fly;
   const asym = p.mods.asym;
   const kRoll = 30;
-  const zeta = c.stall > 0.6 ? -0.2 : 0.35;
-  p.rollRate += (asym * 2.2 * (0.5 + c.stall) - kRoll * p.roll - 2 * zeta * Math.sqrt(kRoll) * p.rollRate) * dt;
+  const zeta = stall > 0.6 ? -0.2 : 0.35;
+  p.rollRate += (asym * 2.2 * (0.5 + stall) - kRoll * p.roll - 2 * zeta * Math.sqrt(kRoll) * p.rollRate) * dt;
   p.roll = Math.max(-1.3, Math.min(1.3, p.roll + p.rollRate * dt));
 
   p.alpha = alpha;
   p.V = V;
   p.CL = c.CL;
   p.CD = c.CD;
-  p.stall = c.stall;
+  p.stall = stall;
   p.time += dt;
+}
+
+/**
+ * Helium gas held: how much the balloon has the plane (0..1), taking it over `PHYS.gasOn` and letting it go over
+ * `gasOff`, and the gas it uses up. Let go of, the plane flies on with the shove it gets on leaving an updraft.
+ */
+function balloon(p: Plane, input: FlightInput, dt: number): number {
+  const on = !!input.helium && p.gas > 0;
+  if (on) p.gas = Math.max(0, p.gas - dt);
+  p.balloonHeld = on;
+  if (!on && p.balloon <= 0) return 0;
+  if (!on && p.balloon >= 1) p.exitBoost = PHYS.exitTime;
+  p.balloon = Math.max(0, Math.min(1, p.balloon + (on ? dt / PHYS.gasOn : -dt / PHYS.gasOff)));
+  return p.balloon;
 }
 
 /**

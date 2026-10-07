@@ -1,4 +1,5 @@
 import type { HudState } from '../../game/session';
+import { PHYS } from '../../physics/config';
 import { Icon } from '../icons';
 
 const COARSE = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
@@ -68,6 +69,11 @@ export function Hud(props: { hud: HudState; onPause: () => void; flightData: boo
               <Icon name="balloon" /> {h.charges.helium}
             </span>
           )}
+          {h.charges.gas > 0 && (
+            <span class="hud__pill hud__gas" title={`Helium: hold ${COARSE ? 'the gadget button' : 'the gadget key'} to rise`}>
+              <Icon name="balloon" /> <GasCells gas={h.charges.gas} />
+            </span>
+          )}
           <span class="hud__pill" title="Damage" style={{ '--dmg': dmgColor }}>
             <Icon name="plane" class="hud__plane" /> {h.damage}%
           </span>
@@ -99,5 +105,22 @@ export function Hud(props: { hud: HudState; onPause: () => void; flightData: boo
         </div>
       )}
     </div>
+  );
+}
+
+/** Helium gas left: a cell per canister's worth, the one in use emptying (past six, a count and one cell). */
+function GasCells(props: { gas: number }) {
+  const n = Math.ceil(props.gas / PHYS.gasSupply - 1e-6);
+  const last = props.gas / PHYS.gasSupply - (n - 1);
+  const shown = n > 6 ? 1 : n;
+  return (
+    <span class="hud__cells">
+      {n > 6 && `×${n}`}
+      {Array.from({ length: shown }, (_, i) => (
+        <span class="hud__cell">
+          <i style={{ height: `${Math.round((i === shown - 1 ? last : 1) * 100)}%` }} />
+        </span>
+      ))}
+    </span>
   );
 }

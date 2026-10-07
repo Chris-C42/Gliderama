@@ -387,7 +387,7 @@ export function convertHouse(name, house, rsrc, file = '', pictures = null) {
       if (ob.type === 'star') goalStars++;
     }
     items.push(...gapBlocks.get(r).map((g) => ({ ...g, ramp: solid })));
-    for (const it of items) if (['star', 'sheet', 'battery', 'bands', 'tape'].includes(it.t)) pickups++;
+    for (const it of items) if (['star', 'sheet', 'battery', 'bands', 'helium', 'tape'].includes(it.t)) pickups++;
     // roof rooms: the roof is a solid mass under its surface line (Interactions.c CheckRoofCollision)
     if (bgName === 'roof') items.unshift(...roofBlocks(r.tiles));
     const def = {

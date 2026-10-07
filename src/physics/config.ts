@@ -56,6 +56,23 @@ export const PHYS = {
   heliumLift: 0.05,
   heliumTime: 1.6,
   /**
+   * Helium gas (Glider PRO's helium canisters, in the Classic Houses). While the gadget button is held a helium
+   * balloon takes the plane: it carries its weight, hangs it level and brings it to a steady climb (`gasRise` m/s,
+   * about Glider PRO's 4 px a frame), flying on at `gasDrift` × the design's best-glide speed with the air it is in,
+   * so a current shoves it along as Glider PRO's fans do, and a bump does it no harm (nor holds it back). It takes the
+   * plane over `gasOn` sim s and lets it go over `gasOff`, stopping its climb as it does (at `gasLetGo` per sim s), and
+   * the plane flies on from there, level, with the shove it gets on leaving an updraft. `gasEase`, `gasLevel` (per sim
+   * s): how quickly it brings the plane to its climb and levels it. `gasSupply`: sim s of it per canister.
+   */
+  gasRise: 2.2,
+  gasDrift: 0.75,
+  gasEase: 4,
+  gasLevel: 3,
+  gasLetGo: 20,
+  gasOn: 0.15,
+  gasOff: 0.12,
+  gasSupply: 3.4,
+  /**
    * Leaving an updraft after climbing in it: a gentle shove along the heading so the plane doesn't come
    * out at stall speed. It counts once the plane has spent `exitLiftTime` sim s in air rising faster
    * than `exitLiftMin` m/s, fires when the rising air drops under `exitLiftOut`, and accelerates the
