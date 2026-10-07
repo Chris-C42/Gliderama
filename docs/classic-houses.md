@@ -237,19 +237,23 @@ given up), and a star with no way on from it to the others (a room with no way o
 does not finish that way it flies again trying each star itself first, the switches only once the stars got
 nowhere; the better of the two counts. It throws as a player can: level, up, or steeply down (aiming with the
 mouse), and where things move about it may wait a second or two to time a throw past them; a flight getting
-nowhere it gives up, as a player would put the plane down there (and so does the play lab's autopilot). The menagerie flies
-alongside, from the moment the plane comes into its room (the game makes a room's things afresh then; the play lab's
-autopilot makes the room afresh before each throw, and waits as long as the plan does, as the plans assume), and
-touching anything that hurts ends a flight (a cobweb or a drip's drop too, though in the game one only holds the
-plane a moment and the other soaks it); a star touched as the plane is lost still counts, as in the game.
+nowhere it gives up, as a player would put the plane down there (and so does the play lab's autopilot). It picks up
+helium canisters, and while it has gas it may hold the gadget button for the balloon to take the plane (the gas kept
+from flight to flight until it is used, as the game keeps it). The menagerie flies alongside, from the moment the
+plane comes into its room (the game makes a room's things afresh then; the play lab's autopilot makes the room afresh
+before each throw, and waits as long as the plan does, as the plans assume), and touching anything that hurts ends a
+flight (a cobweb or a drip's drop too, though in the game one only holds the plane a moment and the other soaks it);
+a star touched as the plane is lost still counts, as in the game.
 *Finished* means the bot collected every star, so a player with the same controls can. A house it does not finish
 may well be flyable: Glider PRO's tricks (hanging still in a column, quick switch timing, long detours for a switch)
-are hard for a paper plane and harder for a search; where it got stuck is given. The bot finishes 20 of the 21
-houses that have stars (the Fun House has none); Land of Illusion's last star is seven rooms up, a climb on
-helium (see **Helium** below) that the bot doesn't fly yet. The play lab's autopilot also flew, in the real game in the browser, the stretches the bot once got stuck
-on in Castle o' the Air (Castletop), Davis Station (the silo), Rainbow's End (the way to its second star), Land of
-Illusion (the dollhouse) and Slumberland (the way to its third star), and SpacePods, Nemo's Market, the Demo
-House and The Asylum Pro from start to finish.
+are hard for a paper plane and harder for a search; where it got stuck is given. The bot finishes all 21 houses
+that have stars (the Fun House has none); Land of Illusion's last star is seven rooms up, a climb it makes on helium
+(see **Helium** below) from the four canisters in "Transformation". Elsewhere a canister helps where the bot happens
+on one: in Davis Station the one in "Faulty Wiring", on the first sheet's way, floats it on towards the first star.
+The play lab's autopilot also flew, in the real game in the browser, the stretches the bot once got stuck on in
+Castle o' the Air (Castletop), Davis Station (the silo), Rainbow's End (the way to its second star), Land of Illusion
+(the dollhouse, and the climb on helium to its last star) and Slumberland (the way to its third star), and SpacePods,
+Nemo's Market, the Demo House and The Asylum Pro from start to finish.
 
 | House | Authors | Rooms | Objects mapped / dropped | Stars | Flight check (bot pilot) | Par |
 |---|---|---:|---:|---:|---|---:|
@@ -259,21 +263,21 @@ House and The Asylum Pro from start to finish.
 | Fun House | — | 43 | 348 / 58 | 0 | no stars to find (free flight); the house has no stars, as in Glider PRO | — |
 | Castle o' the Air | John Calhoun | 85 | 612 / 8 | 4 | **finished**: all 4 stars, through 31 rooms; 233 s of flying, 4 sheets lost | 345 s |
 | Empty House | — | 35 | 78 / 0 | 1 | **finished**: the star, through 12 rooms; 38 s of flying, no sheet lost | 60 s |
-| Davis Station | Jonathan Chin (alias Paul Finn) & John Calhoun | 65 | 511 / 80 | 4 | **finished**: all 4 stars, through 43 rooms; 208 s of flying, 13 sheets lost | 380 s |
-| In The Mirror | Jonathan Chin (alias Paul Finn) | 97 | 729 / 66 | 1 | **finished**: the star, through 24 rooms; 82 s of flying, 1 sheet lost | 125 s |
+| Davis Station | Jonathan Chin (alias Paul Finn) & John Calhoun | 65 | 511 / 80 | 4 | **finished**: all 4 stars, through 43 rooms; 218 s of flying, 5 sheets lost | 335 s |
+| In The Mirror | Jonathan Chin (alias Paul Finn) | 97 | 729 / 66 | 1 | **finished**: the star, through 24 rooms; 73 s of flying, 1 sheet lost | 115 s |
 | Art Museum | — | 109 | 476 / 93 | 6 | **finished**: all 6 stars, through 46 rooms; 206 s of flying, 2 sheets lost | 295 s |
 | Nemo's Market | Ward Hartenstein | 124 | 456 / 380 | 5 | **finished**: all 5 stars, through 32 rooms; 177 s of flying, 6 sheets lost | 290 s |
-| Metropolis | Jonathan Chin (alias Paul Finn) & John Calhoun | 127 | 730 / 79 | 4 | **finished**: all 4 stars, through 39 rooms; 174 s of flying, 6 sheets lost | 285 s |
+| Metropolis | Jonathan Chin (alias Paul Finn) & John Calhoun | 127 | 730 / 79 | 4 | **finished**: all 4 stars, through 39 rooms; 149 s of flying, 5 sheets lost | 245 s |
 | The Asylum Pro | Steve Sullivan | 140 | 1023 / 73 | 1 | **finished**: the star, through 15 rooms; 60 s of flying, 1 sheet lost | 95 s |
-| Grand Prix | Jonathan Chin (alias Paul Finn) | 175 | 1232 / 49 | 3 | **finished**: all 3 stars, through 49 rooms; 215 s of flying, 1 sheet lost | 300 s |
+| Grand Prix | Jonathan Chin (alias Paul Finn) | 175 | 1232 / 49 | 3 | **finished**: all 3 stars, through 49 rooms; 219 s of flying, 1 sheet lost | 300 s |
 | CD Demo House | John Calhoun & Kim Money | 206 | 866 / 667 | 9 | **finished**: all 9 stars, through 50 rooms; 653 s of flying, 44 sheets lost | 1200 s |
 | Titanic | Jonathan Chin (alias Paul Finn) & John Calhoun | 208 | 1259 / 115 | 1 | **finished**: the star, through 21 rooms; 80 s of flying, 6 sheets lost | 160 s |
-| Rainbow's End | Ward Hartenstein | 223 | 1595 / 78 | 5 | **finished**: all 5 stars, through 62 rooms; 370 s of flying, 8 sheets lost | 555 s |
+| Rainbow's End | Ward Hartenstein | 223 | 1595 / 78 | 5 | **finished**: all 5 stars, through 62 rooms; 433 s of flying, 8 sheets lost | 635 s |
 | ImagineHouse PRO II | Jonathan Chin (alias Paul Finn) | 279 | 1758 / 56 | 3 | **finished**: all 3 stars, through 39 rooms; 142 s of flying, 7 sheets lost | 250 s |
-| Land of Illusion | Ward Hartenstein | 303 | 1627 / 189 | 5 | 4 of 5 stars, through 64 rooms; stuck in "Transformation" (62,-9), 7 rooms from the next star; 572 s of flying, 26 sheets lost; the last star is seven rooms up, a climb made on helium in Glider PRO, with no rising air here | — |
+| Land of Illusion | Ward Hartenstein | 303 | 1627 / 189 | 5 | **finished**: all 5 stars, through 71 rooms; 571 s of flying, 19 sheets lost; the last star is seven rooms up, a climb on helium | 900 s |
 | Slumberland | John Calhoun (first house and top of fourth house), Jonathan Chin (second house), Steve Sullivan (third house), Ward Hartenstein (bottom of fourth house) | 383 | 2954 / 42 | 6 | **finished**: all 6 stars, through 123 rooms; 718 s of flying, 30 sheets lost | 1175 s |
 | SpacePods | Ward Hartenstein | 402 | 2962 / 2878 | 1 | **finished**: the star, through 11 rooms; 117 s of flying, 17 sheets lost | 295 s |
-| Leviathan | Jonathan Chin (alias Paul Finn) | 472 | 3163 / 172 | 6 | **finished**: all 6 stars, through 149 rooms; 867 s of flying, 27 sheets lost | 1350 s |
+| Leviathan | Jonathan Chin (alias Paul Finn) | 472 | 3163 / 172 | 6 | **finished**: all 6 stars, through 149 rooms; 859 s of flying, 26 sheets lost | 1330 s |
 | Teddy World | Shawn Brenneman | 531 | 2958 / 563 | 1 | **finished**: the star, through 7 rooms; 23 s of flying, no sheet lost | 40 s |
 
 ## Glider PRO objects without Gliderama art
@@ -320,7 +324,11 @@ Not drawn at all: the houses' own pictures (`customPict`, 4782 of them), which G
   bump does it no harm. While there is helium, the gadget button is the helium's (as in Glider PRO, where helium
   takes the battery's place). Let go, the plane flies on.
 - **Transports** put the plane down gliding level where the original puts the glider; deluxe transports keep
-  their on/off state and switch.
+  their on/off state and switch. In Glider PRO a glider put down wholly inside another linked transport goes straight
+  on through it (Land of Illusion's vortex sends it back and forth between two rooms, past the helium canisters, until
+  it comes out of the one mouth linked to nothing); here a transport doesn't take the plane in the 0.6 s after the
+  last one, so it comes out at the first stop (where those canisters are) and goes on only if it is still in a mouth
+  after that: holding the helium, it rises clear.
 - **Lights**: a switch can work another room's lights; darkness follows the original's rule, but rooms are
   lit or dark as a whole (every lamp in a room is on its light switch).
 - **Roofs** are stepped blocks, not slopes.

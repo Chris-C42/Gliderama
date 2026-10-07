@@ -1014,6 +1014,8 @@ export function solveHouse(level: LevelDef, design: Design, opts: HouseSolveOpti
       checkpoint: { ...n0.checkpoint },
       steps: { dir: input.dir as -1 | 0 | 1, pitch: input.pitch, ...(input.helium ? { helium: true } : {}), prev: n0.steps },
     };
+    // (where a balloon takes the plane, for the trace)
+    if (input.helium && n.plane.gas > 0 && !n0.steps?.helium) n.trace = [...n.trace, `helium held in ${n.key} @${(totalT + n.t).toFixed(1)}s`];
     const st: TickState = { plane: n.plane, aero, hullLocal, halfLen, groundT: n.groundT, stillT: n.stillT };
     let room = roomOf(n.key);
     const known: Partial<SessionApi> = {
